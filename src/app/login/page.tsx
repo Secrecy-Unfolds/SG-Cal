@@ -43,7 +43,7 @@ export default function LoginPage() {
         className="w-full max-w-sm bg-white dark:bg-neutral-900 rounded-2xl shadow-sm border border-black/5 dark:border-white/10 p-8 space-y-4"
       >
         <div>
-          <h1 className="text-xl font-semibold">Squad Calendar</h1>
+          <h1 className="text-xl font-semibold">SG Calendar</h1>
           <p className="text-sm text-black/50 dark:text-white/50">Sign in to continue</p>
         </div>
 

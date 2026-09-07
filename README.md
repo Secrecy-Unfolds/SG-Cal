@@ -1,4 +1,4 @@
-# Squad Calendar
+# SG Calendar
 
 A private calendar for two people (login required). Every entry is either a
 **Meeting** or a **Task**, with a description/agenda, and it emails both of

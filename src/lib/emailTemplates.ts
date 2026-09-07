@@ -8,7 +8,7 @@ const MEETING_COLOR = "#1d4ed8";
 const MEETING_BG = "#dbeafe";
 
 function brandName(): string {
-  return process.env.EMAIL_SENDER_NAME?.trim() || "Squad Calendar";
+  return process.env.EMAIL_SENDER_NAME?.trim() || "SG Calendar";
 }
 
 function escapeHtml(str: string): string {
