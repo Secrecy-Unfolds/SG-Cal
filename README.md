@@ -1,18 +1,26 @@
 # Squad Calendar
 
-A private calendar for two people (login required). Add events with a
-description/agenda, and it emails both of you automatically:
+A private calendar for two people (login required). Every entry is either a
+**Meeting** or a **Task**, with a description/agenda, and it emails both of
+you automatically:
 
-- **Immediately** when an event is created
+- **Immediately** when a meeting or task is created
 - **Every Saturday at 8:00 AM (Asia/Muscat)** — a "get ready" digest of every
-  upcoming event (skipped if there are none)
-- **Every day at 12:00 AM (Asia/Muscat)** — a digest of that day's events
-  (skipped if there are none)
+  upcoming meeting and task (skipped if there are none)
+- **Every day at 12:00 AM (Asia/Muscat)** — a digest of that day's meetings
+  and tasks (skipped if there are none)
+- **1 hour before a meeting starts**
+- **3 hours before a task's due time**
+
+Also has a dark mode toggle and a profile page for changing your password.
 
 ## Stack
 
 Next.js (App Router) on Vercel, Postgres for storage, a Google Apps Script
-web app as the email relay, Vercel Cron for the two scheduled digests. Two
+web app as the email relay. Vercel Cron handles the two daily/weekly
+digests; the two time-before reminders are driven by a free external
+scheduler (cron-job.org) hitting a protected endpoint every 10-15 minutes,
+since Vercel's free plan only allows daily-or-less-frequent crons. Two
 accounts only — no public sign-up.
 
 ## 1. One-time setup

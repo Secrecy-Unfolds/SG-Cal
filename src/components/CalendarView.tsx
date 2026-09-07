@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import EventModal, { EventItem } from "@/components/EventModal";
+import Link from "next/link";
+import EventModal, { EventItem, EventType } from "@/components/EventModal";
+import ThemeToggle from "@/components/ThemeToggle";
 import { formatMuscatDateTime, toMuscatDateInput } from "@/lib/time";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -32,7 +34,7 @@ export default function CalendarView({ username }: { username: string }) {
   const [loading, setLoading] = useState(true);
   const [modalState, setModalState] = useState<
     | { mode: "closed" }
-    | { mode: "create"; date: Date }
+    | { mode: "create"; date: Date; type?: EventType }
     | { mode: "edit"; event: EventItem }
   >({ mode: "closed" });
 
@@ -106,20 +108,33 @@ export default function CalendarView({ username }: { username: string }) {
       <header className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-xl font-semibold">Squad Calendar</h1>
-          <p className="text-sm text-black/50">
+          <p className="text-sm text-black/50 dark:text-white/50">
             {username ? `Signed in as ${username}` : ""}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={() => setModalState({ mode: "create", date: new Date() })}
+            onClick={() => setModalState({ mode: "create", date: new Date(), type: "meeting" })}
             className="rounded-lg bg-accent text-white px-4 py-2 text-sm font-medium"
           >
-            + New event
+            + Meeting
           </button>
           <button
+            onClick={() => setModalState({ mode: "create", date: new Date(), type: "task" })}
+            className="rounded-lg bg-amber-600 text-white px-4 py-2 text-sm font-medium"
+          >
+            + Task
+          </button>
+          <Link
+            href="/profile"
+            className="rounded-lg border border-black/10 dark:border-white/10 px-4 py-2 text-sm hover:bg-black/[0.03] dark:hover:bg-white/5"
+          >
+            Profile
+          </Link>
+          <ThemeToggle />
+          <button
             onClick={handleLogout}
-            className="rounded-lg border border-black/10 px-4 py-2 text-sm"
+            className="rounded-lg border border-black/10 dark:border-white/10 px-4 py-2 text-sm hover:bg-black/[0.03] dark:hover:bg-white/5"
           >
             Log out
           </button>
@@ -131,7 +146,7 @@ export default function CalendarView({ username }: { username: string }) {
           <div className="flex items-center justify-between mb-3">
             <button
               onClick={() => setMonthCursor((m) => addMonths(m, -1))}
-              className="rounded-lg border border-black/10 px-3 py-1.5 text-sm"
+              className="rounded-lg border border-black/10 dark:border-white/10 px-3 py-1.5 text-sm hover:bg-black/[0.03] dark:hover:bg-white/5"
             >
               ← Prev
             </button>
@@ -140,15 +155,18 @@ export default function CalendarView({ username }: { username: string }) {
             </h2>
             <button
               onClick={() => setMonthCursor((m) => addMonths(m, 1))}
-              className="rounded-lg border border-black/10 px-3 py-1.5 text-sm"
+              className="rounded-lg border border-black/10 dark:border-white/10 px-3 py-1.5 text-sm hover:bg-black/[0.03] dark:hover:bg-white/5"
             >
               Next →
             </button>
           </div>
 
-          <div className="grid grid-cols-7 gap-px bg-black/5 rounded-xl overflow-hidden border border-black/5">
+          <div className="grid grid-cols-7 gap-px bg-black/5 dark:bg-white/10 rounded-xl overflow-hidden border border-black/5 dark:border-white/10">
             {WEEKDAYS.map((w) => (
-              <div key={w} className="bg-white text-center text-xs font-medium text-black/40 py-2">
+              <div
+                key={w}
+                className="bg-white dark:bg-neutral-900 text-center text-xs font-medium text-black/40 dark:text-white/40 py-2"
+              >
                 {w}
               </div>
             ))}
@@ -161,13 +179,13 @@ export default function CalendarView({ username }: { username: string }) {
                 <div
                   key={key}
                   onClick={() => setModalState({ mode: "create", date: day })}
-                  className={`bg-white min-h-[96px] p-1.5 cursor-pointer hover:bg-black/[0.03] transition-colors ${
+                  className={`bg-white dark:bg-neutral-900 min-h-[96px] p-1.5 cursor-pointer hover:bg-black/[0.03] dark:hover:bg-white/5 transition-colors ${
                     inMonth ? "" : "opacity-40"
                   }`}
                 >
                   <div
                     className={`text-xs mb-1 inline-flex items-center justify-center w-5 h-5 rounded-full ${
-                      isToday ? "bg-accent text-white" : "text-black/60"
+                      isToday ? "bg-accent text-white" : "text-black/60 dark:text-white/60"
                     }`}
                   >
                     {day.getDate()}
@@ -180,14 +198,18 @@ export default function CalendarView({ username }: { username: string }) {
                           e.stopPropagation();
                           setModalState({ mode: "edit", event: ev });
                         }}
-                        className="block w-full text-left text-[11px] leading-tight bg-accent/10 text-accent rounded px-1 py-0.5 truncate hover:bg-accent/20"
+                        className={`block w-full text-left text-[11px] leading-tight rounded px-1 py-0.5 truncate ${
+                          ev.type === "task"
+                            ? "bg-amber-500/10 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 dark:hover:bg-amber-500/30"
+                            : "bg-accent/10 dark:bg-accent/20 text-accent dark:text-blue-300 hover:bg-accent/20 dark:hover:bg-accent/30"
+                        }`}
                         title={ev.title}
                       >
                         {ev.title}
                       </button>
                     ))}
                     {dayEvents.length > 3 && (
-                      <div className="text-[10px] text-black/40 px-1">
+                      <div className="text-[10px] text-black/40 dark:text-white/40 px-1">
                         +{dayEvents.length - 3} more
                       </div>
                     )}
@@ -196,23 +218,34 @@ export default function CalendarView({ username }: { username: string }) {
               );
             })}
           </div>
-          {loading && <p className="text-xs text-black/40 mt-2">Loading…</p>}
+          {loading && <p className="text-xs text-black/40 dark:text-white/40 mt-2">Loading…</p>}
         </section>
 
         <aside>
           <h3 className="text-sm font-semibold mb-3">Upcoming</h3>
           <div className="space-y-2">
             {upcoming.length === 0 && (
-              <p className="text-sm text-black/40">Nothing coming up this month.</p>
+              <p className="text-sm text-black/40 dark:text-white/40">
+                Nothing coming up this month.
+              </p>
             )}
             {upcoming.map((ev) => (
               <button
                 key={ev.id}
                 onClick={() => setModalState({ mode: "edit", event: ev })}
-                className="w-full text-left bg-white border border-black/5 rounded-xl p-3 hover:border-accent/40"
+                className="w-full text-left bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-xl p-3 hover:border-accent/40"
               >
+                <span
+                  className={`inline-block text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 mb-1 ${
+                    ev.type === "task"
+                      ? "bg-amber-500/10 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300"
+                      : "bg-accent/10 dark:bg-accent/20 text-accent dark:text-blue-300"
+                  }`}
+                >
+                  {ev.type === "task" ? "Task" : "Meeting"}
+                </span>
                 <div className="text-sm font-medium truncate">{ev.title}</div>
-                <div className="text-xs text-black/50">
+                <div className="text-xs text-black/50 dark:text-white/50">
                   {formatMuscatDateTime(new Date(ev.start_at))}
                 </div>
               </button>
@@ -224,6 +257,7 @@ export default function CalendarView({ username }: { username: string }) {
       {modalState.mode === "create" && (
         <EventModal
           defaultDate={modalState.date}
+          defaultType={modalState.type}
           onClose={closeModal}
           onSaved={afterChange}
           onDeleted={afterChange}

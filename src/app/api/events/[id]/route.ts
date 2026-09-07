@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { deleteEvent, getEventById, updateEvent } from "@/lib/events";
+import { deleteEvent, getEventById, isEventType, updateEvent } from "@/lib/events";
 
 export const runtime = "nodejs";
 
@@ -22,6 +22,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const body = await req.json().catch(() => null);
   const title = typeof body?.title === "string" ? body.title.trim() : "";
   const description = typeof body?.description === "string" ? body.description.trim() : "";
+  const type = isEventType(body?.type) ? body.type : "meeting";
   const startAtStr = typeof body?.startAt === "string" ? body.startAt : "";
   const endAtStr = typeof body?.endAt === "string" ? body.endAt : "";
 
@@ -33,8 +34,14 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   if (isNaN(startAt.getTime()) || (endAt && isNaN(endAt.getTime()))) {
     return NextResponse.json({ error: "Invalid start/end date" }, { status: 400 });
   }
+  if (type === "task" && !endAt) {
+    return NextResponse.json(
+      { error: "Tasks need a due/end time so the 3-hours-before reminder can fire" },
+      { status: 400 }
+    );
+  }
 
-  const event = await updateEvent(id, { title, description, startAt, endAt });
+  const event = await updateEvent(id, { title, description, type, startAt, endAt });
   return NextResponse.json({ event });
 }
 

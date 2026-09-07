@@ -3,18 +3,12 @@ import { listEventsBetween } from "@/lib/events";
 import { sendMail, getAllRecipientEmails } from "@/lib/mailer";
 import { midnightDigestEmail } from "@/lib/emailTemplates";
 import { muscatTodayRangeUTC } from "@/lib/time";
+import { isAuthorizedCronRequest } from "@/lib/cronAuth";
 
 export const runtime = "nodejs";
 
-function authorized(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  const header = req.headers.get("authorization");
-  return header === `Bearer ${secret}`;
-}
-
 export async function GET(req: NextRequest) {
-  if (!authorized(req)) {
+  if (!isAuthorizedCronRequest(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

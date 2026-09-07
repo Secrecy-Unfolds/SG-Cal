@@ -25,7 +25,9 @@ A few words you'll see a lot:
 - [ ] Your `.env` file filled in with real values
 - [ ] Two logins created (yours + your friend's)
 - [ ] The app tested locally on your computer
-- [ ] The app deployed live on Vercel, with the two scheduled emails active
+- [ ] The app deployed live on Vercel, with the two scheduled digest emails active
+- [ ] A free cron-job.org account pinging the reminder-sweep endpoint every
+      10-15 minutes (for the 1-hour/3-hour-before reminders)
 
 ---
 
@@ -253,8 +255,9 @@ http://localhost:3000
 
 1. Log in with one of the `SEED_USER1`/`SEED_USER2` username/passwords you
    picked in Part 4c.
-2. Click **+ New event**, fill in a title, date/time, and description, and
-   save it.
+2. Click **+ Meeting** or **+ Task** (top of the page), fill in a title,
+   date/time, and description, and save it. Tasks require a due time —
+   meetings don't.
 3. Check the recipient's inbox (both of you should get an email — check
    spam folders too the first time).
 
@@ -373,13 +376,65 @@ curl.exe -H "Authorization: Bearer PASTE_YOUR_CRON_SECRET_HERE" https://YOUR-SIT
 
 ---
 
+## Part 10 — Set up the meeting/task reminder emails
+
+Besides the Saturday and midnight digests, the app also sends:
+
+- An email **1 hour before a meeting starts**
+- An email **3 hours before a task is due**
+
+These fire at arbitrary times of day, so they can't use Vercel's cron (the
+free Hobby plan only allows once-a-day schedules). Instead, the app exposes
+one more protected endpoint, `/api/cron/reminder-sweep`, that needs to be
+pinged every 10-15 minutes by an outside service. We'll use
+[cron-job.org](https://cron-job.org) — it's free, needs no credit card, and
+takes about 2 minutes to set up.
+
+1. Go to https://cron-job.org and click **Sign up** (top right). Confirm
+   your email.
+2. Once logged in, click **Create cronjob**.
+3. Fill in:
+   - **Title**: `Squad Calendar reminders` (anything you like)
+   - **Address (URL)**: `https://YOUR-SITE.vercel.app/api/cron/reminder-sweep`
+     (use your real Vercel URL from Part 8e)
+   - **Schedule**: choose "Every 15 minutes" (under the "Custom" or common
+     schedules — exact wording varies by their UI, just make sure it runs
+     every 10-15 minutes, all day, every day)
+4. Open the **Advanced** section (sometimes a small arrow/tab) and find
+   **Request headers** (or "Custom headers"). Add one:
+   - Name: `Authorization`
+   - Value: `Bearer PASTE_YOUR_CRON_SECRET_HERE` (the same `CRON_SECRET`
+     value from your `.env` / Vercel env vars — keep the word `Bearer` and
+     the space before the value)
+5. Save. cron-job.org will start pinging your endpoint automatically.
+
+To confirm it's working, on cron-job.org's dashboard click into the job
+after a few minutes and check the **execution history** — each run should
+show HTTP status `200`. You can also trigger it manually anytime the same
+way as the other two:
+
+```
+curl.exe -H "Authorization: Bearer PASTE_YOUR_CRON_SECRET_HERE" https://YOUR-SITE.vercel.app/api/cron/reminder-sweep
+```
+
+It responds with something like `{"ok":true,"meetingsNotified":0,"tasksNotified":0}`
+— the counts are only nonzero when something actually crossed the 1-hour /
+3-hour threshold since the last check, which is normal most of the time.
+
+---
+
 ## Everyday use after this
 
-- Visit your live URL, log in, add/edit/delete events from the calendar.
-- Both of you get an email the moment any event is created.
+- Visit your live URL, log in, add/edit/delete events from the calendar —
+  each one is either a **Meeting** or a **Task** (toggle at the top of the
+  new/edit form). Tasks require a due time; meetings don't.
+- Both of you get an email the moment any meeting or task is created.
 - Every Saturday morning you both get a "get ready" summary of everything
-  upcoming.
-- Every midnight you both get that day's events — only if there are any.
+  upcoming (meetings and tasks together).
+- Every midnight you both get that day's meetings and tasks — only if there
+  are any.
+- Every meeting also emails you both **1 hour before it starts**.
+- Every task also emails you both **3 hours before its due time**.
 
 You will not need to touch the terminal again unless you want to change
 code, add a new account, or reset a password (`npm run setup` again).
@@ -417,3 +472,14 @@ this value unless you set them to the same string in both places).
 always a missing environment variable. Go to your project on
 vercel.com → **Settings → Environment Variables** and confirm all five from
 Part 8d are present, then redeploy with `vercel --prod` again.
+
+**The 1-hour/3-hour reminder emails never arrive, but the digests do** —
+that means the Saturday/midnight crons are fine but the reminder-sweep
+endpoint isn't being pinged. Check cron-job.org's dashboard → your job →
+execution history. A `401` means the `Authorization` header value doesn't
+match `CRON_SECRET`; no executions at all means the job isn't
+enabled/saved correctly — redo Part 10.
+
+**"Tasks need a due/end time" error when saving a task** — tasks require
+the third time field (labeled "Due") since it's what the 3-hours-before
+reminder is calculated from; fill it in and save again.
