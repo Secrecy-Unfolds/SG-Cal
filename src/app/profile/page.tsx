@@ -9,7 +9,7 @@ export default async function ProfilePage() {
       <a href="/" className="text-sm text-black/50 dark:text-white/50 hover:underline">
         ← Back to calendar
       </a>
-      <h1 className="text-xl font-semibold mt-3 mb-1">Profile</h1>
+      <h1 className="text-xl font-semibold mt-3 mb-1">Change Password</h1>
       <p className="text-sm text-black/50 dark:text-white/50 mb-6">
         Signed in as {session?.username ?? ""}
       </p>

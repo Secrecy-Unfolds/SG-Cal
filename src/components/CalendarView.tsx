@@ -129,7 +129,7 @@ export default function CalendarView({ username }: { username: string }) {
             href="/profile"
             className="rounded-lg border border-black/10 dark:border-white/10 px-4 py-2 text-sm hover:bg-black/[0.03] dark:hover:bg-white/5"
           >
-            Profile
+            Change Password
           </Link>
           <ThemeToggle />
           <button
