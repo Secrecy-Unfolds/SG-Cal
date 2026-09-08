@@ -17,4 +17,4 @@ export async function getSession(): Promise<SessionPayload | null> {
   return verifySessionToken(token);
 }
 
-export { SESSION_COOKIE, SESSION_COOKIE_MAX_AGE, signSession } from "@/lib/session";
+export { SESSION_COOKIE, secondsUntilNextMuscatMidnight, signSession } from "@/lib/session";

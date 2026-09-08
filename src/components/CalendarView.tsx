@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import EventModal, { EventItem, EventType } from "@/components/EventModal";
 import ThemeToggle from "@/components/ThemeToggle";
-import { formatMuscatDateTime, toMuscatDateInput } from "@/lib/time";
+import { eachMuscatDateKeyInRange, formatMuscatDateOnly, formatMuscatDateTime, toMuscatDateInput } from "@/lib/time";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -71,9 +71,14 @@ export default function CalendarView({ username }: { username: string }) {
   const eventsByDay = useMemo(() => {
     const map = new Map<string, EventItem[]>();
     for (const ev of events) {
-      const key = toMuscatDateInput(new Date(ev.start_at));
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(ev);
+      const keys =
+        ev.is_tentative && ev.end_at
+          ? eachMuscatDateKeyInRange(new Date(ev.start_at), new Date(ev.end_at))
+          : [toMuscatDateInput(new Date(ev.start_at))];
+      for (const key of keys) {
+        if (!map.has(key)) map.set(key, []);
+        map.get(key)!.push(ev);
+      }
     }
     return map;
   }, [events]);
@@ -81,7 +86,9 @@ export default function CalendarView({ username }: { username: string }) {
   const upcoming = useMemo(() => {
     const now = Date.now();
     return events
-      .filter((e) => new Date(e.start_at).getTime() >= now)
+      .filter((e) =>
+        e.is_tentative ? (e.end_at ? new Date(e.end_at).getTime() >= now : true) : new Date(e.start_at).getTime() >= now
+      )
       .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())
       .slice(0, 8);
   }, [events]);
@@ -201,10 +208,13 @@ export default function CalendarView({ username }: { username: string }) {
                         className={`block w-full text-left text-[11px] leading-tight rounded px-1 py-0.5 truncate ${
                           ev.type === "task"
                             ? "bg-amber-500/10 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 dark:hover:bg-amber-500/30"
+                            : ev.is_tentative
+                            ? "border border-dashed border-violet-500/50 text-violet-700 dark:text-violet-300 hover:bg-violet-500/10"
                             : "bg-accent/10 dark:bg-accent/20 text-accent dark:text-blue-300 hover:bg-accent/20 dark:hover:bg-accent/30"
                         }`}
                         title={ev.title}
                       >
+                        {ev.is_tentative ? "? " : ""}
                         {ev.title}
                       </button>
                     ))}
@@ -239,14 +249,20 @@ export default function CalendarView({ username }: { username: string }) {
                   className={`inline-block text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 mb-1 ${
                     ev.type === "task"
                       ? "bg-amber-500/10 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300"
+                      : ev.is_tentative
+                      ? "bg-violet-500/10 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300"
                       : "bg-accent/10 dark:bg-accent/20 text-accent dark:text-blue-300"
                   }`}
                 >
-                  {ev.type === "task" ? "Task" : "Meeting"}
+                  {ev.type === "task" ? "Task" : ev.is_tentative ? "Tentative" : "Meeting"}
                 </span>
                 <div className="text-sm font-medium truncate">{ev.title}</div>
                 <div className="text-xs text-black/50 dark:text-white/50">
-                  {formatMuscatDateTime(new Date(ev.start_at))}
+                  {ev.is_tentative
+                    ? `Sometime ${formatMuscatDateOnly(new Date(ev.start_at))}${
+                        ev.end_at ? ` – ${formatMuscatDateOnly(new Date(ev.end_at))}` : ""
+                      }`
+                    : formatMuscatDateTime(new Date(ev.start_at))}
                 </div>
               </button>
             ))}

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { createEvent, isEventType, listEventsBetween } from "@/lib/events";
+import { createEvent, isEventType, listEventsBetween, validateEventTiming } from "@/lib/events";
 import { sendMail, getAllRecipientEmails } from "@/lib/mailer";
 import { eventCreatedEmail } from "@/lib/emailTemplates";
 
@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
   const title = typeof body?.title === "string" ? body.title.trim() : "";
   const description = typeof body?.description === "string" ? body.description.trim() : "";
   const type = isEventType(body?.type) ? body.type : "meeting";
+  const isTentative = body?.isTentative === true;
   const startAtStr = typeof body?.startAt === "string" ? body.startAt : "";
   const endAtStr = typeof body?.endAt === "string" ? body.endAt : "";
 
@@ -44,17 +45,16 @@ export async function POST(req: NextRequest) {
   if (isNaN(startAt.getTime()) || (endAt && isNaN(endAt.getTime()))) {
     return NextResponse.json({ error: "Invalid start/end date" }, { status: 400 });
   }
-  if (type === "task" && !endAt) {
-    return NextResponse.json(
-      { error: "Tasks need a due/end time so the 3-hours-before reminder can fire" },
-      { status: 400 }
-    );
+  const timingError = validateEventTiming({ type, isTentative, startAt, endAt });
+  if (timingError) {
+    return NextResponse.json({ error: timingError }, { status: 400 });
   }
 
   const event = await createEvent({
     title,
     description,
     type,
+    isTentative,
     startAt,
     endAt,
     createdBy: session.uid,

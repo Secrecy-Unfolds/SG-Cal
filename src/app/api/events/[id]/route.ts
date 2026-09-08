@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { deleteEvent, getEventById, isEventType, updateEvent } from "@/lib/events";
+import { deleteEvent, getEventById, isEventType, updateEvent, validateEventTiming } from "@/lib/events";
+import { sendMail, getAllRecipientEmails } from "@/lib/mailer";
+import { eventCanceledEmail, eventUpdatedEmail } from "@/lib/emailTemplates";
 
 export const runtime = "nodejs";
 
@@ -23,6 +25,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const title = typeof body?.title === "string" ? body.title.trim() : "";
   const description = typeof body?.description === "string" ? body.description.trim() : "";
   const type = isEventType(body?.type) ? body.type : "meeting";
+  const isTentative = body?.isTentative === true;
   const startAtStr = typeof body?.startAt === "string" ? body.startAt : "";
   const endAtStr = typeof body?.endAt === "string" ? body.endAt : "";
 
@@ -34,14 +37,21 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   if (isNaN(startAt.getTime()) || (endAt && isNaN(endAt.getTime()))) {
     return NextResponse.json({ error: "Invalid start/end date" }, { status: 400 });
   }
-  if (type === "task" && !endAt) {
-    return NextResponse.json(
-      { error: "Tasks need a due/end time so the 3-hours-before reminder can fire" },
-      { status: 400 }
-    );
+  const timingError = validateEventTiming({ type, isTentative, startAt, endAt });
+  if (timingError) {
+    return NextResponse.json({ error: timingError }, { status: 400 });
   }
 
-  const event = await updateEvent(id, { title, description, type, startAt, endAt });
+  const event = await updateEvent(id, { title, description, type, isTentative, startAt, endAt });
+
+  try {
+    const recipients = await getAllRecipientEmails();
+    const { subject, html } = eventUpdatedEmail(event!, session.username);
+    await sendMail({ to: recipients, subject, html });
+  } catch (err) {
+    console.error("Failed to send event-updated email:", err);
+  }
+
   return NextResponse.json({ event });
 }
 
@@ -56,5 +66,14 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   await deleteEvent(id);
+
+  try {
+    const recipients = await getAllRecipientEmails();
+    const { subject, html } = eventCanceledEmail(existing, session.username);
+    await sendMail({ to: recipients, subject, html });
+  } catch (err) {
+    console.error("Failed to send event-canceled email:", err);
+  }
+
   return NextResponse.json({ ok: true });
 }

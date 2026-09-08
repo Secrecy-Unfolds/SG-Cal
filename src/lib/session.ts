@@ -1,8 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
+import { muscatTodayRangeUTC } from "@/lib/time";
 
 export const SESSION_COOKIE = "session";
-const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days
-export const SESSION_COOKIE_MAX_AGE = SESSION_MAX_AGE_SECONDS;
 
 function getSecretKey() {
   const secret = process.env.SESSION_SECRET;
@@ -15,11 +14,22 @@ export type SessionPayload = {
   username: string;
 };
 
+// Sessions expire at the next midnight (Asia/Muscat), not on a rolling
+// window — logging in at 8pm gets a shorter session than logging in at 8am.
+function nextMuscatMidnightUTC(): Date {
+  return muscatTodayRangeUTC().end;
+}
+
+export function secondsUntilNextMuscatMidnight(): number {
+  return Math.max(1, Math.round((nextMuscatMidnightUTC().getTime() - Date.now()) / 1000));
+}
+
 export async function signSession(payload: SessionPayload): Promise<string> {
+  const expEpochSeconds = Math.floor(nextMuscatMidnightUTC().getTime() / 1000);
   return new SignJWT(payload as any)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime(`${SESSION_MAX_AGE_SECONDS}s`)
+    .setExpirationTime(expEpochSeconds)
     .sign(getSecretKey());
 }
 

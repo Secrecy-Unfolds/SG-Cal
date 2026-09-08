@@ -29,6 +29,10 @@ export function formatMuscatDateTime(date: Date): string {
   });
 }
 
+export function formatMuscatDateOnly(date: Date): string {
+  return formatMuscat(date, { weekday: "short", day: "2-digit", month: "short" });
+}
+
 // Returns the [startUTC, endUTC) range covering "today" in Muscat local time,
 // as of the moment this is called.
 export function muscatTodayRangeUTC(): { start: Date; end: Date } {
@@ -52,4 +56,27 @@ export function toMuscatDateInput(date: Date): string {
 
 export function toMuscatTimeInput(date: Date): string {
   return formatMuscat(date, { hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
+// Every Muscat calendar day (as "YYYY-MM-DD" keys) from start through end,
+// inclusive — used to spread a tentative/date-range meeting across each day
+// it might happen, on the calendar grid.
+export function eachMuscatDateKeyInRange(start: Date, end: Date): string[] {
+  const startKey = toMuscatDateInput(start);
+  const endKey = toMuscatDateInput(end);
+  const [sy, sm, sd] = startKey.split("-").map(Number);
+  const [ey, em, ed] = endKey.split("-").map(Number);
+  let cursor = Date.UTC(sy, sm - 1, sd);
+  const last = Date.UTC(ey, em - 1, ed);
+
+  const keys: string[] = [];
+  while (cursor <= last) {
+    const d = new Date(cursor);
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(d.getUTCDate()).padStart(2, "0");
+    keys.push(`${y}-${m}-${day}`);
+    cursor += 24 * 60 * 60_000;
+  }
+  return keys;
 }

@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS events (
   title TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
   type TEXT NOT NULL DEFAULT 'meeting',
+  is_tentative BOOLEAN NOT NULL DEFAULT false,
   start_at TIMESTAMPTZ NOT NULL,
   end_at TIMESTAMPTZ,
   created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
@@ -23,6 +24,7 @@ CREATE TABLE IF NOT EXISTS events (
 ALTER TABLE events ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'meeting';
 ALTER TABLE events ADD COLUMN IF NOT EXISTS start_reminder_sent_at TIMESTAMPTZ;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS end_reminder_sent_at TIMESTAMPTZ;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS is_tentative BOOLEAN NOT NULL DEFAULT false;
 
 CREATE INDEX IF NOT EXISTS events_start_at_idx ON events (start_at);
 CREATE INDEX IF NOT EXISTS events_type_idx ON events (type);

@@ -1,11 +1,13 @@
 import { EventRow } from "@/lib/events";
-import { formatMuscatDateTime } from "@/lib/time";
+import { formatMuscatDateOnly, formatMuscatDateTime } from "@/lib/time";
 
 const ACCENT = "#3b5bdb";
 const TASK_COLOR = "#b45309";
 const TASK_BG = "#fef3c7";
 const MEETING_COLOR = "#1d4ed8";
 const MEETING_BG = "#dbeafe";
+const TENTATIVE_COLOR = "#7c3aed";
+const TENTATIVE_BG = "#ede9fe";
 
 function brandName(): string {
   return process.env.EMAIL_SENDER_NAME?.trim() || "SG Calendar";
@@ -19,13 +21,18 @@ function escapeHtml(str: string): string {
 }
 
 function typeLabel(e: EventRow): string {
-  return e.type === "task" ? "Task" : "Meeting";
+  if (e.type === "task") return "Task";
+  return e.is_tentative ? "Tentative meeting" : "Meeting";
+}
+
+function cardAccentColor(e: EventRow): string {
+  if (e.type === "task") return TASK_COLOR;
+  return e.is_tentative ? TENTATIVE_COLOR : MEETING_COLOR;
 }
 
 function typeBadge(e: EventRow): string {
-  const isTask = e.type === "task";
-  const bg = isTask ? TASK_BG : MEETING_BG;
-  const color = isTask ? TASK_COLOR : MEETING_COLOR;
+  const bg = e.type === "task" ? TASK_BG : e.is_tentative ? TENTATIVE_BG : MEETING_BG;
+  const color = cardAccentColor(e);
   return `<span style="display:inline-block; font-size:11px; font-weight:700; letter-spacing:0.3px; text-transform:uppercase; color:${color}; background:${bg}; border-radius:999px; padding:2px 8px; margin-bottom:6px;">${typeLabel(
     e
   )}</span>`;
@@ -67,23 +74,31 @@ function wrap(preheader: string, heading: string, bodyHtml: string): string {
 </html>`;
 }
 
-function eventCard(e: EventRow): string {
+function eventWhenText(e: EventRow): string {
+  if (e.is_tentative) {
+    const from = formatMuscatDateOnly(new Date(e.start_at));
+    const to = e.end_at ? formatMuscatDateOnly(new Date(e.end_at)) : from;
+    return from === to ? `Tentative &mdash; possibly ${from}` : `Tentative &mdash; sometime between ${from} and ${to}`;
+  }
   const when = formatMuscatDateTime(new Date(e.start_at));
   const endPart = e.end_at ? ` &ndash; ${formatMuscatDateTime(new Date(e.end_at))}` : "";
+  return `${when}${endPart}`;
+}
+
+function eventCard(e: EventRow): string {
   const desc = e.description?.trim()
     ? `<div style="margin-top:8px; font-size:13px; line-height:1.5; color:#4b5563; white-space:pre-wrap;">${escapeHtml(
         e.description
       )}</div>`
     : "";
-  const isTask = e.type === "task";
   return `
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 14px;">
       <tr>
-        <td style="width:4px; background:${isTask ? TASK_COLOR : MEETING_COLOR}; border-radius:4px; font-size:0;">&nbsp;</td>
+        <td style="width:4px; background:${cardAccentColor(e)}; border-radius:4px; font-size:0;">&nbsp;</td>
         <td style="padding:2px 0 12px 14px;">
           <div>${typeBadge(e)}</div>
           <div style="font-size:15px; font-weight:600; color:#111827;">${escapeHtml(e.title)}</div>
-          <div style="font-size:13px; color:#6b7280; margin-top:2px;">${when}${endPart}</div>
+          <div style="font-size:13px; color:#6b7280; margin-top:2px;">${eventWhenText(e)}</div>
           ${desc}
         </td>
       </tr>
@@ -103,6 +118,32 @@ export function eventCreatedEmail(e: EventRow): { subject: string; html: string 
       `${who} just added "${e.title}" to the calendar`,
       `New ${label} added`,
       introText(`${who} added a new ${label} to the calendar:`) + eventCard(e)
+    ),
+  };
+}
+
+export function eventUpdatedEmail(e: EventRow, who: string): { subject: string; html: string } {
+  const label = typeLabel(e).toLowerCase();
+  const whoSafe = escapeHtml(who);
+  return {
+    subject: `Updated ${label}: ${e.title}`,
+    html: wrap(
+      `${whoSafe} updated "${e.title}"`,
+      `${typeLabel(e)} updated`,
+      introText(`${whoSafe} made changes to this ${label}. Here are the current details:`) + eventCard(e)
+    ),
+  };
+}
+
+export function eventCanceledEmail(e: EventRow, who: string): { subject: string; html: string } {
+  const label = typeLabel(e).toLowerCase();
+  const whoSafe = escapeHtml(who);
+  return {
+    subject: `Canceled ${label}: ${e.title}`,
+    html: wrap(
+      `${whoSafe} canceled "${e.title}"`,
+      `${typeLabel(e)} canceled`,
+      introText(`${whoSafe} removed this ${label} from the calendar. It was scheduled for:`) + eventCard(e)
     ),
   };
 }

@@ -10,6 +10,7 @@ export type EventItem = {
   title: string;
   description: string;
   type: EventType;
+  is_tentative: boolean;
   start_at: string;
   end_at: string | null;
   created_by_username: string | null;
@@ -35,9 +36,13 @@ export default function EventModal({
   const initialEnd = event?.end_at ? new Date(event.end_at) : null;
 
   const [type, setType] = useState<EventType>(event?.type ?? defaultType);
+  const [isTentative, setIsTentative] = useState(event?.is_tentative ?? false);
   const [title, setTitle] = useState(event?.title ?? "");
   const [description, setDescription] = useState(event?.description ?? "");
   const [date, setDate] = useState(toMuscatDateInput(initialStart));
+  const [toDate, setToDate] = useState(
+    event?.is_tentative && initialEnd ? toMuscatDateInput(initialEnd) : toMuscatDateInput(initialStart)
+  );
   const [startTime, setStartTime] = useState(toMuscatTimeInput(initialStart));
   const [endTime, setEndTime] = useState(initialEnd ? toMuscatTimeInput(initialEnd) : "");
   const [saving, setSaving] = useState(false);
@@ -46,6 +51,16 @@ export default function EventModal({
 
   const isTask = type === "task";
 
+  function selectType(next: EventType) {
+    setType(next);
+    if (next === "task") setIsTentative(false);
+  }
+
+  function toggleTentative(checked: boolean) {
+    setIsTentative(checked);
+    if (checked) setToDate(date);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -53,19 +68,33 @@ export default function EventModal({
       setError("Title is required");
       return;
     }
-    if (isTask && !endTime) {
+    if (isTentative && !toDate) {
+      setError("Pick an end date for the range");
+      return;
+    }
+    if (isTentative && toDate < date) {
+      setError("Range end must be on or after the start date");
+      return;
+    }
+    if (!isTentative && isTask && !endTime) {
       setError("Tasks need a due time — it's used for the 3-hours-before reminder");
       return;
     }
     setSaving(true);
     try {
-      const startAt = muscatInputToUTC(date, startTime).toISOString();
-      const endAt = endTime ? muscatInputToUTC(date, endTime).toISOString() : null;
+      const startAt = isTentative
+        ? muscatInputToUTC(date, "00:00").toISOString()
+        : muscatInputToUTC(date, startTime).toISOString();
+      const endAt = isTentative
+        ? muscatInputToUTC(toDate, "23:59").toISOString()
+        : endTime
+        ? muscatInputToUTC(date, endTime).toISOString()
+        : null;
 
       const res = await fetch(isEdit ? `/api/events/${event!.id}` : "/api/events", {
         method: isEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: title.trim(), description, type, startAt, endAt }),
+        body: JSON.stringify({ title: title.trim(), description, type, isTentative, startAt, endAt }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -117,7 +146,7 @@ export default function EventModal({
         <div className="flex rounded-lg border border-black/10 dark:border-white/10 p-1 text-sm">
           <button
             type="button"
-            onClick={() => setType("meeting")}
+            onClick={() => selectType("meeting")}
             className={`flex-1 rounded-md py-1.5 font-medium transition-colors ${
               !isTask ? "bg-accent text-white" : "text-black/50 dark:text-white/50"
             }`}
@@ -126,7 +155,7 @@ export default function EventModal({
           </button>
           <button
             type="button"
-            onClick={() => setType("task")}
+            onClick={() => selectType("task")}
             className={`flex-1 rounded-md py-1.5 font-medium transition-colors ${
               isTask ? "bg-accent text-white" : "text-black/50 dark:text-white/50"
             }`}
@@ -146,44 +175,92 @@ export default function EventModal({
           />
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
-          <div className="space-y-1 col-span-1">
-            <label className="text-sm font-medium">Date</label>
+        {!isTask && (
+          <label className="flex items-start gap-2 text-sm cursor-pointer">
             <input
-              type="date"
-              className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-2 text-sm dark:[color-scheme:dark]"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
+              type="checkbox"
+              className="mt-0.5"
+              checked={isTentative}
+              onChange={(e) => toggleTentative(e.target.checked)}
             />
+            <span>
+              Tentative — not sure of the exact time yet, pick a date range instead
+            </span>
+          </label>
+        )}
+
+        {isTentative ? (
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">From date</label>
+              <input
+                type="date"
+                className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-2 text-sm dark:[color-scheme:dark]"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">To date</label>
+              <input
+                type="date"
+                className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-2 text-sm dark:[color-scheme:dark]"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                min={date}
+                required
+              />
+            </div>
           </div>
-          <div className="space-y-1 col-span-1">
-            <label className="text-sm font-medium">Start</label>
-            <input
-              type="time"
-              className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-2 text-sm dark:[color-scheme:dark]"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              required
-            />
+        ) : (
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-1 col-span-1">
+              <label className="text-sm font-medium">Date</label>
+              <input
+                type="date"
+                className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-2 text-sm dark:[color-scheme:dark]"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-1 col-span-1">
+              <label className="text-sm font-medium">Start</label>
+              <input
+                type="time"
+                className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-2 text-sm dark:[color-scheme:dark]"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-1 col-span-1">
+              <label className="text-sm font-medium">{isTask ? "Due" : "End (optional)"}</label>
+              <input
+                type="time"
+                className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-2 text-sm dark:[color-scheme:dark]"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                required={isTask}
+              />
+            </div>
           </div>
-          <div className="space-y-1 col-span-1">
-            <label className="text-sm font-medium">{isTask ? "Due" : "End (optional)"}</label>
-            <input
-              type="time"
-              className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-2 text-sm dark:[color-scheme:dark]"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              required={isTask}
-            />
-          </div>
-        </div>
-        {isTask && (
+        )}
+
+        {isTentative && (
+          <p className="text-xs text-black/40 dark:text-white/40 -mt-2">
+            This will show up on every day in the range on the calendar, and in
+            each of those days' digest emails. No fixed time means no
+            1-hour-before reminder for this one.
+          </p>
+        )}
+        {!isTentative && isTask && (
           <p className="text-xs text-black/40 dark:text-white/40 -mt-2">
             You'll get a reminder email 3 hours before this due time.
           </p>
         )}
-        {!isTask && (
+        {!isTentative && !isTask && (
           <p className="text-xs text-black/40 dark:text-white/40 -mt-2">
             You'll get a reminder email 1 hour before this meeting starts.
           </p>

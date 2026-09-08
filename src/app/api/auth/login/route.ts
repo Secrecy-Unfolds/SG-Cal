@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
-import { verifyPassword, signSession, SESSION_COOKIE, SESSION_COOKIE_MAX_AGE } from "@/lib/auth";
+import { verifyPassword, signSession, SESSION_COOKIE, secondsUntilNextMuscatMidnight } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: SESSION_COOKIE_MAX_AGE,
+    maxAge: secondsUntilNextMuscatMidnight(),
   });
   return response;
 }
