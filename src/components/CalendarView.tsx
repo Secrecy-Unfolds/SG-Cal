@@ -4,8 +4,11 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import EventModal, { EventItem, EventType } from "@/components/EventModal";
+import EventViewModal from "@/components/EventViewModal";
+import DayEventsModal from "@/components/DayEventsModal";
 import ThemeToggle from "@/components/ThemeToggle";
-import { eachMuscatDateKeyInRange, formatMuscatDateOnly, formatMuscatDateTime, toMuscatDateInput } from "@/lib/time";
+import { eachMuscatDateKeyInRange, toMuscatDateInput } from "@/lib/time";
+import { eventBadgeClass, formatEventWhen, eventTypeLabel } from "@/lib/eventDisplay";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -27,16 +30,19 @@ function gridStart(month: Date) {
   return addDays(first, -first.getDay());
 }
 
+type ModalState =
+  | { mode: "closed" }
+  | { mode: "day"; date: Date }
+  | { mode: "view"; event: EventItem }
+  | { mode: "create"; date: Date; type?: EventType }
+  | { mode: "edit"; event: EventItem };
+
 export default function CalendarView({ username }: { username: string }) {
   const router = useRouter();
   const [monthCursor, setMonthCursor] = useState(() => startOfMonth(new Date()));
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [modalState, setModalState] = useState<
-    | { mode: "closed" }
-    | { mode: "create"; date: Date; type?: EventType }
-    | { mode: "edit"; event: EventItem }
-  >({ mode: "closed" });
+  const [modalState, setModalState] = useState<ModalState>({ mode: "closed" });
 
   const gridDays = useMemo(() => {
     const start = gridStart(monthCursor);
@@ -185,7 +191,7 @@ export default function CalendarView({ username }: { username: string }) {
               return (
                 <div
                   key={key}
-                  onClick={() => setModalState({ mode: "create", date: day })}
+                  onClick={() => setModalState({ mode: "day", date: day })}
                   className={`bg-white dark:bg-neutral-900 min-h-[96px] p-1.5 cursor-pointer hover:bg-black/[0.03] dark:hover:bg-white/5 transition-colors ${
                     inMonth ? "" : "opacity-40"
                   }`}
@@ -203,7 +209,7 @@ export default function CalendarView({ username }: { username: string }) {
                         key={ev.id}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setModalState({ mode: "edit", event: ev });
+                          setModalState({ mode: "view", event: ev });
                         }}
                         className={`block w-full text-left text-[11px] leading-tight rounded px-1 py-0.5 truncate ${
                           ev.type === "task"
@@ -242,34 +248,40 @@ export default function CalendarView({ username }: { username: string }) {
             {upcoming.map((ev) => (
               <button
                 key={ev.id}
-                onClick={() => setModalState({ mode: "edit", event: ev })}
+                onClick={() => setModalState({ mode: "view", event: ev })}
                 className="w-full text-left bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-xl p-3 hover:border-accent/40"
               >
                 <span
-                  className={`inline-block text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 mb-1 ${
-                    ev.type === "task"
-                      ? "bg-amber-500/10 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300"
-                      : ev.is_tentative
-                      ? "bg-violet-500/10 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300"
-                      : "bg-accent/10 dark:bg-accent/20 text-accent dark:text-blue-300"
-                  }`}
+                  className={`inline-block text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 mb-1 ${eventBadgeClass(
+                    ev
+                  )}`}
                 >
-                  {ev.type === "task" ? "Task" : ev.is_tentative ? "Tentative" : "Meeting"}
+                  {eventTypeLabel(ev)}
                 </span>
                 <div className="text-sm font-medium truncate">{ev.title}</div>
-                <div className="text-xs text-black/50 dark:text-white/50">
-                  {ev.is_tentative
-                    ? `Sometime ${formatMuscatDateOnly(new Date(ev.start_at))}${
-                        ev.end_at ? ` – ${formatMuscatDateOnly(new Date(ev.end_at))}` : ""
-                      }`
-                    : formatMuscatDateTime(new Date(ev.start_at))}
-                </div>
+                <div className="text-xs text-black/50 dark:text-white/50">{formatEventWhen(ev)}</div>
               </button>
             ))}
           </div>
         </aside>
       </div>
 
+      {modalState.mode === "day" && (
+        <DayEventsModal
+          date={modalState.date}
+          events={eventsByDay.get(toMuscatDateInput(modalState.date)) ?? []}
+          onClose={closeModal}
+          onSelectEvent={(ev) => setModalState({ mode: "view", event: ev })}
+          onAddNew={(type) => setModalState({ mode: "create", date: modalState.date, type })}
+        />
+      )}
+      {modalState.mode === "view" && (
+        <EventViewModal
+          event={modalState.event}
+          onClose={closeModal}
+          onEdit={() => setModalState({ mode: "edit", event: modalState.event })}
+        />
+      )}
       {modalState.mode === "create" && (
         <EventModal
           defaultDate={modalState.date}
