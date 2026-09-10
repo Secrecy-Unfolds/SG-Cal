@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { deleteEvent, getEventById, isEventType, updateEvent, validateEventTiming } from "@/lib/events";
+import {
+  canEditTask,
+  deleteEvent,
+  getEventById,
+  isEventType,
+  isTaskStatus,
+  resolveTaskAssignment,
+  updateEvent,
+  validateEventTiming,
+} from "@/lib/events";
 import { sendMail, getAllRecipientEmails } from "@/lib/mailer";
 import { eventCanceledEmail, eventUpdatedEmail } from "@/lib/emailTemplates";
 
@@ -21,6 +30,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const existing = await getEventById(id);
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  if (!canEditTask({ uid: session.uid, role: session.role }, existing)) {
+    return NextResponse.json(
+      { error: "Only the assignee or an Admin can edit this task" },
+      { status: 403 }
+    );
+  }
+
   const body = await req.json().catch(() => null);
   const title = typeof body?.title === "string" ? body.title.trim() : "";
   const description = typeof body?.description === "string" ? body.description.trim() : "";
@@ -28,6 +44,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const isTentative = body?.isTentative === true;
   const startAtStr = typeof body?.startAt === "string" ? body.startAt : "";
   const endAtStr = typeof body?.endAt === "string" ? body.endAt : "";
+  const requestedAssigneeId = typeof body?.assigneeId === "number" ? body.assigneeId : null;
+  const requestedStatus = isTaskStatus(body?.status) ? body.status : null;
 
   if (!title || !startAtStr) {
     return NextResponse.json({ error: "title and startAt are required" }, { status: 400 });
@@ -42,7 +60,28 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json({ error: timingError }, { status: 400 });
   }
 
-  const event = await updateEvent(id, { title, description, type, isTentative, startAt, endAt });
+  const assignment = await resolveTaskAssignment({
+    type,
+    actorUid: session.uid,
+    actorRole: session.role,
+    requestedAssigneeId,
+    requestedStatus,
+    previousStatus: existing.status,
+  });
+  if (!assignment.ok) {
+    return NextResponse.json({ error: assignment.error }, { status: assignment.httpStatus });
+  }
+
+  const event = await updateEvent(id, {
+    title,
+    description,
+    type,
+    isTentative,
+    startAt,
+    endAt,
+    assigneeId: assignment.assigneeId,
+    status: assignment.status,
+  });
 
   try {
     const recipients = await getAllRecipientEmails();
@@ -64,6 +103,13 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
 
   const existing = await getEventById(id);
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  if (!canEditTask({ uid: session.uid, role: session.role }, existing)) {
+    return NextResponse.json(
+      { error: "Only the assignee or an Admin can delete this task" },
+      { status: 403 }
+    );
+  }
 
   await deleteEvent(id);
 

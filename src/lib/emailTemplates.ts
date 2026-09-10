@@ -1,4 +1,4 @@
-import { EventRow } from "@/lib/events";
+import { EventRow, TASK_STATUS_LABELS } from "@/lib/events";
 import { formatMuscatDateOnly, formatMuscatDateTime } from "@/lib/time";
 
 const ACCENT = "#3b5bdb";
@@ -85,6 +85,15 @@ function eventWhenText(e: EventRow): string {
   return `${when}${endPart}`;
 }
 
+function taskMetaLine(e: EventRow): string {
+  if (e.type !== "task") return "";
+  const assignee = e.assignee_username ? escapeHtml(e.assignee_username) : "Unassigned";
+  const statusLabel = TASK_STATUS_LABELS[e.status];
+  return `<div style="margin-top:6px; font-size:12px; color:#6b7280;">Assigned to: <strong>${assignee}</strong> &middot; Status: <strong>${escapeHtml(
+    statusLabel
+  )}</strong></div>`;
+}
+
 function eventCard(e: EventRow): string {
   const desc = e.description?.trim()
     ? `<div style="margin-top:8px; font-size:13px; line-height:1.5; color:#4b5563; white-space:pre-wrap;">${escapeHtml(
@@ -99,6 +108,7 @@ function eventCard(e: EventRow): string {
           <div>${typeBadge(e)}</div>
           <div style="font-size:15px; font-weight:600; color:#111827;">${escapeHtml(e.title)}</div>
           <div style="font-size:13px; color:#6b7280; margin-top:2px;">${eventWhenText(e)}</div>
+          ${taskMetaLine(e)}
           ${desc}
         </td>
       </tr>

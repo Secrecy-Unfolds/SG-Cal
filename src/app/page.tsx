@@ -4,5 +4,9 @@ import CalendarView from "@/components/CalendarView";
 export default async function HomePage() {
   const session = await getSession();
 
-  return <CalendarView username={session?.username ?? ""} />;
+  return (
+    <CalendarView
+      currentUser={session ? { uid: session.uid, username: session.username, role: session.role } : null}
+    />
+  );
 }

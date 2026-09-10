@@ -1,17 +1,29 @@
 "use client";
 
 import { EventItem } from "@/components/EventModal";
-import { eventBadgeClass, eventTypeLabel, formatEventWhen } from "@/lib/eventDisplay";
+import {
+  canEditEvent,
+  eventBadgeClass,
+  eventTypeLabel,
+  formatEventWhen,
+  TASK_STATUS_BADGE_CLASS,
+  TASK_STATUS_LABELS,
+  type CurrentUser,
+} from "@/lib/eventDisplay";
 
 export default function EventViewModal({
   event,
+  currentUser,
   onClose,
   onEdit,
 }: {
   event: EventItem;
+  currentUser: CurrentUser | null;
   onClose: () => void;
   onEdit: () => void;
 }) {
+  const editable = canEditEvent(currentUser, event);
+
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
       <div className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4">
@@ -37,6 +49,21 @@ export default function EventViewModal({
 
         <div className="text-sm text-black/70 dark:text-white/70">{formatEventWhen(event)}</div>
 
+        {event.type === "task" && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`inline-block text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 ${
+                TASK_STATUS_BADGE_CLASS[event.status]
+              }`}
+            >
+              {TASK_STATUS_LABELS[event.status]}
+            </span>
+            <span className="text-xs text-black/50 dark:text-white/50">
+              Assigned to {event.assignee_username ?? "nobody yet"}
+            </span>
+          </div>
+        )}
+
         {event.description?.trim() && (
           <div className="text-sm text-black/70 dark:text-white/70 whitespace-pre-wrap border-t border-black/5 dark:border-white/10 pt-3">
             {event.description}
@@ -49,7 +76,12 @@ export default function EventViewModal({
           </div>
         )}
 
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex items-center justify-end gap-2 pt-2">
+          {!editable && (
+            <span className="text-xs text-black/40 dark:text-white/40 mr-auto">
+              Only the assignee or an Admin can edit this
+            </span>
+          )}
           <button
             type="button"
             onClick={onClose}
@@ -57,13 +89,15 @@ export default function EventViewModal({
           >
             Close
           </button>
-          <button
-            type="button"
-            onClick={onEdit}
-            className="rounded-lg bg-accent text-white px-4 py-2 text-sm font-medium"
-          >
-            Edit
-          </button>
+          {editable && (
+            <button
+              type="button"
+              onClick={onEdit}
+              className="rounded-lg bg-accent text-white px-4 py-2 text-sm font-medium"
+            >
+              Edit
+            </button>
+          )}
         </div>
       </div>
     </div>

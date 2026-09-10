@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { createEvent, isEventType, listEventsBetween, validateEventTiming } from "@/lib/events";
+import {
+  createEvent,
+  isEventType,
+  isTaskStatus,
+  listEventsBetween,
+  resolveTaskAssignment,
+  validateEventTiming,
+} from "@/lib/events";
 import { sendMail, getAllRecipientEmails } from "@/lib/mailer";
 import { eventCreatedEmail } from "@/lib/emailTemplates";
 
@@ -35,6 +42,8 @@ export async function POST(req: NextRequest) {
   const isTentative = body?.isTentative === true;
   const startAtStr = typeof body?.startAt === "string" ? body.startAt : "";
   const endAtStr = typeof body?.endAt === "string" ? body.endAt : "";
+  const requestedAssigneeId = typeof body?.assigneeId === "number" ? body.assigneeId : null;
+  const requestedStatus = isTaskStatus(body?.status) ? body.status : null;
 
   if (!title || !startAtStr) {
     return NextResponse.json({ error: "title and startAt are required" }, { status: 400 });
@@ -50,6 +59,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: timingError }, { status: 400 });
   }
 
+  const assignment = await resolveTaskAssignment({
+    type,
+    actorUid: session.uid,
+    actorRole: session.role,
+    requestedAssigneeId,
+    requestedStatus,
+  });
+  if (!assignment.ok) {
+    return NextResponse.json({ error: assignment.error }, { status: assignment.httpStatus });
+  }
+
   const event = await createEvent({
     title,
     description,
@@ -58,6 +78,8 @@ export async function POST(req: NextRequest) {
     startAt,
     endAt,
     createdBy: session.uid,
+    assigneeId: assignment.assigneeId,
+    status: assignment.status,
   });
 
   try {

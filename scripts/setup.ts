@@ -4,6 +4,10 @@ import { join } from "path";
 import { Pool } from "pg";
 import bcrypt from "bcryptjs";
 
+function parseRole(value: string | undefined): "user" | "admin" | "super_admin" {
+  return value === "super_admin" || value === "admin" ? value : "user";
+}
+
 async function main() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
@@ -24,11 +28,13 @@ async function main() {
       username: process.env.SEED_USER1_USERNAME,
       password: process.env.SEED_USER1_PASSWORD,
       email: process.env.SEED_USER1_EMAIL,
+      role: parseRole(process.env.SEED_USER1_ROLE),
     },
     {
       username: process.env.SEED_USER2_USERNAME,
       password: process.env.SEED_USER2_PASSWORD,
       email: process.env.SEED_USER2_EMAIL,
+      role: parseRole(process.env.SEED_USER2_ROLE),
     },
   ];
 
@@ -39,12 +45,13 @@ async function main() {
     }
     const hash = await bcrypt.hash(u.password, 10);
     await pool.query(
-      `INSERT INTO users (username, password_hash, email)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash, email = EXCLUDED.email`,
-      [u.username, hash, u.email]
+      `INSERT INTO users (username, password_hash, email, role)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (username) DO UPDATE
+         SET password_hash = EXCLUDED.password_hash, email = EXCLUDED.email, role = EXCLUDED.role`,
+      [u.username, hash, u.email, u.role]
     );
-    console.log(`Upserted user "${u.username}" (${u.email})`);
+    console.log(`Upserted user "${u.username}" (${u.email}, ${u.role})`);
   }
 
   await pool.end();

@@ -1,7 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { muscatInputToUTC, toMuscatDateInput, toMuscatTimeInput } from "@/lib/time";
+import {
+  TASK_STATUSES,
+  TASK_STATUS_LABELS,
+  TaskStatus,
+  type CurrentUser,
+} from "@/lib/eventDisplay";
 
 export type EventType = "meeting" | "task";
 
@@ -14,11 +20,17 @@ export type EventItem = {
   start_at: string;
   end_at: string | null;
   created_by_username: string | null;
+  assignee_id: number | null;
+  assignee_username: string | null;
+  status: TaskStatus;
 };
+
+type AssignableUser = { id: number; username: string };
 
 export default function EventModal({
   defaultDate,
   defaultType = "meeting",
+  currentUser,
   event,
   onClose,
   onSaved,
@@ -26,6 +38,7 @@ export default function EventModal({
 }: {
   defaultDate?: Date;
   defaultType?: EventType;
+  currentUser: CurrentUser;
   event?: EventItem;
   onClose: () => void;
   onSaved: () => void;
@@ -34,6 +47,7 @@ export default function EventModal({
   const isEdit = !!event;
   const initialStart = event ? new Date(event.start_at) : defaultDate ?? new Date();
   const initialEnd = event?.end_at ? new Date(event.end_at) : null;
+  const canPickAnyAssignee = currentUser.role !== "user";
 
   const [type, setType] = useState<EventType>(event?.type ?? defaultType);
   const [isTentative, setIsTentative] = useState(event?.is_tentative ?? false);
@@ -45,11 +59,24 @@ export default function EventModal({
   );
   const [startTime, setStartTime] = useState(toMuscatTimeInput(initialStart));
   const [endTime, setEndTime] = useState(initialEnd ? toMuscatTimeInput(initialEnd) : "");
+  const [assigneeId, setAssigneeId] = useState<number | null>(
+    event ? event.assignee_id : canPickAnyAssignee ? null : currentUser.uid
+  );
+  const [status, setStatus] = useState<TaskStatus>(event?.status ?? "backlog");
+  const [assignableUsers, setAssignableUsers] = useState<AssignableUser[]>([]);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isTask = type === "task";
+
+  useEffect(() => {
+    if (!canPickAnyAssignee) return;
+    fetch("/api/users")
+      .then((res) => (res.ok ? res.json() : { users: [] }))
+      .then((data) => setAssignableUsers(data.users ?? []))
+      .catch(() => setAssignableUsers([]));
+  }, [canPickAnyAssignee]);
 
   function selectType(next: EventType) {
     setType(next);
@@ -59,6 +86,15 @@ export default function EventModal({
   function toggleTentative(checked: boolean) {
     setIsTentative(checked);
     if (checked) setToDate(date);
+  }
+
+  function changeAssignee(next: number | null) {
+    setAssigneeId(next);
+    if (next === null) {
+      setStatus("backlog");
+    } else if (status === "backlog") {
+      setStatus("pending");
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -94,7 +130,16 @@ export default function EventModal({
       const res = await fetch(isEdit ? `/api/events/${event!.id}` : "/api/events", {
         method: isEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: title.trim(), description, type, isTentative, startAt, endAt }),
+        body: JSON.stringify({
+          title: title.trim(),
+          description,
+          type,
+          isTentative,
+          startAt,
+          endAt,
+          assigneeId: isTask ? assigneeId : null,
+          status: isTask ? status : "backlog",
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -128,7 +173,7 @@ export default function EventModal({
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4"
+        className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">
@@ -264,6 +309,75 @@ export default function EventModal({
           <p className="text-xs text-black/40 dark:text-white/40 -mt-2">
             You'll get a reminder email 1 hour before this meeting starts.
           </p>
+        )}
+
+        {isTask && (
+          <div className="space-y-3 rounded-lg border border-black/10 dark:border-white/10 p-3">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Assigned to</label>
+              {canPickAnyAssignee ? (
+                <select
+                  className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-2 text-sm dark:[color-scheme:dark]"
+                  value={assigneeId ?? ""}
+                  onChange={(e) => changeAssignee(e.target.value ? Number(e.target.value) : null)}
+                >
+                  <option value="">Unassigned (Backlog)</option>
+                  {assignableUsers.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.username}
+                      {u.id === currentUser.uid ? " (you)" : ""}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={assigneeId === currentUser.uid}
+                    onChange={(e) => changeAssignee(e.target.checked ? currentUser.uid : null)}
+                  />
+                  Assign this task to me
+                </label>
+              )}
+              {!canPickAnyAssignee && (
+                <p className="text-xs text-black/40 dark:text-white/40">
+                  You can only assign tasks to yourself — leave unchecked to drop it in the Backlog.
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Status</label>
+              {assigneeId === null ? (
+                <div className="text-sm text-black/50 dark:text-white/50 px-1 py-1">
+                  Backlog (assign it to set a status)
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {TASK_STATUSES.filter((s) => s !== "backlog").map((s) => {
+                    const isClosed = s === "closed";
+                    const disabled = isClosed && currentUser.role === "user";
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        disabled={disabled}
+                        title={disabled ? "Only Admin level can close a task" : undefined}
+                        onClick={() => setStatus(s)}
+                        className={`rounded-full px-3 py-1 text-xs font-medium border transition-colors ${
+                          status === s
+                            ? "bg-accent text-white border-accent"
+                            : "border-black/10 dark:border-white/10 text-black/60 dark:text-white/60 hover:bg-black/[0.03] dark:hover:bg-white/5"
+                        } ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+                      >
+                        {TASK_STATUS_LABELS[s]}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
         <div className="space-y-1">

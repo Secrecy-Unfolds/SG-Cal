@@ -8,7 +8,7 @@ import EventViewModal from "@/components/EventViewModal";
 import DayEventsModal from "@/components/DayEventsModal";
 import ThemeToggle from "@/components/ThemeToggle";
 import { eachMuscatDateKeyInRange, toMuscatDateInput } from "@/lib/time";
-import { eventBadgeClass, formatEventWhen, eventTypeLabel } from "@/lib/eventDisplay";
+import { eventBadgeClass, formatEventWhen, eventTypeLabel, type CurrentUser } from "@/lib/eventDisplay";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -37,7 +37,12 @@ type ModalState =
   | { mode: "create"; date: Date; type?: EventType }
   | { mode: "edit"; event: EventItem };
 
-export default function CalendarView({ username }: { username: string }) {
+export default function CalendarView({
+  currentUser,
+}: {
+  currentUser: (CurrentUser & { username: string }) | null;
+}) {
+  const canManageUsers = currentUser?.role === "admin" || currentUser?.role === "super_admin";
   const router = useRouter();
   const [monthCursor, setMonthCursor] = useState(() => startOfMonth(new Date()));
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -122,7 +127,7 @@ export default function CalendarView({ username }: { username: string }) {
         <div>
           <h1 className="text-xl font-semibold">SG Calendar</h1>
           <p className="text-sm text-black/50 dark:text-white/50">
-            {username ? `Signed in as ${username}` : ""}
+            {currentUser ? `Signed in as ${currentUser.username}` : ""}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -144,6 +149,14 @@ export default function CalendarView({ username }: { username: string }) {
           >
             Change Password
           </Link>
+          {canManageUsers && (
+            <Link
+              href="/users"
+              className="rounded-lg border border-black/10 dark:border-white/10 px-4 py-2 text-sm hover:bg-black/[0.03] dark:hover:bg-white/5"
+            >
+              Manage Users
+            </Link>
+          )}
           <ThemeToggle />
           <button
             onClick={handleLogout}
@@ -278,22 +291,25 @@ export default function CalendarView({ username }: { username: string }) {
       {modalState.mode === "view" && (
         <EventViewModal
           event={modalState.event}
+          currentUser={currentUser}
           onClose={closeModal}
           onEdit={() => setModalState({ mode: "edit", event: modalState.event })}
         />
       )}
-      {modalState.mode === "create" && (
+      {modalState.mode === "create" && currentUser && (
         <EventModal
           defaultDate={modalState.date}
           defaultType={modalState.type}
+          currentUser={currentUser}
           onClose={closeModal}
           onSaved={afterChange}
           onDeleted={afterChange}
         />
       )}
-      {modalState.mode === "edit" && (
+      {modalState.mode === "edit" && currentUser && (
         <EventModal
           event={modalState.event}
+          currentUser={currentUser}
           onClose={closeModal}
           onSaved={afterChange}
           onDeleted={afterChange}
