@@ -8,7 +8,7 @@ import {
   resolveTaskAssignment,
   validateEventTiming,
 } from "@/lib/events";
-import { sendMail, getAllRecipientEmails } from "@/lib/mailer";
+import { sendMailInBackground, getAllRecipientEmails } from "@/lib/mailer";
 import { eventCreatedEmail } from "@/lib/emailTemplates";
 
 export const runtime = "nodejs";
@@ -82,13 +82,9 @@ export async function POST(req: NextRequest) {
     status: assignment.status,
   });
 
-  try {
-    const recipients = await getAllRecipientEmails();
-    const { subject, html } = eventCreatedEmail(event);
-    await sendMail({ to: recipients, subject, html });
-  } catch (err) {
-    console.error("Failed to send event-created email:", err);
-  }
+  const recipients = await getAllRecipientEmails();
+  const { subject, html } = eventCreatedEmail(event);
+  sendMailInBackground({ to: recipients, subject, html });
 
   return NextResponse.json({ event }, { status: 201 });
 }

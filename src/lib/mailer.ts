@@ -1,3 +1,4 @@
+import { waitUntil } from "@vercel/functions";
 import { query } from "@/lib/db";
 
 // Default endpoint for the Google Apps Script mail relay; override with
@@ -41,4 +42,14 @@ export async function sendMail(opts: { to: string[]; subject: string; html: stri
   if (opts.to.length === 0) return;
   // The relay's "to" field is a single address, so fire one request per recipient.
   await Promise.all(opts.to.map((addr) => sendOne(addr, opts.subject, opts.html)));
+}
+
+// For interactive routes (create/update/delete an event): the Apps Script
+// relay is occasionally slow, and awaiting it before responding left the
+// client's request hanging (and sometimes timing out) even though the
+// underlying database change had already succeeded. waitUntil hands the
+// send off to run in the background — Vercel keeps the function alive long
+// enough to finish it without making the user wait on it.
+export function sendMailInBackground(opts: { to: string[]; subject: string; html: string }) {
+  waitUntil(sendMail(opts).catch((err) => console.error("Failed to send notification email:", err)));
 }

@@ -5,7 +5,7 @@ import {
   markStartReminderSent,
   markEndReminderSent,
 } from "@/lib/events";
-import { sendMail, getAllRecipientEmails } from "@/lib/mailer";
+import { sendMailInBackground, getAllRecipientEmails } from "@/lib/mailer";
 import { meetingStartingSoonEmail, taskDueSoonEmail } from "@/lib/emailTemplates";
 import { isAuthorizedCronRequest } from "@/lib/cronAuth";
 
@@ -21,17 +21,20 @@ export async function GET(req: NextRequest) {
 
   const recipients = await getAllRecipientEmails();
 
+  // Fire each email in the background and mark it sent right away — a slow
+  // or failing send from the relay shouldn't block marking the reminder
+  // (or hold up the rest of this sweep's items behind it).
   const meetings = await listMeetingsNeedingStartReminder();
   for (const meeting of meetings) {
     const { subject, html } = meetingStartingSoonEmail(meeting);
-    await sendMail({ to: recipients, subject, html });
+    sendMailInBackground({ to: recipients, subject, html });
     await markStartReminderSent(meeting.id);
   }
 
   const tasks = await listTasksNeedingEndReminder();
   for (const task of tasks) {
     const { subject, html } = taskDueSoonEmail(task);
-    await sendMail({ to: recipients, subject, html });
+    sendMailInBackground({ to: recipients, subject, html });
     await markEndReminderSent(task.id);
   }
 

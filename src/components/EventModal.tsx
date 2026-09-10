@@ -27,6 +27,19 @@ export type EventItem = {
 
 type AssignableUser = { id: number; username: string };
 
+// Guards against a request hanging forever (e.g. a slow upstream) by
+// aborting and surfacing a normal error instead of leaving the UI stuck
+// showing "Saving..."/"Deleting..." indefinitely.
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs = 20000): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export default function EventModal({
   defaultDate,
   defaultType = "meeting",
@@ -127,7 +140,7 @@ export default function EventModal({
         ? muscatInputToUTC(date, endTime).toISOString()
         : null;
 
-      const res = await fetch(isEdit ? `/api/events/${event!.id}` : "/api/events", {
+      const res = await fetchWithTimeout(isEdit ? `/api/events/${event!.id}` : "/api/events", {
         method: isEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -147,6 +160,8 @@ export default function EventModal({
         return;
       }
       onSaved();
+    } catch {
+      setError("Request timed out — check your connection and try again");
     } finally {
       setSaving(false);
     }
@@ -157,13 +172,15 @@ export default function EventModal({
     if (!confirm(`Delete "${event.title}"?`)) return;
     setDeleting(true);
     try {
-      const res = await fetch(`/api/events/${event.id}`, { method: "DELETE" });
+      const res = await fetchWithTimeout(`/api/events/${event.id}`, { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         setError(data.error ?? "Failed to delete event");
         return;
       }
       onDeleted();
+    } catch {
+      setError("Request timed out — check your connection and try again");
     } finally {
       setDeleting(false);
     }
@@ -317,7 +334,7 @@ export default function EventModal({
               <label className="text-sm font-medium">Assigned to</label>
               {canPickAnyAssignee ? (
                 <select
-                  className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-2 text-sm dark:[color-scheme:dark]"
+                  className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-2 text-sm [color-scheme:light]"
                   value={assigneeId ?? ""}
                   onChange={(e) => changeAssignee(e.target.value ? Number(e.target.value) : null)}
                 >

@@ -10,7 +10,7 @@ import {
   updateEvent,
   validateEventTiming,
 } from "@/lib/events";
-import { sendMail, getAllRecipientEmails } from "@/lib/mailer";
+import { sendMailInBackground, getAllRecipientEmails } from "@/lib/mailer";
 import { eventCanceledEmail, eventUpdatedEmail } from "@/lib/emailTemplates";
 
 export const runtime = "nodejs";
@@ -83,13 +83,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     status: assignment.status,
   });
 
-  try {
-    const recipients = await getAllRecipientEmails();
-    const { subject, html } = eventUpdatedEmail(event!, session.username);
-    await sendMail({ to: recipients, subject, html });
-  } catch (err) {
-    console.error("Failed to send event-updated email:", err);
-  }
+  const recipients = await getAllRecipientEmails();
+  const { subject, html } = eventUpdatedEmail(event!, session.username);
+  sendMailInBackground({ to: recipients, subject, html });
 
   return NextResponse.json({ event });
 }
@@ -113,13 +109,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
 
   await deleteEvent(id);
 
-  try {
-    const recipients = await getAllRecipientEmails();
-    const { subject, html } = eventCanceledEmail(existing, session.username);
-    await sendMail({ to: recipients, subject, html });
-  } catch (err) {
-    console.error("Failed to send event-canceled email:", err);
-  }
+  const recipients = await getAllRecipientEmails();
+  const { subject, html } = eventCanceledEmail(existing, session.username);
+  sendMailInBackground({ to: recipients, subject, html });
 
   return NextResponse.json({ ok: true });
 }
