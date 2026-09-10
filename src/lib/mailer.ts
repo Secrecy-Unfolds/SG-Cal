@@ -19,6 +19,20 @@ export async function getAllRecipientEmails(): Promise<string[]> {
   return res.rows.map((r) => r.email);
 }
 
+// Procurement Planning is Admin-level only, so its notifications go to
+// Admins and Super Admins only — plain "user" accounts can't see that
+// section at all. Same EMAIL_TEST_MODE behavior as above: only Super Admin
+// while testing.
+export async function getAdminLevelRecipientEmails(): Promise<string[]> {
+  const testMode = process.env.EMAIL_TEST_MODE === "true";
+  const res = await query<{ email: string }>(
+    testMode
+      ? "SELECT email FROM users WHERE role = 'super_admin' ORDER BY id ASC"
+      : "SELECT email FROM users WHERE role IN ('admin', 'super_admin') ORDER BY id ASC"
+  );
+  return res.rows.map((r) => r.email);
+}
+
 async function sendOne(to: string, subject: string, html: string) {
   const url = process.env.EMAIL_ENDPOINT_URL || DEFAULT_EMAIL_ENDPOINT_URL;
   const token = process.env.EMAIL_TOKEN;

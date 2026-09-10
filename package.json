@@ -9,6 +9,7 @@
     "setup": "tsx scripts/setup.ts"
   },
   "dependencies": {
+    "@vercel/blob": "^2.8.0",
     "@vercel/functions": "^3.9.7",
     "bcryptjs": "^2.4.3",
     "jose": "^5.9.6",

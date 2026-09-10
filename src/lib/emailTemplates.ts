@@ -1,24 +1,13 @@
 import { EventRow, TASK_STATUS_LABELS } from "@/lib/events";
 import { formatMuscatDateOnly, formatMuscatDateTime } from "@/lib/time";
+import { escapeHtml, introText, wrap } from "@/lib/emailShell";
 
-const ACCENT = "#3b5bdb";
 const TASK_COLOR = "#b45309";
 const TASK_BG = "#fef3c7";
 const MEETING_COLOR = "#1d4ed8";
 const MEETING_BG = "#dbeafe";
 const TENTATIVE_COLOR = "#7c3aed";
 const TENTATIVE_BG = "#ede9fe";
-
-function brandName(): string {
-  return process.env.EMAIL_SENDER_NAME?.trim() || "SG Calendar";
-}
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
 
 function typeLabel(e: EventRow): string {
   if (e.type === "task") return "Task";
@@ -36,42 +25,6 @@ function typeBadge(e: EventRow): string {
   return `<span style="display:inline-block; font-size:11px; font-weight:700; letter-spacing:0.3px; text-transform:uppercase; color:${color}; background:${bg}; border-radius:999px; padding:2px 8px; margin-bottom:6px;">${typeLabel(
     e
   )}</span>`;
-}
-
-function wrap(preheader: string, heading: string, bodyHtml: string): string {
-  const brand = escapeHtml(brandName());
-  return `<!doctype html>
-<html>
-  <body style="margin:0; padding:0; background:#f2f3f5;">
-    <div style="display:none; max-height:0; overflow:hidden; opacity:0;">${escapeHtml(preheader)}</div>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2f3f5; padding:32px 16px;">
-      <tr>
-        <td align="center">
-          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%; background:#ffffff; border-radius:12px; overflow:hidden; font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
-            <tr>
-              <td style="background:${ACCENT}; padding:22px 32px;">
-                <span style="color:#ffffff; font-size:16px; font-weight:700; letter-spacing:0.2px;">${brand}</span>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:32px;">
-                <h1 style="margin:0 0 18px; font-size:20px; line-height:1.3; color:#111827;">${escapeHtml(heading)}</h1>
-                ${bodyHtml}
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:18px 32px; background:#f9fafb; border-top:1px solid #eef0f2;">
-                <p style="margin:0; font-size:12px; color:#9aa0a6;">
-                  Sent automatically by ${brand} &middot; times shown in Asia/Muscat
-                </p>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>`;
 }
 
 function eventWhenText(e: EventRow): string {
@@ -113,10 +66,6 @@ function eventCard(e: EventRow): string {
         </td>
       </tr>
     </table>`;
-}
-
-function introText(text: string): string {
-  return `<p style="margin:0 0 18px; font-size:14px; line-height:1.5; color:#4b5563;">${escapeHtml(text)}</p>`;
 }
 
 export function eventCreatedEmail(e: EventRow): { subject: string; html: string } {

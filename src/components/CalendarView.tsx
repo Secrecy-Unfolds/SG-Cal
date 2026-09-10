@@ -42,7 +42,7 @@ export default function CalendarView({
 }: {
   currentUser: (CurrentUser & { username: string }) | null;
 }) {
-  const canManageUsers = currentUser?.role === "admin" || currentUser?.role === "super_admin";
+  const isAdminLevel = currentUser?.role === "admin" || currentUser?.role === "super_admin";
   const router = useRouter();
   const [monthCursor, setMonthCursor] = useState(() => startOfMonth(new Date()));
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -149,13 +149,21 @@ export default function CalendarView({
           >
             Change Password
           </Link>
-          {canManageUsers && (
-            <Link
-              href="/users"
-              className="rounded-lg border border-black/10 dark:border-white/10 px-4 py-2 text-sm hover:bg-black/[0.03] dark:hover:bg-white/5"
-            >
-              Manage Users
-            </Link>
+          {isAdminLevel && (
+            <>
+              <Link
+                href="/procurement"
+                className="rounded-lg border border-black/10 dark:border-white/10 px-4 py-2 text-sm hover:bg-black/[0.03] dark:hover:bg-white/5"
+              >
+                Procurement
+              </Link>
+              <Link
+                href="/users"
+                className="rounded-lg border border-black/10 dark:border-white/10 px-4 py-2 text-sm hover:bg-black/[0.03] dark:hover:bg-white/5"
+              >
+                Manage Users
+              </Link>
+            </>
           )}
           <ThemeToggle />
           <button

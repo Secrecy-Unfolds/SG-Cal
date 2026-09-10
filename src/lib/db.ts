@@ -1,4 +1,12 @@
-import { Pool, QueryResultRow } from "pg";
+import { Pool, QueryResultRow, types } from "pg";
+
+// DATE columns (oid 1082) come back as plain "YYYY-MM-DD" strings instead of
+// pg's default JS Date objects — those are ambiguous for a date-only value
+// (constructed as UTC midnight, which can shift a day depending on how it's
+// later formatted/interpreted) and procurement's required_by/expected dates
+// have no time component to justify the extra type. TIMESTAMPTZ columns
+// (events' start_at etc., oid 1184) are untouched.
+types.setTypeParser(1082, (value) => value);
 
 declare global {
   // eslint-disable-next-line no-var

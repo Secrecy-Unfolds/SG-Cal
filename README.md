@@ -44,6 +44,25 @@ back to Backlog. Only Admin-level accounts can move a task's status to
 status. Task creation/update/cancellation emails include the current
 assignee and status.
 
+### Procurement Planning (Admin-level only)
+
+A `/procurement` section for tracking purchases: each **product** has a
+picture, description, purpose ("required for"), a needed-by date, quantity,
+customs notes, and expected purchase/arrival dates, plus its own status —
+Planning → Ordered → In Transit/Customs → Received (or Cancelled). Its
+**vendor comparisons live inside the product** — each product can have
+several possible vendors compared side by side (niche, country, pricing,
+payment terms, a 1-5 quality rating, delivery period, warranty), with one
+markable as **preferred**, plus free-text preference remarks explaining the
+choice. Capital needed isn't typed in directly — it's calculated from
+**unit price × quantity + shipping cost + customs cost**, shown live as you
+fill in the form.
+Product pictures upload to Vercel Blob storage — see SETUP.md Part 11.
+Plain `user` accounts can't see or access this section at all. Every
+create/update/delete on a product or vendor emails all Admin-level accounts
+(Admin + Super Admin) — separate from the calendar's notifications, and
+also respecting `EMAIL_TEST_MODE` (only Super Admin while testing).
+
 ## Stack
 
 Next.js (App Router) on Vercel, Postgres for storage, a Google Apps Script

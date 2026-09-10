@@ -423,6 +423,40 @@ It responds with something like `{"ok":true,"meetingsNotified":0,"tasksNotified"
 
 ---
 
+## Part 11 — Set up picture uploads for Procurement Planning
+
+Admin-level accounts (Admin/Super Admin) have a **Procurement Planning**
+section for tracking products to buy, comparing vendors, and picking a
+preferred one. Everything works without this part — the one thing that
+needs it is uploading a product picture, which is stored using Vercel Blob
+(a simple file storage add-on, separate from your Postgres database).
+
+1. Go to your project on https://vercel.com, open it, click **Storage**.
+2. Click **Create Database** (Blob storage is listed alongside Postgres
+   here) → choose **Blob** → give it any name → **Create**.
+3. Vercel automatically adds a `BLOB_READ_WRITE_TOKEN` environment variable
+   to your project — you don't need to copy/paste anything for the live
+   site.
+4. For **local** testing, pull that value down so `npm run dev` can use it
+   too:
+   ```
+   vercel env pull .env.local
+   ```
+   This creates/updates `.env.local` with the token (Next.js reads both
+   `.env` and `.env.local`, so your other settings in `.env` still apply).
+   If you'd rather not run that command, just open the token's value on
+   the Vercel dashboard (Settings → Environment Variables) and paste it
+   into your `.env` as `BLOB_READ_WRITE_TOKEN=...`.
+5. Restart `npm run dev` if it was running, so it picks up the new
+   variable.
+
+If this isn't set up yet, uploading a picture shows a clear error
+("Picture uploads aren't configured yet") instead of failing silently —
+everything else in Procurement Planning (products, vendors, statuses)
+works regardless.
+
+---
+
 ## Everyday use after this
 
 - Visit your live URL, log in, add/edit/delete events from the calendar —
@@ -435,6 +469,9 @@ It responds with something like `{"ok":true,"meetingsNotified":0,"tasksNotified"
   are any.
 - Every meeting also emails you both **1 hour before it starts**.
 - Every task also emails you both **3 hours before its due time**.
+- Admin-level accounts also have **Procurement Planning** — track products
+  to buy, compare vendors side by side, mark a preferred one, and follow a
+  product from Planning through Ordered, In Transit/Customs, and Received.
 
 You will not need to touch the terminal again unless you want to change
 code, add a new account, or reset a password (`npm run setup` again).
