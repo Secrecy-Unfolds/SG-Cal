@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession, hashPassword } from "@/lib/auth";
-import { canAssignRole, createUser, isUserRole, listUsers, usernameExists } from "@/lib/users";
+import { canAssignRole, createUser, isAdminLevel, isUserRole, listUsers, usernameExists } from "@/lib/users";
 
 export const runtime = "nodejs";
 
 export async function GET() {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.role === "user") {
+  if (!isAdminLevel(session.role)) {
     return NextResponse.json({ error: "Only Admins and Super Admins can view this" }, { status: 403 });
   }
 

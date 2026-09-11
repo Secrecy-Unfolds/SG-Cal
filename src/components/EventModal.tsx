@@ -163,7 +163,7 @@ export default function EventModal({
       }
       onSaved();
     } catch {
-      setError("Request timed out — check your connection and try again");
+      setError("Network error — check your connection and try again.");
     } finally {
       setSaving(false);
     }
@@ -182,7 +182,7 @@ export default function EventModal({
       }
       onDeleted();
     } catch {
-      setError("Request timed out — check your connection and try again");
+      setError("Network error — check your connection and try again.");
     } finally {
       setDeleting(false);
     }

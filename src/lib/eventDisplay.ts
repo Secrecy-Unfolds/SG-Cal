@@ -1,4 +1,5 @@
 import { formatMuscatDateOnly, formatMuscatDateTime } from "@/lib/time";
+import type { UserRole } from "@/lib/users";
 
 export type TaskStatus = "backlog" | "pending" | "in_progress" | "review_needed" | "closed";
 
@@ -53,7 +54,7 @@ export function formatEventWhen(ev: DisplayEvent): string {
   return `${when}${endPart}`;
 }
 
-export type CurrentUser = { uid: number; role: "user" | "admin" | "super_admin" };
+export type CurrentUser = { uid: number; role: UserRole };
 
 // Mirrors the server-side canEditTask in lib/events.ts, without needing a DB
 // round-trip — used to show/hide the Edit button before the user even tries.

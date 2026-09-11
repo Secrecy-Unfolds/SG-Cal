@@ -82,9 +82,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     assigneeId: assignment.assigneeId,
     status: assignment.status,
   });
+  if (!event) return NextResponse.json({ error: "Event not found" }, { status: 404 });
 
   const recipients = await getAllRecipientEmails();
-  const { subject, html } = eventUpdatedEmail(event!, session.username);
+  const { subject, html } = eventUpdatedEmail(event, session.username);
   sendMailInBackground({ to: recipients, subject, html });
 
   return NextResponse.json({ event });
