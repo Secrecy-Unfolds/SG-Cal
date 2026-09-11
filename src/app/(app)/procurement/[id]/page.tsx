@@ -18,8 +18,8 @@ export default async function ProcurementProductPage({ params }: { params: { id:
   const vendors = await listVendorsForProduct(id);
 
   return (
-    <main className="min-h-screen max-w-3xl mx-auto px-4 py-6">
+    <div className="max-w-3xl">
       <ProductDetailClient product={product} vendors={vendors} />
-    </main>
+    </div>
   );
 }

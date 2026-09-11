@@ -25,18 +25,48 @@ export type UserSummary = {
   email: string;
   role: UserRole;
   created_at: Date;
+  name: string;
+  phone: string;
+  picture_url: string | null;
 };
+
+const USER_SUMMARY_SELECT = "id, username, email, role, created_at, name, phone, picture_url";
 
 export async function listUsers(): Promise<UserSummary[]> {
   const res = await query<UserSummary>(
-    "SELECT id, username, email, role, created_at FROM users ORDER BY id ASC"
+    `SELECT ${USER_SUMMARY_SELECT} FROM users ORDER BY id ASC`
   );
   return res.rows;
 }
 
-export async function usernameExists(username: string): Promise<boolean> {
-  const res = await query<{ id: number }>("SELECT id FROM users WHERE username = $1", [username]);
+export async function getUserById(id: number): Promise<UserSummary | null> {
+  const res = await query<UserSummary>(
+    `SELECT ${USER_SUMMARY_SELECT} FROM users WHERE id = $1`,
+    [id]
+  );
+  return res.rows[0] ?? null;
+}
+
+// Excludes selfId so a user saving their profile without changing their own
+// username doesn't collide with themselves.
+export async function usernameExists(username: string, excludeId?: number): Promise<boolean> {
+  const res = excludeId
+    ? await query<{ id: number }>("SELECT id FROM users WHERE username = $1 AND id != $2", [username, excludeId])
+    : await query<{ id: number }>("SELECT id FROM users WHERE username = $1", [username]);
   return res.rows.length > 0;
+}
+
+export async function updateProfile(
+  id: number,
+  input: { name: string; username: string; email: string; phone: string }
+): Promise<UserSummary> {
+  const res = await query<UserSummary>(
+    `UPDATE users SET name = $1, username = $2, email = $3, phone = $4
+     WHERE id = $5
+     RETURNING ${USER_SUMMARY_SELECT}`,
+    [input.name, input.username, input.email, input.phone, id]
+  );
+  return res.rows[0];
 }
 
 // Escalating permissions: a "user" can't add accounts at all; an "admin" can

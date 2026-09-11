@@ -2,11 +2,9 @@
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import EventModal, { EventItem, EventType } from "@/components/EventModal";
 import EventViewModal from "@/components/EventViewModal";
 import DayEventsModal from "@/components/DayEventsModal";
-import ThemeToggle from "@/components/ThemeToggle";
 import { eachMuscatDateKeyInRange, toMuscatDateInput } from "@/lib/time";
 import { eventBadgeClass, formatEventWhen, eventTypeLabel, type CurrentUser } from "@/lib/eventDisplay";
 
@@ -42,7 +40,6 @@ export default function CalendarView({
 }: {
   currentUser: (CurrentUser & { username: string }) | null;
 }) {
-  const isAdminLevel = currentUser?.role === "admin" || currentUser?.role === "super_admin";
   const router = useRouter();
   const [monthCursor, setMonthCursor] = useState(() => startOfMonth(new Date()));
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -104,12 +101,6 @@ export default function CalendarView({
       .slice(0, 8);
   }, [events]);
 
-  async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-    router.refresh();
-  }
-
   function closeModal() {
     setModalState({ mode: "closed" });
   }
@@ -122,14 +113,9 @@ export default function CalendarView({
   const todayKey = toMuscatDateInput(new Date());
 
   return (
-    <main className="min-h-screen max-w-6xl mx-auto px-4 py-6">
+    <div>
       <header className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div>
-          <h1 className="text-xl font-semibold">SG Calendar</h1>
-          <p className="text-sm text-black/50 dark:text-white/50">
-            {currentUser ? `Signed in as ${currentUser.username}` : ""}
-          </p>
-        </div>
+        <h1 className="text-xl font-semibold">Calendar</h1>
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setModalState({ mode: "create", date: new Date(), type: "meeting" })}
@@ -142,35 +128,6 @@ export default function CalendarView({
             className="rounded-lg bg-amber-600 text-white px-4 py-2 text-sm font-medium"
           >
             + Task
-          </button>
-          <Link
-            href="/profile"
-            className="rounded-lg border border-black/10 dark:border-white/10 px-4 py-2 text-sm hover:bg-black/[0.03] dark:hover:bg-white/5"
-          >
-            Change Password
-          </Link>
-          {isAdminLevel && (
-            <>
-              <Link
-                href="/procurement"
-                className="rounded-lg border border-black/10 dark:border-white/10 px-4 py-2 text-sm hover:bg-black/[0.03] dark:hover:bg-white/5"
-              >
-                Procurement
-              </Link>
-              <Link
-                href="/users"
-                className="rounded-lg border border-black/10 dark:border-white/10 px-4 py-2 text-sm hover:bg-black/[0.03] dark:hover:bg-white/5"
-              >
-                Manage Users
-              </Link>
-            </>
-          )}
-          <ThemeToggle />
-          <button
-            onClick={handleLogout}
-            className="rounded-lg border border-black/10 dark:border-white/10 px-4 py-2 text-sm hover:bg-black/[0.03] dark:hover:bg-white/5"
-          >
-            Log out
           </button>
         </div>
       </header>
@@ -323,6 +280,6 @@ export default function CalendarView({
           onDeleted={afterChange}
         />
       )}
-    </main>
+    </div>
   );
 }
