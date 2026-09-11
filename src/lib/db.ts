@@ -20,6 +20,12 @@ function createPool() {
   }
   return new Pool({
     connectionString,
+    // rejectUnauthorized: false is intentional, not a leftover — this targets
+    // Vercel's provisioned Neon Postgres (see SETUP.md), whose pooled
+    // connection endpoint presents a cert chain that Node's default trust
+    // store doesn't always validate cleanly in serverless environments.
+    // Traffic is still TLS-encrypted; only certificate-chain validation is
+    // skipped. sslmode=disable (e.g. local dev) opts out of TLS entirely.
     ssl: connectionString.includes("sslmode=disable")
       ? false
       : { rejectUnauthorized: false },

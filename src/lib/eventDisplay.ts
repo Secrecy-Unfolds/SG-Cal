@@ -12,6 +12,10 @@ export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
   closed: "Closed",
 };
 
+export function isTaskStatus(value: unknown): value is TaskStatus {
+  return TASK_STATUSES.includes(value as TaskStatus);
+}
+
 export const TASK_STATUS_BADGE_CLASS: Record<TaskStatus, string> = {
   backlog: "bg-black/5 dark:bg-white/10 text-black/50 dark:text-white/50",
   pending: "bg-amber-500/10 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300",

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import { listUsers, ROLE_LABELS } from "@/lib/users";
+import { isAdminLevel, listUsers, ROLE_LABELS } from "@/lib/users";
 import AddUserForm from "@/components/AddUserForm";
 import { formatMuscat } from "@/lib/time";
 
@@ -13,7 +13,7 @@ const ROLE_BADGE_CLASS: Record<string, string> = {
 export default async function UsersPage() {
   const session = await getSession();
   if (!session) redirect("/login");
-  if (session.role === "user") redirect("/");
+  if (!isAdminLevel(session.role)) redirect("/");
 
   const users = await listUsers();
 

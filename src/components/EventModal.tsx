@@ -75,7 +75,9 @@ export default function EventModal({
   const [assigneeId, setAssigneeId] = useState<number | null>(
     event ? event.assignee_id : canPickAnyAssignee ? null : currentUser.uid
   );
-  const [status, setStatus] = useState<TaskStatus>(event?.status ?? "backlog");
+  const [status, setStatus] = useState<TaskStatus>(
+    event?.status ?? (assigneeId === null ? "backlog" : "pending")
+  );
   const [assignableUsers, setAssignableUsers] = useState<AssignableUser[]>([]);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -313,18 +315,18 @@ export default function EventModal({
         {isTentative && (
           <p className="text-xs text-black/40 dark:text-white/40 -mt-2">
             This will show up on every day in the range on the calendar, and in
-            each of those days' digest emails. No fixed time means no
+            each of those days&rsquo; digest emails. No fixed time means no
             1-hour-before reminder for this one.
           </p>
         )}
         {!isTentative && isTask && (
           <p className="text-xs text-black/40 dark:text-white/40 -mt-2">
-            You'll get a reminder email 3 hours before this due time.
+            You&rsquo;ll get a reminder email 3 hours before this due time.
           </p>
         )}
         {!isTentative && !isTask && (
           <p className="text-xs text-black/40 dark:text-white/40 -mt-2">
-            You'll get a reminder email 1 hour before this meeting starts.
+            You&rsquo;ll get a reminder email 1 hour before this meeting starts.
           </p>
         )}
 

@@ -28,6 +28,8 @@ export default function LoginForm() {
       }
       router.push("/");
       router.refresh();
+    } catch {
+      setError("Network error — check your connection and try again.");
     } finally {
       setLoading(false);
     }

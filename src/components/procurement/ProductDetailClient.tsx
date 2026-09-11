@@ -60,7 +60,7 @@ export default function ProductDetailClient({
       router.push("/procurement");
       router.refresh();
     } catch {
-      setError("Request timed out — check your connection and try again");
+      setError("Network error — check your connection and try again.");
     } finally {
       setDeleting(false);
     }
@@ -78,7 +78,7 @@ export default function ProductDetailClient({
       }
       router.refresh();
     } catch {
-      setError("Request timed out — check your connection and try again");
+      setError("Network error — check your connection and try again.");
     } finally {
       setBusyVendorId(null);
     }
@@ -117,7 +117,7 @@ export default function ProductDetailClient({
       }
       router.refresh();
     } catch {
-      setError("Request timed out — check your connection and try again");
+      setError("Network error — check your connection and try again.");
     } finally {
       setBusyVendorId(null);
     }

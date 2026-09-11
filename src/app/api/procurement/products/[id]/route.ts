@@ -105,9 +105,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 
   const product = await updateProduct(id, input);
+  if (!product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
 
   const recipients = await getAdminLevelRecipientEmails();
-  const { subject, html } = productUpdatedEmail(product!, session.username);
+  const { subject, html } = productUpdatedEmail(product, session.username);
   sendMailInBackground({ to: recipients, subject, html });
 
   return NextResponse.json({ product });

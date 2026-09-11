@@ -15,7 +15,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 // Admin and Super Admin are treated identically everywhere access is gated
 // by "Admin-level" (Manage Users, Procurement Planning) — only plain "user"
 // is excluded.
-export function isAdminLevel(role: UserRole): boolean {
+export function isAdminLevel(role: UserRole): role is "admin" | "super_admin" {
   return role !== "user";
 }
 

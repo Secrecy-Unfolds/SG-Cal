@@ -1,5 +1,6 @@
 import { query } from "@/lib/db";
 import type { UserRole } from "@/lib/users";
+import type { TaskStatus } from "@/lib/eventDisplay";
 
 export type EventType = "meeting" | "task";
 
@@ -7,21 +8,10 @@ export function isEventType(value: unknown): value is EventType {
   return value === "meeting" || value === "task";
 }
 
-export type TaskStatus = "backlog" | "pending" | "in_progress" | "review_needed" | "closed";
-
-export const TASK_STATUSES: TaskStatus[] = ["backlog", "pending", "in_progress", "review_needed", "closed"];
-
-export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
-  backlog: "Backlog",
-  pending: "Pending",
-  in_progress: "In Progress",
-  review_needed: "Review Needed",
-  closed: "Closed",
-};
-
-export function isTaskStatus(value: unknown): value is TaskStatus {
-  return TASK_STATUSES.includes(value as TaskStatus);
-}
+// Single source of truth lives in eventDisplay.ts (client-safe — no server-only
+// imports), so client components can use it directly without pulling in `pg`.
+export type { TaskStatus } from "@/lib/eventDisplay";
+export { TASK_STATUSES, TASK_STATUS_LABELS, isTaskStatus } from "@/lib/eventDisplay";
 
 export type EventRow = {
   id: number;

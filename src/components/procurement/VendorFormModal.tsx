@@ -71,7 +71,7 @@ export default function VendorFormModal({
       }
       onSaved();
     } catch {
-      setError("Request timed out — check your connection and try again");
+      setError("Network error — check your connection and try again.");
     } finally {
       setSaving(false);
     }

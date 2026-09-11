@@ -16,6 +16,10 @@ export const PROCUREMENT_STATUS_LABELS: Record<ProcurementStatus, string> = {
   cancelled: "Cancelled",
 };
 
+export function isProcurementStatus(value: unknown): value is ProcurementStatus {
+  return PROCUREMENT_STATUSES.includes(value as ProcurementStatus);
+}
+
 export const PROCUREMENT_STATUS_BADGE_CLASS: Record<ProcurementStatus, string> = {
   planning: "bg-black/5 dark:bg-white/10 text-black/60 dark:text-white/60",
   ordered: "bg-amber-500/10 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300",

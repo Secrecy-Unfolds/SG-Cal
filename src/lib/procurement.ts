@@ -1,26 +1,15 @@
 import { query } from "@/lib/db";
+import type { ProcurementStatus } from "@/lib/procurementDisplay";
 
-export type ProcurementStatus = "planning" | "ordered" | "in_transit" | "received" | "cancelled";
-
-export const PROCUREMENT_STATUSES: ProcurementStatus[] = [
-  "planning",
-  "ordered",
-  "in_transit",
-  "received",
-  "cancelled",
-];
-
-export const PROCUREMENT_STATUS_LABELS: Record<ProcurementStatus, string> = {
-  planning: "Planning",
-  ordered: "Ordered",
-  in_transit: "In Transit / Customs",
-  received: "Received",
-  cancelled: "Cancelled",
-};
-
-export function isProcurementStatus(value: unknown): value is ProcurementStatus {
-  return PROCUREMENT_STATUSES.includes(value as ProcurementStatus);
-}
+// Single source of truth lives in procurementDisplay.ts (client-safe — no
+// server-only imports), so client components can use it directly without
+// pulling in `pg`.
+export type { ProcurementStatus } from "@/lib/procurementDisplay";
+export {
+  PROCUREMENT_STATUSES,
+  PROCUREMENT_STATUS_LABELS,
+  isProcurementStatus,
+} from "@/lib/procurementDisplay";
 
 export type VendorRow = {
   id: number;

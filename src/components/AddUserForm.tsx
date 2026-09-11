@@ -44,6 +44,8 @@ export default function AddUserForm({ actorRole }: { actorRole: "admin" | "super
       setPassword("");
       setRole("user");
       router.refresh();
+    } catch {
+      setError("Network error — check your connection and try again.");
     } finally {
       setSaving(false);
     }

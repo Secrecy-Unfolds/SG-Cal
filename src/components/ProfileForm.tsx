@@ -36,6 +36,8 @@ export default function ProfileForm() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+    } catch {
+      setError("Network error — check your connection and try again.");
     } finally {
       setSaving(false);
     }
