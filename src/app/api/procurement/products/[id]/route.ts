@@ -4,9 +4,9 @@ import { isAdminLevel } from "@/lib/users";
 import {
   deleteProduct,
   getProductById,
-  getVendorById,
   isProcurementStatus,
   listVendorsForProduct,
+  productHasVendor,
   updateProduct,
 } from "@/lib/procurement";
 import { getAdminLevelRecipientEmails, sendMailInBackground } from "@/lib/mailer";
@@ -98,9 +98,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 
   if (input.preferredVendorId !== null) {
-    const vendor = await getVendorById(input.preferredVendorId);
-    if (!vendor || vendor.product_id !== id) {
-      return NextResponse.json({ error: "Preferred vendor must belong to this product" }, { status: 400 });
+    const linked = await productHasVendor(id, input.preferredVendorId);
+    if (!linked) {
+      return NextResponse.json({ error: "Preferred vendor must be linked to this product" }, { status: 400 });
     }
   }
 

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ProductFormModal, { ProductData } from "@/components/procurement/ProductFormModal";
-import VendorFormModal, { VendorData } from "@/components/procurement/VendorFormModal";
+import VendorFormModal, { ProductVendorData } from "@/components/procurement/VendorFormModal";
 import {
   computeCapitalNeeded,
   formatDateOnly,
@@ -36,11 +36,13 @@ export default function ProductDetailClient({
   vendors,
 }: {
   product: ProductData & { preferred_vendor_id: number | null };
-  vendors: VendorData[];
+  vendors: ProductVendorData[];
 }) {
   const router = useRouter();
   const [editingProduct, setEditingProduct] = useState(false);
-  const [vendorModal, setVendorModal] = useState<{ mode: "closed" } | { mode: "add" } | { mode: "edit"; vendor: VendorData }>({
+  const [vendorModal, setVendorModal] = useState<
+    { mode: "closed" } | { mode: "add" } | { mode: "edit"; vendor: ProductVendorData }
+  >({
     mode: "closed",
   });
   const [deleting, setDeleting] = useState(false);
@@ -66,14 +68,14 @@ export default function ProductDetailClient({
     }
   }
 
-  async function handleDeleteVendor(vendor: VendorData) {
-    if (!confirm(`Remove vendor "${vendor.name}"?`)) return;
+  async function handleDeleteVendor(vendor: ProductVendorData) {
+    if (!confirm(`Remove "${vendor.name}" from this product? The vendor itself isn't deleted, just its link to this product.`)) return;
     setBusyVendorId(vendor.id);
     try {
-      const res = await fetch(`/api/procurement/vendors/${vendor.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/procurement/product-vendors/${vendor.id}`, { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error ?? "Failed to delete vendor");
+        setError(data.error ?? "Failed to remove vendor");
         return;
       }
       router.refresh();
@@ -84,8 +86,8 @@ export default function ProductDetailClient({
     }
   }
 
-  async function handleSetPreferred(vendorId: number | null) {
-    setBusyVendorId(vendorId ?? -1);
+  async function handleSetPreferred(joinId: number, vendorId: number | null) {
+    setBusyVendorId(joinId);
     try {
       const res = await fetch(`/api/procurement/products/${product.id}`, {
         method: "PUT",
@@ -216,8 +218,8 @@ export default function ProductDetailClient({
       ) : (
         <div className="space-y-3">
           {vendors.map((v) => {
-            const isPreferred = product.preferred_vendor_id === v.id;
-            const busy = busyVendorId === v.id || (busyVendorId === -1 && isPreferred);
+            const isPreferred = product.preferred_vendor_id === v.vendor_id;
+            const busy = busyVendorId === v.id;
             return (
               <div
                 key={v.id}
@@ -239,7 +241,7 @@ export default function ProductDetailClient({
                   </div>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => handleSetPreferred(isPreferred ? null : v.id)}
+                      onClick={() => handleSetPreferred(v.id, isPreferred ? null : v.vendor_id)}
                       disabled={busy}
                       className="text-xs rounded-lg border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5 disabled:opacity-50"
                     >
@@ -287,6 +289,7 @@ export default function ProductDetailClient({
       {vendorModal.mode === "add" && (
         <VendorFormModal
           productId={product.id}
+          existingVendorIds={vendors.map((v) => v.vendor_id)}
           onClose={() => setVendorModal({ mode: "closed" })}
           onSaved={() => {
             setVendorModal({ mode: "closed" });
@@ -297,7 +300,8 @@ export default function ProductDetailClient({
       {vendorModal.mode === "edit" && (
         <VendorFormModal
           productId={product.id}
-          vendor={vendorModal.vendor}
+          existingVendorIds={vendors.map((v) => v.vendor_id)}
+          vendorLink={vendorModal.vendor}
           onClose={() => setVendorModal({ mode: "closed" })}
           onSaved={() => {
             setVendorModal({ mode: "closed" });

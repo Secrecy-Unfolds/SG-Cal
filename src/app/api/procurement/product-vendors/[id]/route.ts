@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { isAdminLevel } from "@/lib/users";
-import { deleteVendor, getProductById, getVendorById, updateVendor } from "@/lib/procurement";
+import {
+  getProductById,
+  getProductVendorById,
+  unlinkVendorFromProduct,
+  updateProductVendorOffering,
+} from "@/lib/procurement";
 import { getAdminLevelRecipientEmails, sendMailInBackground } from "@/lib/mailer";
 import { vendorDeletedEmail, vendorUpdatedEmail } from "@/lib/procurementEmailTemplates";
 
@@ -12,10 +17,7 @@ function parseId(idParam: string): number | null {
   return Number.isInteger(id) && id > 0 ? id : null;
 }
 
-function parseVendorBody(body: any) {
-  const name = typeof body?.name === "string" ? body.name.trim() : "";
-  const niche = typeof body?.niche === "string" ? body.niche.trim() : "";
-  const country = typeof body?.country === "string" ? body.country.trim() : "";
+function parseOfferingBody(body: any) {
   const pricing = typeof body?.pricing === "string" ? body.pricing.trim() : "";
   const paymentTerms = typeof body?.paymentTerms === "string" ? body.paymentTerms.trim() : "";
   const qualityRating =
@@ -25,58 +27,53 @@ function parseVendorBody(body: any) {
   const deliveryPeriod = typeof body?.deliveryPeriod === "string" ? body.deliveryPeriod.trim() : "";
   const warranty = typeof body?.warranty === "string" ? body.warranty.trim() : "";
 
-  return { name, niche, country, pricing, paymentTerms, qualityRating, deliveryPeriod, warranty };
+  return { pricing, paymentTerms, qualityRating, deliveryPeriod, warranty };
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { vendorId: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!isAdminLevel(session.role)) {
     return NextResponse.json({ error: "Only Admin-level accounts can edit vendors" }, { status: 403 });
   }
 
-  const id = parseId(params.vendorId);
+  const id = parseId(params.id);
   if (!id) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
 
-  const existing = await getVendorById(id);
+  const existing = await getProductVendorById(id);
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json().catch(() => null);
-  const input = parseVendorBody(body);
-  if (!input.name) {
-    return NextResponse.json({ error: "Vendor name is required" }, { status: 400 });
-  }
+  const offering = parseOfferingBody(body);
 
-  const vendor = await updateVendor(id, input);
+  const productVendor = await updateProductVendorOffering(id, offering);
 
   const product = await getProductById(existing.product_id);
-  if (product && vendor) {
+  if (product && productVendor) {
     const recipients = await getAdminLevelRecipientEmails();
-    const { subject, html } = vendorUpdatedEmail(product, vendor, session.username);
+    const { subject, html } = vendorUpdatedEmail(product, productVendor, session.username);
     sendMailInBackground({ to: recipients, subject, html });
   }
 
-  return NextResponse.json({ vendor });
+  return NextResponse.json({ vendor: productVendor });
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { vendorId: string } }) {
+export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!isAdminLevel(session.role)) {
-    return NextResponse.json({ error: "Only Admin-level accounts can delete vendors" }, { status: 403 });
+    return NextResponse.json({ error: "Only Admin-level accounts can remove vendors" }, { status: 403 });
   }
 
-  const id = parseId(params.vendorId);
+  const id = parseId(params.id);
   if (!id) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
 
-  const existing = await getVendorById(id);
+  const existing = await getProductVendorById(id);
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const product = await getProductById(existing.product_id);
 
-  // If this was the preferred vendor, the FK's ON DELETE SET NULL clears
-  // that on the product automatically.
-  await deleteVendor(id);
+  await unlinkVendorFromProduct(id);
 
   if (product) {
     const recipients = await getAdminLevelRecipientEmails();

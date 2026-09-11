@@ -1,4 +1,4 @@
-import type { ProductRow, VendorRow } from "@/lib/procurement";
+import type { ProductRow, ProductVendorRow } from "@/lib/procurement";
 import { escapeHtml, introText, wrap } from "@/lib/emailShell";
 import { computeCapitalNeeded, formatDateOnly, formatMoney, PROCUREMENT_STATUS_LABELS } from "@/lib/procurementDisplay";
 
@@ -42,7 +42,7 @@ function productCard(product: ProductRow): string {
     </table>`;
 }
 
-function vendorCard(vendor: VendorRow): string {
+function vendorCard(vendor: ProductVendorRow): string {
   const details = [
     vendor.country ? `Country: <strong>${escapeHtml(vendor.country)}</strong>` : null,
     vendor.niche ? `Niche: <strong>${escapeHtml(vendor.niche)}</strong>` : null,
@@ -105,7 +105,7 @@ export function productDeletedEmail(product: ProductRow, who: string): { subject
 
 export function vendorAddedEmail(
   product: ProductRow,
-  vendor: VendorRow,
+  vendor: ProductVendorRow,
   who: string
 ): { subject: string; html: string } {
   const whoSafe = escapeHtml(who);
@@ -121,7 +121,7 @@ export function vendorAddedEmail(
 
 export function vendorUpdatedEmail(
   product: ProductRow,
-  vendor: VendorRow,
+  vendor: ProductVendorRow,
   who: string
 ): { subject: string; html: string } {
   const whoSafe = escapeHtml(who);
@@ -137,7 +137,7 @@ export function vendorUpdatedEmail(
 
 export function vendorDeletedEmail(
   product: ProductRow,
-  vendor: VendorRow,
+  vendor: ProductVendorRow,
   who: string
 ): { subject: string; html: string } {
   const whoSafe = escapeHtml(who);

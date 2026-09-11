@@ -64,31 +64,6 @@ CREATE TABLE IF NOT EXISTS procurement_products (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS procurement_vendors (
-  id SERIAL PRIMARY KEY,
-  product_id INTEGER NOT NULL REFERENCES procurement_products(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  niche TEXT NOT NULL DEFAULT '',
-  country TEXT NOT NULL DEFAULT '',
-  pricing TEXT NOT NULL DEFAULT '',
-  payment_terms TEXT NOT NULL DEFAULT '',
-  quality_rating SMALLINT,
-  delivery_period TEXT NOT NULL DEFAULT '',
-  warranty TEXT NOT NULL DEFAULT '',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- procurement_products.preferred_vendor_id -> procurement_vendors(id) is added
--- here (not inline above) since the two tables reference each other; wrapped
--- so re-running this file doesn't error on an already-added constraint.
-DO $$ BEGIN
-  ALTER TABLE procurement_products
-    ADD CONSTRAINT procurement_products_preferred_vendor_fkey
-    FOREIGN KEY (preferred_vendor_id) REFERENCES procurement_vendors(id) ON DELETE SET NULL;
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
-
-CREATE INDEX IF NOT EXISTS procurement_vendors_product_id_idx ON procurement_vendors (product_id);
 CREATE INDEX IF NOT EXISTS procurement_products_status_idx ON procurement_products (status);
 
 -- Capital needed is now computed (unit price * quantity + shipping + customs
@@ -107,3 +82,54 @@ ALTER TABLE procurement_products ADD COLUMN IF NOT EXISTS unit_price NUMERIC(12,
 ALTER TABLE procurement_products ADD COLUMN IF NOT EXISTS shipping_cost NUMERIC(12, 2);
 ALTER TABLE procurement_products ADD COLUMN IF NOT EXISTS customs_cost NUMERIC(12, 2);
 ALTER TABLE procurement_products DROP COLUMN IF EXISTS capital_needed;
+
+-- Vendors are many-to-many with products: the same vendor can now supply
+-- more than one product, so vendor identity (name/country/niche) is split
+-- from each product's offering (pricing/terms/rating/delivery/warranty).
+-- No deployment of this app has any procurement products/vendors yet, so an
+-- old-shaped table (detected by its now-removed product_id column) is just
+-- dropped and recreated rather than migrated row-by-row.
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'procurement_vendors' AND column_name = 'product_id'
+  ) THEN
+    DROP TABLE procurement_vendors CASCADE;
+  END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS procurement_vendors (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  country TEXT NOT NULL DEFAULT '',
+  niche TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS procurement_product_vendors (
+  id SERIAL PRIMARY KEY,
+  product_id INTEGER NOT NULL REFERENCES procurement_products(id) ON DELETE CASCADE,
+  vendor_id INTEGER NOT NULL REFERENCES procurement_vendors(id) ON DELETE CASCADE,
+  pricing TEXT NOT NULL DEFAULT '',
+  payment_terms TEXT NOT NULL DEFAULT '',
+  quality_rating SMALLINT,
+  delivery_period TEXT NOT NULL DEFAULT '',
+  warranty TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (product_id, vendor_id)
+);
+
+CREATE INDEX IF NOT EXISTS procurement_product_vendors_product_id_idx ON procurement_product_vendors (product_id);
+CREATE INDEX IF NOT EXISTS procurement_product_vendors_vendor_id_idx ON procurement_product_vendors (vendor_id);
+CREATE INDEX IF NOT EXISTS procurement_vendors_name_idx ON procurement_vendors (name);
+
+-- procurement_products.preferred_vendor_id -> procurement_vendors(id). Lives
+-- here (not with procurement_products above) since it depends on
+-- procurement_vendors existing in its current shape; wrapped so re-running
+-- this file doesn't error on an already-added constraint.
+DO $$ BEGIN
+  ALTER TABLE procurement_products
+    ADD CONSTRAINT procurement_products_preferred_vendor_fkey
+    FOREIGN KEY (preferred_vendor_id) REFERENCES procurement_vendors(id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;

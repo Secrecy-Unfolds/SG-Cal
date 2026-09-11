@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { isAdminLevel } from "@/lib/users";
-import { createVendor, getProductById } from "@/lib/procurement";
+import {
+  createVendor,
+  getProductById,
+  linkVendorToProduct,
+  VendorAlreadyLinkedError,
+} from "@/lib/procurement";
 import { getAdminLevelRecipientEmails, sendMailInBackground } from "@/lib/mailer";
 import { vendorAddedEmail } from "@/lib/procurementEmailTemplates";
 
@@ -12,10 +17,7 @@ function parseId(idParam: string): number | null {
   return Number.isInteger(id) && id > 0 ? id : null;
 }
 
-function parseVendorBody(body: any) {
-  const name = typeof body?.name === "string" ? body.name.trim() : "";
-  const niche = typeof body?.niche === "string" ? body.niche.trim() : "";
-  const country = typeof body?.country === "string" ? body.country.trim() : "";
+function parseOfferingBody(body: any) {
   const pricing = typeof body?.pricing === "string" ? body.pricing.trim() : "";
   const paymentTerms = typeof body?.paymentTerms === "string" ? body.paymentTerms.trim() : "";
   const qualityRating =
@@ -25,7 +27,7 @@ function parseVendorBody(body: any) {
   const deliveryPeriod = typeof body?.deliveryPeriod === "string" ? body.deliveryPeriod.trim() : "";
   const warranty = typeof body?.warranty === "string" ? body.warranty.trim() : "";
 
-  return { name, niche, country, pricing, paymentTerms, qualityRating, deliveryPeriod, warranty };
+  return { pricing, paymentTerms, qualityRating, deliveryPeriod, warranty };
 }
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -42,16 +44,33 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
 
   const body = await req.json().catch(() => null);
-  const input = parseVendorBody(body);
-  if (!input.name) {
-    return NextResponse.json({ error: "Vendor name is required" }, { status: 400 });
+  const offering = parseOfferingBody(body);
+
+  let vendorId: number;
+  if (typeof body?.vendorId === "number") {
+    vendorId = body.vendorId;
+  } else {
+    const name = typeof body?.name === "string" ? body.name.trim() : "";
+    if (!name) return NextResponse.json({ error: "Vendor name is required" }, { status: 400 });
+    const country = typeof body?.country === "string" ? body.country.trim() : "";
+    const niche = typeof body?.niche === "string" ? body.niche.trim() : "";
+    const vendor = await createVendor({ name, country, niche });
+    vendorId = vendor.id;
   }
 
-  const vendor = await createVendor(productId, input);
+  let productVendor;
+  try {
+    productVendor = await linkVendorToProduct(productId, vendorId, offering);
+  } catch (err) {
+    if (err instanceof VendorAlreadyLinkedError) {
+      return NextResponse.json({ error: "This vendor is already added to this product" }, { status: 409 });
+    }
+    throw err;
+  }
 
   const recipients = await getAdminLevelRecipientEmails();
-  const { subject, html } = vendorAddedEmail(product, vendor, session.username);
+  const { subject, html } = vendorAddedEmail(product, productVendor, session.username);
   sendMailInBackground({ to: recipients, subject, html });
 
-  return NextResponse.json({ vendor }, { status: 201 });
+  return NextResponse.json({ vendor: productVendor }, { status: 201 });
 }
