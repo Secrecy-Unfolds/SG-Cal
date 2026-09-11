@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import ConfirmModal from "@/components/ConfirmModal";
 import ProductFormModal, { ProductData } from "@/components/procurement/ProductFormModal";
 import VendorFormModal, { ProductVendorData } from "@/components/procurement/VendorFormModal";
 import {
@@ -48,9 +49,11 @@ export default function ProductDetailClient({
   const [deleting, setDeleting] = useState(false);
   const [busyVendorId, setBusyVendorId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirmingDeleteProduct, setConfirmingDeleteProduct] = useState(false);
+  const [confirmingRemoveVendor, setConfirmingRemoveVendor] = useState<ProductVendorData | null>(null);
 
   async function handleDeleteProduct() {
-    if (!confirm(`Delete "${product.name}"? This also removes its vendor comparisons.`)) return;
+    setConfirmingDeleteProduct(false);
     setDeleting(true);
     try {
       const res = await fetch(`/api/procurement/products/${product.id}`, { method: "DELETE" });
@@ -69,7 +72,7 @@ export default function ProductDetailClient({
   }
 
   async function handleDeleteVendor(vendor: ProductVendorData) {
-    if (!confirm(`Remove "${vendor.name}" from this product? The vendor itself isn't deleted, just its link to this product.`)) return;
+    setConfirmingRemoveVendor(null);
     setBusyVendorId(vendor.id);
     try {
       const res = await fetch(`/api/procurement/product-vendors/${vendor.id}`, { method: "DELETE" });
@@ -158,7 +161,7 @@ export default function ProductDetailClient({
               Edit
             </button>
             <button
-              onClick={handleDeleteProduct}
+              onClick={() => setConfirmingDeleteProduct(true)}
               disabled={deleting}
               className="rounded-lg border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 px-4 py-2 text-sm font-medium disabled:opacity-50"
             >
@@ -254,7 +257,7 @@ export default function ProductDetailClient({
                       Edit
                     </button>
                     <button
-                      onClick={() => handleDeleteVendor(v)}
+                      onClick={() => setConfirmingRemoveVendor(v)}
                       disabled={busy}
                       className="text-xs rounded-lg border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 px-3 py-1.5 disabled:opacity-50"
                     >
@@ -307,6 +310,27 @@ export default function ProductDetailClient({
             setVendorModal({ mode: "closed" });
             router.refresh();
           }}
+        />
+      )}
+
+      {confirmingDeleteProduct && (
+        <ConfirmModal
+          title="Delete product"
+          message={`Delete "${product.name}"? This also removes its vendor comparisons.`}
+          confirmLabel="Delete"
+          loading={deleting}
+          onConfirm={handleDeleteProduct}
+          onCancel={() => setConfirmingDeleteProduct(false)}
+        />
+      )}
+      {confirmingRemoveVendor && (
+        <ConfirmModal
+          title="Remove vendor"
+          message={`Remove "${confirmingRemoveVendor.name}" from this product? The vendor itself isn't deleted, just its link to this product.`}
+          confirmLabel="Remove"
+          loading={busyVendorId === confirmingRemoveVendor.id}
+          onConfirm={() => handleDeleteVendor(confirmingRemoveVendor)}
+          onCancel={() => setConfirmingRemoveVendor(null)}
         />
       )}
     </div>

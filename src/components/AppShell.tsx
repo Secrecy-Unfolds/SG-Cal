@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Calendar as CalendarIcon,
+  LayoutDashboard,
   LogOut,
   Menu,
   Moon,
@@ -32,6 +33,7 @@ const ROLE_BADGE_CLASS: Record<UserRole, string> = {
 };
 
 const NAV_ITEMS = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: false },
   { href: "/", label: "Calendar", icon: CalendarIcon, adminOnly: false },
   { href: "/procurement", label: "Procurement", icon: Package, adminOnly: true },
   { href: "/users", label: "Manage Users", icon: Users, adminOnly: true },

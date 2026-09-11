@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ConfirmModal from "@/components/ConfirmModal";
 import { muscatInputToUTC, toMuscatDateInput, toMuscatTimeInput } from "@/lib/time";
 import {
   TASK_STATUSES,
@@ -81,6 +82,7 @@ export default function EventModal({
   const [assignableUsers, setAssignableUsers] = useState<AssignableUser[]>([]);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isTask = type === "task";
@@ -171,7 +173,7 @@ export default function EventModal({
 
   async function handleDelete() {
     if (!event) return;
-    if (!confirm(`Delete "${event.title}"?`)) return;
+    setConfirmingDelete(false);
     setDeleting(true);
     try {
       const res = await fetchWithTimeout(`/api/events/${event.id}`, { method: "DELETE" });
@@ -415,7 +417,7 @@ export default function EventModal({
           {isEdit ? (
             <button
               type="button"
-              onClick={handleDelete}
+              onClick={() => setConfirmingDelete(true)}
               disabled={deleting}
               className="text-sm text-red-600 dark:text-red-400 disabled:opacity-50"
             >
@@ -442,6 +444,17 @@ export default function EventModal({
           </div>
         </div>
       </form>
+
+      {confirmingDelete && event && (
+        <ConfirmModal
+          title="Delete event"
+          message={`Delete "${event.title}"?`}
+          confirmLabel="Delete"
+          loading={deleting}
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmingDelete(false)}
+        />
+      )}
     </div>
   );
 }

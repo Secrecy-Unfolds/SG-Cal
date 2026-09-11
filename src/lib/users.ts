@@ -95,8 +95,25 @@ export async function createUser(input: {
   const res = await query<UserSummary>(
     `INSERT INTO users (username, password_hash, email, role)
      VALUES ($1, $2, $3, $4)
-     RETURNING id, username, email, role, created_at`,
+     RETURNING ${USER_SUMMARY_SELECT}`,
     [input.username, input.passwordHash, input.email, input.role]
   );
   return res.rows[0];
+}
+
+export async function updateUserRole(id: number, role: UserRole): Promise<UserSummary | null> {
+  const res = await query<UserSummary>(
+    `UPDATE users SET role = $1 WHERE id = $2 RETURNING ${USER_SUMMARY_SELECT}`,
+    [role, id]
+  );
+  return res.rows[0] ?? null;
+}
+
+// Whether actorRole can edit a targetRole account's profile details (name,
+// username, email, phone) — same escalation shape as canAssignRole, but a
+// plain boolean since there's only one rejection reason worth surfacing.
+export function canEditUserDetails(actorRole: UserRole, targetRole: UserRole): boolean {
+  if (actorRole === "super_admin") return targetRole !== "super_admin";
+  if (actorRole === "admin") return targetRole === "user";
+  return false;
 }

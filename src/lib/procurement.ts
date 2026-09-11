@@ -126,6 +126,51 @@ export async function searchVendors(q: string): Promise<VendorRow[]> {
   return res.rows;
 }
 
+export type VendorWithProductsRow = VendorRow & { products: { id: number; name: string }[] };
+
+export async function listVendors(): Promise<VendorWithProductsRow[]> {
+  const res = await query<VendorWithProductsRow>(
+    `SELECT v.id, v.name, v.country, v.niche, v.created_at,
+            COALESCE(
+              json_agg(json_build_object('id', p.id, 'name', p.name) ORDER BY p.name)
+                FILTER (WHERE p.id IS NOT NULL),
+              '[]'
+            ) AS products
+     FROM procurement_vendors v
+     LEFT JOIN procurement_product_vendors pv ON pv.vendor_id = v.id
+     LEFT JOIN procurement_products p ON p.id = pv.product_id
+     GROUP BY v.id
+     ORDER BY v.name ASC`
+  );
+  return res.rows;
+}
+
+export async function getVendorById(id: number): Promise<VendorRow | null> {
+  const res = await query<VendorRow>(
+    `SELECT id, name, country, niche, created_at FROM procurement_vendors WHERE id = $1`,
+    [id]
+  );
+  return res.rows[0] ?? null;
+}
+
+export async function updateVendorIdentity(id: number, input: VendorIdentityInput): Promise<VendorRow | null> {
+  const res = await query<VendorRow>(
+    `UPDATE procurement_vendors SET name = $1, country = $2, niche = $3
+     WHERE id = $4
+     RETURNING id, name, country, niche, created_at`,
+    [input.name, input.country, input.niche, id]
+  );
+  return res.rows[0] ?? null;
+}
+
+// Cascades via the schema's own FKs: procurement_product_vendors.vendor_id is
+// ON DELETE CASCADE (removes every product link) and
+// procurement_products.preferred_vendor_id is ON DELETE SET NULL (clears it
+// on any product that had this vendor marked preferred).
+export async function deleteVendor(id: number): Promise<void> {
+  await query(`DELETE FROM procurement_vendors WHERE id = $1`, [id]);
+}
+
 export type ProductInput = {
   name: string;
   pictureUrl: string | null;

@@ -1,49 +1,49 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import type { UserSummary } from "@/lib/users";
 
-type UserRole = "user" | "admin";
-
-export default function AddUserForm({
-  actorRole,
+export default function EditUserDetailsModal({
+  user,
   onClose,
+  onSaved,
 }: {
-  actorRole: "admin" | "super_admin";
+  user: UserSummary;
   onClose: () => void;
+  onSaved: () => void;
 }) {
-  const router = useRouter();
-  const canPickRole = actorRole === "super_admin";
-
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState<UserRole>("user");
-  const [error, setError] = useState<string | null>(null);
+  const [name, setName] = useState(user.name);
+  const [username, setUsername] = useState(user.username);
+  const [email, setEmail] = useState(user.email);
+  const [phone, setPhone] = useState(user.phone);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (!username.trim() || !email.trim()) {
+      setError("Username and email are required");
+      return;
+    }
     setSaving(true);
     try {
-      const res = await fetch("/api/users", {
-        method: "POST",
+      const res = await fetch(`/api/users/${user.id}/profile`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          name: name.trim(),
           username: username.trim(),
           email: email.trim(),
-          password,
-          role: canPickRole ? role : "user",
+          phone: phone.trim(),
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error ?? "Failed to add user");
+        setError(data.error ?? "Failed to save changes");
         return;
       }
-      router.refresh();
-      onClose();
+      onSaved();
     } catch {
       setError("Network error — check your connection and try again.");
     } finally {
@@ -58,7 +58,7 @@ export default function AddUserForm({
         className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4"
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Add a user</h2>
+          <h2 className="text-lg font-semibold">Edit details</h2>
           <button
             type="button"
             onClick={onClose}
@@ -69,12 +69,21 @@ export default function AddUserForm({
         </div>
 
         <div className="space-y-1">
+          <label className="text-sm font-medium">Name</label>
+          <input
+            className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoFocus
+          />
+        </div>
+
+        <div className="space-y-1">
           <label className="text-sm font-medium">Username</label>
           <input
             className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            autoFocus
             required
           />
         </div>
@@ -86,55 +95,19 @@ export default function AddUserForm({
             className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Where their reminder emails go"
             required
           />
         </div>
 
         <div className="space-y-1">
-          <label className="text-sm font-medium">Initial password</label>
+          <label className="text-sm font-medium">Phone number</label>
           <input
-            type="password"
+            type="tel"
             className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            minLength={8}
-            required
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
           />
-          <p className="text-xs text-black/40 dark:text-white/40">
-            At least 8 characters. They can change it later from Change Password.
-          </p>
         </div>
-
-        {canPickRole ? (
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Role</label>
-            <div className="flex rounded-lg border border-black/10 dark:border-white/10 p-1 text-sm">
-              <button
-                type="button"
-                onClick={() => setRole("user")}
-                className={`flex-1 rounded-md py-1.5 font-medium transition-colors ${
-                  role === "user" ? "bg-accent text-white" : "text-black/50 dark:text-white/50"
-                }`}
-              >
-                User
-              </button>
-              <button
-                type="button"
-                onClick={() => setRole("admin")}
-                className={`flex-1 rounded-md py-1.5 font-medium transition-colors ${
-                  role === "admin" ? "bg-accent text-white" : "text-black/50 dark:text-white/50"
-                }`}
-              >
-                Admin
-              </button>
-            </div>
-          </div>
-        ) : (
-          <p className="text-xs text-black/40 dark:text-white/40">
-            New accounts you add get the User role. Only a Super Admin can add Admin accounts.
-          </p>
-        )}
 
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
@@ -151,7 +124,7 @@ export default function AddUserForm({
             disabled={saving}
             className="rounded-lg bg-accent text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
-            {saving ? "Adding..." : "Add user"}
+            {saving ? "Saving..." : "Save changes"}
           </button>
         </div>
       </form>

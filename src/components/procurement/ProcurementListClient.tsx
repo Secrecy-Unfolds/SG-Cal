@@ -18,8 +18,7 @@ export default function ProcurementListClient({ products }: { products: ProductD
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-semibold">Procurement Planning</h1>
+      <div className="flex items-center justify-end mb-4">
         <button
           onClick={() => setShowCreate(true)}
           className="rounded-lg bg-accent text-white px-4 py-2 text-sm font-medium"
