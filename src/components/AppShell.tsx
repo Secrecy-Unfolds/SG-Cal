@@ -152,7 +152,7 @@ export default function AppShell({
         <button
           type="button"
           onClick={handleLogout}
-          className="w-full flex items-center gap-2 rounded-lg border border-black/10 dark:border-white/10 px-3 py-2 text-sm hover:bg-black/[0.03] dark:hover:bg-white/5"
+          className="w-full flex items-center gap-2 btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-2 text-sm hover:bg-black/[0.03] dark:hover:bg-white/5"
         >
           <LogOut size={16} />
           Log out

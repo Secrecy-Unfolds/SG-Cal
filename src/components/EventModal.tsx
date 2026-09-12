@@ -255,7 +255,7 @@ export default function EventModal({
           <button
             type="button"
             onClick={() => selectType("meeting")}
-            className={`flex-1 rounded-md py-1.5 font-medium transition-colors ${
+            className={`flex-1 btn-skew btn-glow py-1.5 font-medium transition-colors ${
               !isTask ? "bg-accent text-ink" : "text-black/50 dark:text-white/50"
             }`}
           >
@@ -264,7 +264,7 @@ export default function EventModal({
           <button
             type="button"
             onClick={() => selectType("task")}
-            className={`flex-1 rounded-md py-1.5 font-medium transition-colors ${
+            className={`flex-1 btn-skew btn-glow py-1.5 font-medium transition-colors ${
               isTask ? "bg-accent text-ink" : "text-black/50 dark:text-white/50"
             }`}
           >
@@ -494,7 +494,7 @@ export default function EventModal({
                         disabled={disabled}
                         title={disabled ? "Only Admin level can close a task" : undefined}
                         onClick={() => setStatus(s)}
-                        className={`rounded-full px-3 py-1 text-xs font-medium border transition-colors ${
+                        className={`btn-skew btn-glow px-3 py-1 text-xs font-medium border transition-colors ${
                           status === s
                             ? "bg-accent text-ink border-accent"
                             : "border-black/10 dark:border-white/10 text-black/60 dark:text-white/60 hover:bg-black/[0.03] dark:hover:bg-white/5"
@@ -528,7 +528,7 @@ export default function EventModal({
               type="button"
               onClick={() => setConfirmingDelete(true)}
               disabled={deleting}
-              className="text-sm text-red-600 dark:text-red-400 disabled:opacity-50"
+              className="btn-skew btn-glow text-sm text-red-600 dark:text-red-400 disabled:opacity-50"
             >
               {deleting ? "Deleting..." : "Delete"}
             </button>
@@ -539,14 +539,14 @@ export default function EventModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
+              className="btn-skew btn-glow px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-4 py-2 text-sm font-medium disabled:opacity-50"
+              className="bg-accent text-ink btn-skew btn-glow px-4 py-2 text-sm font-medium disabled:opacity-50"
             >
               {saving ? "Saving..." : "Save"}
             </button>

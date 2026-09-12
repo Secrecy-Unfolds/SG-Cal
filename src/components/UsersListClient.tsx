@@ -2,13 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, ShieldCheck, User as UserIcon, UserPlus } from "lucide-react";
+import { Search, User as UserIcon, UserPlus } from "lucide-react";
 import AddUserForm from "@/components/AddUserForm";
 import ConfirmModal from "@/components/ConfirmModal";
 import EditUserDetailsModal from "@/components/EditUserDetailsModal";
 import EmployeeDetailsModal from "@/components/hr/EmployeeDetailsModal";
 import { HudFrame } from "@/components/hud/HudFrame";
-import StatTile from "@/components/hud/StatTile";
 import { formatMuscat } from "@/lib/time";
 import type { UserRole, UserSummary } from "@/lib/users";
 import type { EmployeeDetails } from "@/lib/hr";
@@ -36,13 +35,6 @@ const ROLE_BADGE_CLASS: Record<UserRole, string> = {
   admin: "bg-accent/10 dark:bg-accent/20 text-accent dark:text-blue-300",
   user: "bg-black/5 dark:bg-white/10 text-black/60 dark:text-white/60",
 };
-
-// Admin and Super Admin are shown as one "Admin" card — the app already
-// treats them as equivalent everywhere access is gated (isAdminLevel).
-const STATS: { label: string; icon: typeof UserIcon; roles: UserRole[] }[] = [
-  { label: "User", icon: UserIcon, roles: ["user"] },
-  { label: "Admin", icon: ShieldCheck, roles: ["admin", "super_admin"] },
-];
 
 function Avatar({ user, size = 40 }: { user: Pick<UserSummary, "picture_url" | "name" | "username">; size?: number }) {
   return (
@@ -105,7 +97,7 @@ function ViewUserModal({ user, onClose }: { user: UserSummary; onClose: () => vo
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
+            className="btn-skew btn-glow px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
           >
             Close
           </button>
@@ -178,7 +170,7 @@ function UpdateRoleModal({
               key={opt}
               type="button"
               onClick={() => setRole(opt)}
-              className={`flex-1 rounded-md py-1.5 font-medium transition-colors ${
+              className={`flex-1 btn-skew btn-glow py-1.5 font-medium transition-colors ${
                 role === opt ? "bg-accent text-ink" : "text-black/50 dark:text-white/50"
               }`}
             >
@@ -193,7 +185,7 @@ function UpdateRoleModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
+            className="btn-skew btn-glow px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
           >
             Cancel
           </button>
@@ -201,7 +193,7 @@ function UpdateRoleModal({
             type="button"
             onClick={handleSave}
             disabled={saving || role === user.role}
-            className="bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-4 py-2 text-sm font-medium disabled:opacity-50"
+            className="bg-accent text-ink btn-skew btn-glow px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
             {saving ? "Saving..." : "Save"}
           </button>
@@ -254,11 +246,6 @@ export default function UsersListClient({
     }
   }
 
-  const statCounts = useMemo(
-    () => STATS.map((stat) => users.filter((u) => stat.roles.includes(u.role)).length),
-    [users]
-  );
-
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return users;
@@ -284,17 +271,11 @@ export default function UsersListClient({
         <button
           type="button"
           onClick={() => setAdding(true)}
-          className="shrink-0 flex items-center gap-2 bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-4 py-2 text-sm font-medium"
+          className="shrink-0 flex items-center gap-2 bg-accent text-ink btn-skew btn-glow px-4 py-2 text-sm font-medium"
         >
           <UserPlus size={16} />
           Add User
         </button>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 mb-6">
-        {STATS.map((stat, i) => (
-          <StatTile key={stat.label} icon={stat.icon} value={statCounts[i]} label={stat.label} />
-        ))}
       </div>
 
       <div className="relative mb-4">
@@ -317,7 +298,8 @@ export default function UsersListClient({
         </p>
       )}
 
-      <HudFrame corners="all" className="bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl overflow-hidden">
+      <HudFrame corners="all" className="bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl">
+        <div className="rounded-2xl overflow-hidden">
         {filtered.length === 0 ? (
           <p className="text-sm text-black/50 dark:text-white/50 px-4 py-6 text-center">No users match your search.</p>
         ) : (
@@ -356,7 +338,7 @@ export default function UsersListClient({
                   <button
                     type="button"
                     onClick={() => setViewing(u)}
-                    className="text-xs rounded-lg border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
+                    className="text-xs btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
                   >
                     View
                   </button>
@@ -364,7 +346,7 @@ export default function UsersListClient({
                     <button
                       type="button"
                       onClick={() => setEditingDetails(u)}
-                      className="text-xs rounded-lg border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
+                      className="text-xs btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
                     >
                       Edit details
                     </button>
@@ -373,7 +355,7 @@ export default function UsersListClient({
                     <button
                       type="button"
                       onClick={() => setEditingHr(emp)}
-                      className="text-xs rounded-lg border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
+                      className="text-xs btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
                     >
                       Edit HR details
                     </button>
@@ -382,7 +364,7 @@ export default function UsersListClient({
                     <button
                       type="button"
                       onClick={() => setEditingRole(u)}
-                      className="text-xs rounded-lg border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
+                      className="text-xs btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
                     >
                       Update type
                     </button>
@@ -392,7 +374,7 @@ export default function UsersListClient({
                       type="button"
                       onClick={() => setConfirmingReset(u)}
                       disabled={resettingId === u.id}
-                      className="text-xs rounded-lg border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5 disabled:opacity-50"
+                      className="text-xs btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5 disabled:opacity-50"
                     >
                       {resettingId === u.id ? "Resetting..." : "Reset password"}
                     </button>
@@ -402,6 +384,7 @@ export default function UsersListClient({
             );
           })
         )}
+        </div>
       </HudFrame>
 
       {adding && <AddUserForm actorRole={actorRole} onClose={() => setAdding(false)} />}

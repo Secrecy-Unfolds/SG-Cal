@@ -127,13 +127,13 @@ export default function CalendarView({
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setModalState({ mode: "create", date: new Date(), type: "meeting" })}
-            className="bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-4 py-2 text-sm font-medium"
+            className="bg-accent text-ink btn-skew btn-glow px-4 py-2 text-sm font-medium"
           >
             + Meeting
           </button>
           <button
             onClick={() => setModalState({ mode: "create", date: new Date(), type: "task" })}
-            className="bg-amber-600 text-white [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-4 py-2 text-sm font-medium"
+            className="bg-amber-600 text-white btn-skew btn-glow px-4 py-2 text-sm font-medium"
           >
             + Task
           </button>
@@ -145,7 +145,7 @@ export default function CalendarView({
           <div className="flex items-center justify-between mb-3">
             <button
               onClick={() => setMonthCursor((m) => addMonths(m, -1))}
-              className="rounded-lg border border-black/10 dark:border-white/10 px-3 py-1.5 text-sm hover:bg-black/[0.03] dark:hover:bg-white/5"
+              className="btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-1.5 text-sm hover:bg-black/[0.03] dark:hover:bg-white/5"
             >
               ← Prev
             </button>
@@ -154,7 +154,7 @@ export default function CalendarView({
             </h2>
             <button
               onClick={() => setMonthCursor((m) => addMonths(m, 1))}
-              className="rounded-lg border border-black/10 dark:border-white/10 px-3 py-1.5 text-sm hover:bg-black/[0.03] dark:hover:bg-white/5"
+              className="btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-1.5 text-sm hover:bg-black/[0.03] dark:hover:bg-white/5"
             >
               Next →
             </button>

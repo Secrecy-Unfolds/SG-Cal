@@ -146,7 +146,7 @@ export default function MyHRCard({ userId }: { userId: number }) {
               type="button"
               onClick={handleCheckIn}
               disabled={working}
-              className="bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+              className="bg-accent text-ink btn-skew btn-glow px-3 py-1.5 text-xs font-medium disabled:opacity-50"
             >
               Check in
             </button>
@@ -155,7 +155,7 @@ export default function MyHRCard({ userId }: { userId: number }) {
               type="button"
               onClick={handleCheckOut}
               disabled={working}
-              className="bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+              className="bg-accent text-ink btn-skew btn-glow px-3 py-1.5 text-xs font-medium disabled:opacity-50"
             >
               Check out
             </button>
@@ -188,7 +188,7 @@ export default function MyHRCard({ userId }: { userId: number }) {
           <button
             type="button"
             onClick={() => setShowRequestModal(true)}
-            className="rounded-lg border border-black/10 dark:border-white/10 px-3 py-1.5 text-xs hover:bg-black/[0.03] dark:hover:bg-white/5"
+            className="btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-1.5 text-xs hover:bg-black/[0.03] dark:hover:bg-white/5"
           >
             + Request leave
           </button>

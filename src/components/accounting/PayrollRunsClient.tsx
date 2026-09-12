@@ -65,7 +65,7 @@ export default function PayrollRunsClient({ runs }: { runs: PayrollRunRow[] }) {
         <button
           onClick={handleRunPayroll}
           disabled={running}
-          className="bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-4 py-2 text-sm font-medium disabled:opacity-50"
+          className="bg-accent text-ink btn-skew btn-glow px-4 py-2 text-sm font-medium disabled:opacity-50"
         >
           {running ? "Running..." : "Run payroll"}
         </button>

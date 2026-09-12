@@ -37,3 +37,23 @@
     background-color: rgb(var(--accent-rgb) / 0.6);
   }
 }
+
+@layer utilities {
+  /* Shared skewed-parallelogram button shape — same cut used for the
+     original "+ Meeting"/"+ Task" buttons, now applied app-wide regardless
+     of a given button's own background color. */
+  .btn-skew {
+    clip-path: polygon(6% 0, 100% 0, 94% 100%, 0 100%);
+  }
+
+  /* Accent-colored glow on hover, independent of the button's own color —
+     reads as a consistent HUD highlight rather than a per-button effect. */
+  .btn-glow {
+    transition: box-shadow 150ms ease;
+  }
+  .btn-glow:hover:not(:disabled) {
+    box-shadow:
+      0 0 10px 1px rgb(var(--accent-rgb) / 0.6),
+      0 0 22px 4px rgb(var(--accent-rgb) / 0.3);
+  }
+}

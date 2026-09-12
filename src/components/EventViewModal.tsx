@@ -91,7 +91,7 @@ export default function EventViewModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
+            className="btn-skew btn-glow px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
           >
             Close
           </button>
@@ -99,7 +99,7 @@ export default function EventViewModal({
             <button
               type="button"
               onClick={onEdit}
-              className="bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-4 py-2 text-sm font-medium"
+              className="bg-accent text-ink btn-skew btn-glow px-4 py-2 text-sm font-medium"
             >
               Edit
             </button>

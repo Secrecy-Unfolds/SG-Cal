@@ -66,14 +66,14 @@ export default function DayEventsModal({
           <button
             type="button"
             onClick={() => onAddNew("meeting")}
-            className="flex-1 bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-4 py-2 text-sm font-medium"
+            className="flex-1 bg-accent text-ink btn-skew btn-glow px-4 py-2 text-sm font-medium"
           >
             + Meeting
           </button>
           <button
             type="button"
             onClick={() => onAddNew("task")}
-            className="flex-1 bg-amber-600 text-white [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-4 py-2 text-sm font-medium"
+            className="flex-1 bg-amber-600 text-white btn-skew btn-glow px-4 py-2 text-sm font-medium"
           >
             + Task
           </button>

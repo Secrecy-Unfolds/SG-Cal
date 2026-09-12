@@ -84,7 +84,7 @@ export default function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] py-2 text-sm font-semibold uppercase tracking-wide disabled:opacity-50"
+          className="w-full bg-accent text-ink btn-skew btn-glow py-2 text-sm font-semibold uppercase tracking-wide disabled:opacity-50"
         >
           {loading ? "Signing in..." : "Sign in"}
         </button>

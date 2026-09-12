@@ -80,7 +80,7 @@ function EditableField({
               type="button"
               onClick={save}
               disabled={saving}
-              className="bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+              className="bg-accent text-ink btn-skew btn-glow px-3 py-1.5 text-xs font-medium disabled:opacity-50"
             >
               {saving ? "Saving..." : "Save"}
             </button>
@@ -88,7 +88,7 @@ function EditableField({
               type="button"
               onClick={cancel}
               disabled={saving}
-              className="rounded-lg border border-black/10 dark:border-white/10 px-3 py-1.5 text-xs hover:bg-black/[0.03] dark:hover:bg-white/5"
+              className="btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-1.5 text-xs hover:bg-black/[0.03] dark:hover:bg-white/5"
             >
               Cancel
             </button>
@@ -100,7 +100,7 @@ function EditableField({
           <button
             type="button"
             onClick={startEditing}
-            className="shrink-0 text-xs rounded-lg border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
+            className="shrink-0 text-xs btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
           >
             Update
           </button>

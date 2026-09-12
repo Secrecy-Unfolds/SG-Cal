@@ -113,7 +113,7 @@ export default function AddUserForm({
               <button
                 type="button"
                 onClick={() => setRole("user")}
-                className={`flex-1 rounded-md py-1.5 font-medium transition-colors ${
+                className={`flex-1 btn-skew btn-glow py-1.5 font-medium transition-colors ${
                   role === "user" ? "bg-accent text-ink" : "text-black/50 dark:text-white/50"
                 }`}
               >
@@ -122,7 +122,7 @@ export default function AddUserForm({
               <button
                 type="button"
                 onClick={() => setRole("admin")}
-                className={`flex-1 rounded-md py-1.5 font-medium transition-colors ${
+                className={`flex-1 btn-skew btn-glow py-1.5 font-medium transition-colors ${
                   role === "admin" ? "bg-accent text-ink" : "text-black/50 dark:text-white/50"
                 }`}
               >
@@ -142,14 +142,14 @@ export default function AddUserForm({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
+            className="btn-skew btn-glow px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-4 py-2 text-sm font-medium disabled:opacity-50"
+            className="bg-accent text-ink btn-skew btn-glow px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
             {saving ? "Adding..." : "Add user"}
           </button>

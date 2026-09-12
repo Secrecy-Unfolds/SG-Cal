@@ -183,14 +183,14 @@ export default function ProductDetailClient({
           <div className="flex gap-2 mt-3">
             <button
               onClick={() => setEditingProduct(true)}
-              className="bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-4 py-2 text-sm font-medium"
+              className="bg-accent text-ink btn-skew btn-glow px-4 py-2 text-sm font-medium"
             >
               Edit
             </button>
             <button
               onClick={() => setConfirmingDeleteProduct(true)}
               disabled={deleting}
-              className="rounded-lg border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 px-4 py-2 text-sm font-medium disabled:opacity-50"
+              className="btn-skew btn-glow border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 px-4 py-2 text-sm font-medium disabled:opacity-50"
             >
               {deleting ? "Deleting..." : "Delete"}
             </button>
@@ -198,7 +198,7 @@ export default function ProductDetailClient({
               onClick={handleSendToProcurement}
               disabled={sendingToProcurement || !product.preferred_vendor_id}
               title={!product.preferred_vendor_id ? "Mark a vendor preferred first" : undefined}
-              className="rounded-lg border border-black/10 dark:border-white/10 px-4 py-2 text-sm font-medium hover:bg-black/[0.03] dark:hover:bg-white/5 disabled:opacity-40"
+              className="btn-skew btn-glow border border-black/10 dark:border-white/10 px-4 py-2 text-sm font-medium hover:bg-black/[0.03] dark:hover:bg-white/5 disabled:opacity-40"
             >
               {sendingToProcurement ? "Sending..." : "Send to Procurement"}
             </button>
@@ -251,7 +251,7 @@ export default function ProductDetailClient({
           <h2 className="font-heading font-semibold text-base uppercase tracking-wide">Possible vendors</h2>
           <button
             onClick={() => setVendorModal({ mode: "add" })}
-            className="rounded-lg bg-amber-600 text-white px-4 py-2 text-sm font-medium"
+            className="btn-skew btn-glow bg-amber-600 text-white px-4 py-2 text-sm font-medium"
           >
             + Add Vendor
           </button>
@@ -289,20 +289,20 @@ export default function ProductDetailClient({
                     <button
                       onClick={() => handleSetPreferred(v.id, isPreferred ? null : v.vendor_id)}
                       disabled={busy}
-                      className="text-xs rounded-lg border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5 disabled:opacity-50"
+                      className="text-xs btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5 disabled:opacity-50"
                     >
                       {isPreferred ? "Unmark preferred" : "Mark preferred"}
                     </button>
                     <button
                       onClick={() => setVendorModal({ mode: "edit", vendor: v })}
-                      className="text-xs rounded-lg border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
+                      className="text-xs btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => setConfirmingRemoveVendor(v)}
                       disabled={busy}
-                      className="text-xs rounded-lg border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 px-3 py-1.5 disabled:opacity-50"
+                      className="text-xs btn-skew btn-glow border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 px-3 py-1.5 disabled:opacity-50"
                     >
                       Remove
                     </button>
