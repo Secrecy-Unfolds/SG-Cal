@@ -3,17 +3,21 @@
 import { useState } from "react";
 import ProcurementListClient from "@/components/procurement/ProcurementListClient";
 import VendorsListClient from "@/components/procurement/VendorsListClient";
+import PurchaseOrdersListClient from "@/components/procurement/PurchaseOrdersListClient";
 import type { ProductData } from "@/components/procurement/ProductFormModal";
 import type { VendorWithProductsRow } from "@/lib/procurement";
+import type { PurchaseOrderRow } from "@/lib/purchaseOrders";
 
-type Tab = "products" | "vendors";
+type Tab = "products" | "vendors" | "orders";
 
 export default function ProcurementTabs({
   products,
   vendors,
+  purchaseOrders,
 }: {
   products: ProductData[];
   vendors: VendorWithProductsRow[];
+  purchaseOrders: PurchaseOrderRow[];
 }) {
   const [tab, setTab] = useState<Tab>("products");
 
@@ -40,9 +44,20 @@ export default function ProcurementTabs({
         >
           Vendors
         </button>
+        <button
+          type="button"
+          onClick={() => setTab("orders")}
+          className={`px-4 py-1.5 rounded-md font-medium transition-colors ${
+            tab === "orders" ? "bg-accent text-white" : "text-black/50 dark:text-white/50"
+          }`}
+        >
+          Purchase Orders
+        </button>
       </div>
 
-      {tab === "products" ? <ProcurementListClient products={products} /> : <VendorsListClient vendors={vendors} />}
+      {tab === "products" && <ProcurementListClient products={products} />}
+      {tab === "vendors" && <VendorsListClient vendors={vendors} />}
+      {tab === "orders" && <PurchaseOrdersListClient orders={purchaseOrders} />}
     </div>
   );
 }

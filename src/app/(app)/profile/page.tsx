@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { getUserById } from "@/lib/users";
 import ProfileDetailsForm from "@/components/ProfileDetailsForm";
 import ProfileForm from "@/components/ProfileForm";
+import MyHRCard from "@/components/MyHRCard";
 
 export default async function ProfilePage() {
   const session = await getSession();
@@ -15,6 +16,7 @@ export default async function ProfilePage() {
     <div className="max-w-2xl space-y-6">
       <h1 className="text-xl font-semibold">Profile</h1>
       <ProfileDetailsForm user={user} />
+      <MyHRCard userId={user.id} />
       <ProfileForm />
     </div>
   );

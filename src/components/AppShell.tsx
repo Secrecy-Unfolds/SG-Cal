@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  Boxes,
   Calendar as CalendarIcon,
+  Lightbulb,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -14,6 +16,8 @@ import {
   Sun,
   User,
   Users,
+  UserCog,
+  Wallet,
   X,
 } from "lucide-react";
 import type { UserRole } from "@/lib/users";
@@ -37,6 +41,10 @@ const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: false, superAdminOnly: false },
   { href: "/", label: "Calendar", icon: CalendarIcon, adminOnly: false, superAdminOnly: false },
   { href: "/procurement", label: "Procurement", icon: Package, adminOnly: true, superAdminOnly: false },
+  { href: "/inventory", label: "Inventory", icon: Boxes, adminOnly: true, superAdminOnly: false },
+  { href: "/accounting", label: "Accounting", icon: Wallet, adminOnly: true, superAdminOnly: false },
+  { href: "/hr", label: "HR", icon: UserCog, adminOnly: true, superAdminOnly: false },
+  { href: "/ideas", label: "Ideas", icon: Lightbulb, adminOnly: true, superAdminOnly: false },
   { href: "/users", label: "Manage Users", icon: Users, adminOnly: true, superAdminOnly: false },
   { href: "/settings", label: "Settings", icon: SettingsIcon, adminOnly: false, superAdminOnly: true },
   { href: "/profile", label: "Profile", icon: User, adminOnly: false, superAdminOnly: false },

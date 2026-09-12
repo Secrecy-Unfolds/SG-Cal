@@ -51,6 +51,8 @@ export default function ProductDetailClient({
   const [error, setError] = useState<string | null>(null);
   const [confirmingDeleteProduct, setConfirmingDeleteProduct] = useState(false);
   const [confirmingRemoveVendor, setConfirmingRemoveVendor] = useState<ProductVendorData | null>(null);
+  const [sendingToProcurement, setSendingToProcurement] = useState(false);
+  const [poCreatedMessage, setPoCreatedMessage] = useState<string | null>(null);
 
   async function handleDeleteProduct() {
     setConfirmingDeleteProduct(false);
@@ -128,6 +130,29 @@ export default function ProductDetailClient({
     }
   }
 
+  async function handleSendToProcurement() {
+    setSendingToProcurement(true);
+    setError(null);
+    setPoCreatedMessage(null);
+    try {
+      const res = await fetch("/api/purchase-orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: product.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error ?? "Failed to send to Procurement");
+        return;
+      }
+      setPoCreatedMessage(`Sent to Procurement — Purchase Order #${data.order.id} created.`);
+    } catch {
+      setError("Network error — check your connection and try again.");
+    } finally {
+      setSendingToProcurement(false);
+    }
+  }
+
   return (
     <div>
       <a href="/procurement" className="text-sm text-black/50 dark:text-white/50 hover:underline">
@@ -167,11 +192,20 @@ export default function ProductDetailClient({
             >
               {deleting ? "Deleting..." : "Delete"}
             </button>
+            <button
+              onClick={handleSendToProcurement}
+              disabled={sendingToProcurement || !product.preferred_vendor_id}
+              title={!product.preferred_vendor_id ? "Mark a vendor preferred first" : undefined}
+              className="rounded-lg border border-black/10 dark:border-white/10 px-4 py-2 text-sm font-medium hover:bg-black/[0.03] dark:hover:bg-white/5 disabled:opacity-40"
+            >
+              {sendingToProcurement ? "Sending..." : "Send to Procurement"}
+            </button>
           </div>
         </div>
       </div>
 
       {error && <p className="text-sm text-red-600 dark:text-red-400 mb-4">{error}</p>}
+      {poCreatedMessage && <p className="text-sm text-green-600 dark:text-green-400 mb-4">{poCreatedMessage}</p>}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl p-4 mb-6">
         <Field label="Required for" value={product.required_for} />
