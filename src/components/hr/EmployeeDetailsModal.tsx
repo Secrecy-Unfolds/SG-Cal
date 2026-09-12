@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import type { EmployeeDetails } from "@/lib/hr";
-import { HudFrameForm } from "@/components/hud/HudFrame";
 
 const inputClass =
   "w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent";
@@ -59,9 +58,8 @@ export default function EmployeeDetailsModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
-      <HudFrameForm
+      <form
         onSubmit={handleSubmit}
-        corners="all"
         className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between">
@@ -151,7 +149,7 @@ export default function EmployeeDetailsModal({
             {saving ? "Saving..." : "Save changes"}
           </button>
         </div>
-      </HudFrameForm>
+      </form>
     </div>
   );
 }

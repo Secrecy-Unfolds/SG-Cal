@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import ConfirmModal from "@/components/ConfirmModal";
-import { HudFrameForm } from "@/components/hud/HudFrame";
 import { muscatInputToUTC, toMuscatDateInput, toMuscatTimeInput } from "@/lib/time";
 import {
   TASK_STATUSES,
@@ -235,8 +234,7 @@ export default function EventModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
-      <HudFrameForm
-        corners="all"
+      <form
         onSubmit={handleSubmit}
         className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto"
       >
@@ -554,7 +552,7 @@ export default function EventModal({
             </button>
           </div>
         </div>
-      </HudFrameForm>
+      </form>
 
       {confirmingDelete && event && (
         <ConfirmModal

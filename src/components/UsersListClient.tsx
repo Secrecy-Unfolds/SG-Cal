@@ -8,6 +8,7 @@ import ConfirmModal from "@/components/ConfirmModal";
 import EditUserDetailsModal from "@/components/EditUserDetailsModal";
 import EmployeeDetailsModal from "@/components/hr/EmployeeDetailsModal";
 import { HudFrame } from "@/components/hud/HudFrame";
+import StatTile from "@/components/hud/StatTile";
 import { formatMuscat } from "@/lib/time";
 import type { UserRole, UserSummary } from "@/lib/users";
 import type { EmployeeDetails } from "@/lib/hr";
@@ -62,7 +63,7 @@ function Avatar({ user, size = 40 }: { user: Pick<UserSummary, "picture_url" | "
 function ViewUserModal({ user, onClose }: { user: UserSummary; onClose: () => void }) {
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
-      <HudFrame corners="all" className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4">
+      <div className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="font-heading font-semibold text-lg uppercase tracking-wide">User details</h2>
           <button
@@ -109,7 +110,7 @@ function ViewUserModal({ user, onClose }: { user: UserSummary; onClose: () => vo
             Close
           </button>
         </div>
-      </HudFrame>
+      </div>
     </div>
   );
 }
@@ -154,7 +155,7 @@ function UpdateRoleModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
-      <HudFrame corners="all" className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4">
+      <div className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="font-heading font-semibold text-lg uppercase tracking-wide">Update role</h2>
           <button
@@ -205,7 +206,7 @@ function UpdateRoleModal({
             {saving ? "Saving..." : "Save"}
           </button>
         </div>
-      </HudFrame>
+      </div>
     </div>
   );
 }
@@ -291,24 +292,9 @@ export default function UsersListClient({
       </div>
 
       <div className="grid grid-cols-2 gap-3 mb-6">
-        {STATS.map((stat, i) => {
-          const Icon = stat.icon;
-          return (
-            <HudFrame
-              key={stat.label}
-              corners="tl-br"
-              className="bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl p-4 flex items-center gap-3"
-            >
-              <div className="w-9 h-9 rounded-lg bg-accent/10 dark:bg-accent/20 flex items-center justify-center text-accent dark:text-blue-300 shrink-0">
-                <Icon size={18} />
-              </div>
-              <div className="min-w-0">
-                <div className="text-lg font-semibold leading-tight">{statCounts[i]}</div>
-                <div className="text-xs text-black/50 dark:text-white/50 truncate">{stat.label}</div>
-              </div>
-            </HudFrame>
-          );
-        })}
+        {STATS.map((stat, i) => (
+          <StatTile key={stat.label} icon={stat.icon} value={statCounts[i]} label={stat.label} />
+        ))}
       </div>
 
       <div className="relative mb-4">

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import type { TransactionType } from "@/lib/accounting";
 import { toMuscatDateInput } from "@/lib/time";
-import { HudFrameForm } from "@/components/hud/HudFrame";
 
 const inputClass =
   "w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent";
@@ -54,9 +53,8 @@ export default function TransactionFormModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
-      <HudFrameForm
+      <form
         onSubmit={handleSubmit}
-        corners="all"
         className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4"
       >
         <div className="flex items-center justify-between">
@@ -149,7 +147,7 @@ export default function TransactionFormModal({
             {saving ? "Saving..." : "Save"}
           </button>
         </div>
-      </HudFrameForm>
+      </form>
     </div>
   );
 }

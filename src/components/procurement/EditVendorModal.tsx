@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import type { VendorWithProductsRow } from "@/lib/procurement";
-import { HudFrameForm } from "@/components/hud/HudFrame";
 
 export default function EditVendorModal({
   vendor,
@@ -48,9 +47,8 @@ export default function EditVendorModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
-      <HudFrameForm
+      <form
         onSubmit={handleSubmit}
-        corners="all"
         className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4"
       >
         <div className="flex items-center justify-between">
@@ -111,7 +109,7 @@ export default function EditVendorModal({
             {saving ? "Saving..." : "Save"}
           </button>
         </div>
-      </HudFrameForm>
+      </form>
     </div>
   );
 }

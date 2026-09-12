@@ -30,6 +30,7 @@ export type DisplayEvent = {
   is_tentative: boolean;
   start_at: string;
   end_at: string | null;
+  status: TaskStatus;
 };
 
 export function eventTypeLabel(ev: DisplayEvent): string {
@@ -37,8 +38,11 @@ export function eventTypeLabel(ev: DisplayEvent): string {
   return ev.is_tentative ? "Tentative meeting" : "Meeting";
 }
 
+// A task's color reflects its status (backlog/pending/in_progress/
+// review_needed/closed), not a flat "it's a task" amber — reuses the same
+// TASK_STATUS_BADGE_CLASS palette shown on the status badge in EventViewModal.
 export function eventBadgeClass(ev: DisplayEvent): string {
-  if (ev.type === "task") return "bg-amber-500/10 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300";
+  if (ev.type === "task") return TASK_STATUS_BADGE_CLASS[ev.status];
   if (ev.is_tentative) return "bg-violet-500/10 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300";
   return "bg-accent/10 dark:bg-accent/20 text-accent dark:text-blue-300";
 }

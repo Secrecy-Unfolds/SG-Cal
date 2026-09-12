@@ -6,7 +6,13 @@ import EventModal, { EventItem, EventType } from "@/components/EventModal";
 import EventViewModal from "@/components/EventViewModal";
 import DayEventsModal from "@/components/DayEventsModal";
 import { eachMuscatDateKeyInRange, toMuscatDateInput } from "@/lib/time";
-import { eventBadgeClass, formatEventWhen, eventTypeLabel, type CurrentUser } from "@/lib/eventDisplay";
+import {
+  eventBadgeClass,
+  formatEventWhen,
+  eventTypeLabel,
+  TASK_STATUS_BADGE_CLASS,
+  type CurrentUser,
+} from "@/lib/eventDisplay";
 import PageHeader from "@/components/hud/PageHeader";
 import SectionLabel from "@/components/hud/SectionLabel";
 import { HudFrameButton } from "@/components/hud/HudFrame";
@@ -127,7 +133,7 @@ export default function CalendarView({
           </button>
           <button
             onClick={() => setModalState({ mode: "create", date: new Date(), type: "task" })}
-            className="rounded-lg bg-amber-600 text-white px-4 py-2 text-sm font-medium"
+            className="bg-amber-600 text-white [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-4 py-2 text-sm font-medium"
           >
             + Task
           </button>
@@ -193,7 +199,7 @@ export default function CalendarView({
                         }}
                         className={`block w-full text-left text-[11px] leading-tight rounded px-1 py-0.5 truncate ${
                           ev.type === "task"
-                            ? "bg-amber-500/10 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 dark:hover:bg-amber-500/30"
+                            ? `${TASK_STATUS_BADGE_CLASS[ev.status]} hover:opacity-80`
                             : ev.is_tentative
                             ? "border border-dashed border-violet-500/50 text-violet-700 dark:text-violet-300 hover:bg-violet-500/10"
                             : "bg-accent/10 dark:bg-accent/20 text-accent dark:text-blue-300 hover:bg-accent/20 dark:hover:bg-accent/30"

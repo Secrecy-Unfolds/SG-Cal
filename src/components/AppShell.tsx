@@ -37,8 +37,8 @@ const ROLE_BADGE_CLASS: Record<UserRole, string> = {
 };
 
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: false, superAdminOnly: false },
-  { href: "/", label: "Calendar", icon: CalendarIcon, adminOnly: false, superAdminOnly: false },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, adminOnly: false, superAdminOnly: false },
+  { href: "/calendar", label: "Calendar", icon: CalendarIcon, adminOnly: false, superAdminOnly: false },
   { href: "/procurement", label: "Procurement", icon: Package, adminOnly: true, superAdminOnly: false },
   { href: "/inventory", label: "Inventory", icon: Boxes, adminOnly: true, superAdminOnly: false },
   { href: "/accounting", label: "Accounting", icon: Wallet, adminOnly: true, superAdminOnly: false },
