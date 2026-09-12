@@ -93,11 +93,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   let recipients: string[];
   if (type === "meeting") {
     if (canManageAttendees({ uid: session.uid, role: session.role }, existing)) {
-      const { removed } = await setAttendees(
-        event.id,
-        existing.created_by ?? session.uid,
-        requestedAttendeeIds
-      );
+      const { removed } = await setAttendees(event.id, requestedAttendeeIds);
       if (removed.length > 0) {
         const removedEmails = await getEmailsByIds(removed);
         const { subject: removedSubject, html: removedHtml } = meetingAttendeeRemovedEmail(

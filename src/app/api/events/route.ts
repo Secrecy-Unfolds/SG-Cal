@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
 
   let recipients: string[];
   if (type === "meeting") {
-    await setAttendees(event.id, session.uid, requestedAttendeeIds);
+    await setAttendees(event.id, requestedAttendeeIds);
     event = (await getEventById(event.id)) ?? event;
     recipients = await getEmailsByIds(event.attendees.map((a) => a.id));
   } else {

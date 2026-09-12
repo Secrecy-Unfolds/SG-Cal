@@ -90,9 +90,11 @@ export default function EventModal({
   );
   const [assignableUsers, setAssignableUsers] = useState<AssignableUser[]>([]);
   const [allUsers, setAllUsers] = useState<AssignableUser[]>([]);
-  const [attendeeIds, setAttendeeIds] = useState<number[]>(
-    event ? event.attendees.map((a) => a.id) : [currentUser.uid]
-  );
+  // The creator is not an automatic attendee — they're invited like anyone
+  // else, so this starts from exactly what the event already has (or empty
+  // for a brand-new meeting).
+  const [attendees, setAttendees] = useState<EventAttendee[]>(event?.attendees ?? []);
+  const [attendeeQuery, setAttendeeQuery] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -115,8 +117,23 @@ export default function EventModal({
       .catch(() => setAllUsers([]));
   }, []);
 
-  function toggleAttendee(userId: number, checked: boolean) {
-    setAttendeeIds((prev) => (checked ? [...prev, userId] : prev.filter((id) => id !== userId)));
+  const attendeeSuggestions = attendeeQuery.trim()
+    ? allUsers
+        .filter(
+          (u) =>
+            !attendees.some((a) => a.id === u.id) &&
+            u.username.toLowerCase().includes(attendeeQuery.trim().toLowerCase())
+        )
+        .slice(0, 6)
+    : [];
+
+  function addAttendee(u: AssignableUser) {
+    setAttendees((prev) => [...prev, u]);
+    setAttendeeQuery("");
+  }
+
+  function removeAttendee(userId: number) {
+    setAttendees((prev) => prev.filter((a) => a.id !== userId));
   }
 
   function selectType(next: EventType) {
@@ -180,7 +197,7 @@ export default function EventModal({
           endAt,
           assigneeId: isTask ? assigneeId : null,
           status: isTask ? status : "backlog",
-          attendeeIds: !isTask ? attendeeIds : [],
+          attendeeIds: !isTask ? attendees.map((a) => a.id) : [],
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -361,22 +378,55 @@ export default function EventModal({
           <div className="space-y-1">
             <label className="text-sm font-medium">Attendees</label>
             {canManageAttendees ? (
-              <div className="max-h-40 overflow-y-auto rounded-lg border border-black/10 dark:border-white/10 p-2 space-y-1">
-                {allUsers.map((u) => {
-                  const isCreator = isEdit ? u.id === event?.created_by : u.id === currentUser.uid;
-                  return (
-                    <label key={u.id} className="flex items-center gap-2 text-sm py-0.5">
-                      <input
-                        type="checkbox"
-                        checked={attendeeIds.includes(u.id) || isCreator}
-                        disabled={isCreator}
-                        onChange={(e) => toggleAttendee(u.id, e.target.checked)}
-                      />
-                      {u.username}
-                      {isCreator ? " (creator)" : ""}
-                    </label>
-                  );
-                })}
+              <div className="space-y-2">
+                {attendees.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {attendees.map((a) => (
+                      <span
+                        key={a.id}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-accent/10 dark:bg-accent/20 text-accent dark:text-blue-300 text-xs font-medium pl-2.5 pr-1.5 py-1"
+                      >
+                        {a.username}
+                        <button
+                          type="button"
+                          onClick={() => removeAttendee(a.id)}
+                          aria-label={`Remove ${a.username}`}
+                          className="text-accent/60 hover:text-red-600 dark:text-blue-300/60 dark:hover:text-red-400"
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="relative">
+                  <input
+                    className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                    value={attendeeQuery}
+                    onChange={(e) => setAttendeeQuery(e.target.value)}
+                    placeholder="Search people to invite by name..."
+                  />
+                  {attendeeQuery.trim() && (
+                    <div className="absolute z-10 mt-1 w-full rounded-lg border border-black/10 dark:border-white/10 bg-white dark:bg-neutral-900 shadow-lg max-h-40 overflow-y-auto">
+                      {attendeeSuggestions.length > 0 ? (
+                        attendeeSuggestions.map((u) => (
+                          <button
+                            key={u.id}
+                            type="button"
+                            onClick={() => addAttendee(u)}
+                            className="block w-full text-left px-3 py-2 text-sm hover:bg-black/[0.03] dark:hover:bg-white/5"
+                          >
+                            {u.username}
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-3 py-2 text-sm text-black/40 dark:text-white/40">
+                          No matching users
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <p className="text-sm text-black/60 dark:text-white/60">

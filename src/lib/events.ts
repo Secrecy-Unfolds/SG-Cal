@@ -294,19 +294,18 @@ export async function getAttendeeIds(eventId: number): Promise<number[]> {
   return res.rows.map((r) => r.user_id);
 }
 
-// Replaces a meeting's full attendee list, always keeping the creator
-// included (they're never removable via the UI). Returns which ids were
-// newly added/removed vs. before, so the caller can email the right people.
+// Replaces a meeting's full attendee list — the creator is NOT automatically
+// included; they're just another optional invitee, same as anyone else.
+// Returns which ids were newly added/removed vs. before, so the caller can
+// email the right people.
 export async function setAttendees(
   eventId: number,
-  creatorId: number,
   requestedIds: number[]
 ): Promise<{ added: number[]; removed: number[] }> {
   const before = await getAttendeeIds(eventId);
   const beforeSet = new Set(before);
-  const nextSet = new Set(requestedIds);
-  nextSet.add(creatorId);
-  const next = Array.from(nextSet);
+  const next = Array.from(new Set(requestedIds));
+  const nextSet = new Set(next);
 
   const added = next.filter((id) => !beforeSet.has(id));
   const removed = before.filter((id) => !nextSet.has(id));
