@@ -1,24 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listUpcomingEvents } from "@/lib/events";
-import { sendMail, getAllRecipientEmails } from "@/lib/mailer";
-import { saturdayDigestEmail } from "@/lib/emailTemplates";
+import { maybeSendSaturdayDigest } from "@/lib/digests";
 import { isAuthorizedCronRequest } from "@/lib/cronAuth";
 
 export const runtime = "nodejs";
 
+// Kept as a fallback for vercel.json's fixed daily trigger — the actual
+// Super-Admin-configured send time is what /api/cron/reminder-sweep checks
+// on every frequent external ping (see src/lib/digests.ts).
 export async function GET(req: NextRequest) {
   if (!isAuthorizedCronRequest(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const events = await listUpcomingEvents(new Date());
-  if (events.length === 0) {
-    return NextResponse.json({ ok: true, sent: false, reason: "no upcoming events" });
-  }
-
-  const recipients = await getAllRecipientEmails();
-  const { subject, html } = saturdayDigestEmail(events);
-  await sendMail({ to: recipients, subject, html });
-
-  return NextResponse.json({ ok: true, sent: true, count: events.length });
+  const result = await maybeSendSaturdayDigest();
+  return NextResponse.json({ ok: true, ...result });
 }

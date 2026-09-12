@@ -43,6 +43,17 @@ CREATE INDEX IF NOT EXISTS events_type_idx ON events (type);
 CREATE INDEX IF NOT EXISTS events_assignee_id_idx ON events (assignee_id);
 CREATE INDEX IF NOT EXISTS events_status_idx ON events (status);
 
+-- Meeting attendees (meetings only — tasks keep their existing single
+-- assignee model). The creator is always inserted here too, so recipient
+-- resolution (who gets emailed) never has to special-case them separately.
+CREATE TABLE IF NOT EXISTS event_attendees (
+  event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  PRIMARY KEY (event_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS event_attendees_user_id_idx ON event_attendees (user_id);
+
 -- Procurement planning: a product to be purchased, with several possible
 -- vendors compared against each other, one of which can be marked preferred.
 CREATE TABLE IF NOT EXISTS procurement_products (
@@ -127,6 +138,16 @@ CREATE TABLE IF NOT EXISTS procurement_product_vendors (
 CREATE INDEX IF NOT EXISTS procurement_product_vendors_product_id_idx ON procurement_product_vendors (product_id);
 CREATE INDEX IF NOT EXISTS procurement_product_vendors_vendor_id_idx ON procurement_product_vendors (vendor_id);
 CREATE INDEX IF NOT EXISTS procurement_vendors_name_idx ON procurement_vendors (name);
+
+-- Generic app-wide settings (key/value). First use: Super-Admin-configurable
+-- digest send times (see src/lib/settings.ts) — also stores each digest's
+-- last-sent date as a same-day-resend guard, since the configured time is
+-- checked from a frequently-polled endpoint rather than a single fixed cron.
+CREATE TABLE IF NOT EXISTS app_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
 -- procurement_products.preferred_vendor_id -> procurement_vendors(id). Lives
 -- here (not with procurement_products above) since it depends on

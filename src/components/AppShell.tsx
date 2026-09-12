@@ -10,6 +10,7 @@ import {
   Menu,
   Moon,
   Package,
+  Settings as SettingsIcon,
   Sun,
   User,
   Users,
@@ -33,11 +34,12 @@ const ROLE_BADGE_CLASS: Record<UserRole, string> = {
 };
 
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: false },
-  { href: "/", label: "Calendar", icon: CalendarIcon, adminOnly: false },
-  { href: "/procurement", label: "Procurement", icon: Package, adminOnly: true },
-  { href: "/users", label: "Manage Users", icon: Users, adminOnly: true },
-  { href: "/profile", label: "Profile", icon: User, adminOnly: false },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: false, superAdminOnly: false },
+  { href: "/", label: "Calendar", icon: CalendarIcon, adminOnly: false, superAdminOnly: false },
+  { href: "/procurement", label: "Procurement", icon: Package, adminOnly: true, superAdminOnly: false },
+  { href: "/users", label: "Manage Users", icon: Users, adminOnly: true, superAdminOnly: false },
+  { href: "/settings", label: "Settings", icon: SettingsIcon, adminOnly: false, superAdminOnly: true },
+  { href: "/profile", label: "Profile", icon: User, adminOnly: false, superAdminOnly: false },
 ];
 
 function isActive(pathname: string, href: string): boolean {
@@ -76,7 +78,10 @@ export default function AppShell({
   }
 
   const isAdmin = session.role !== "user";
-  const visibleItems = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin);
+  const isSuperAdmin = session.role === "super_admin";
+  const visibleItems = NAV_ITEMS.filter(
+    (item) => (!item.adminOnly || isAdmin) && (!item.superAdminOnly || isSuperAdmin)
+  );
   const activeItem = visibleItems.find((item) => isActive(pathname, item.href));
 
   const sidebarContent = (

@@ -64,6 +64,12 @@ export default function EventViewModal({
           </div>
         )}
 
+        {event.type === "meeting" && event.attendees.length > 0 && (
+          <div className="text-xs text-black/50 dark:text-white/50">
+            Attendees: {event.attendees.map((a) => a.username).join(", ")}
+          </div>
+        )}
+
         {event.description?.trim() && (
           <div className="text-sm text-black/70 dark:text-white/70 whitespace-pre-wrap border-t border-black/5 dark:border-white/10 pt-3">
             {event.description}

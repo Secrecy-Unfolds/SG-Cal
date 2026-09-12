@@ -5,9 +5,11 @@ import {
   markStartReminderSent,
   markEndReminderSent,
 } from "@/lib/events";
-import { sendMailInBackground, getAllRecipientEmails } from "@/lib/mailer";
+import { getEmailsByIds } from "@/lib/users";
+import { sendMailInBackground, getAdminLevelRecipientEmails } from "@/lib/mailer";
 import { meetingStartingSoonEmail, taskDueSoonEmail } from "@/lib/emailTemplates";
 import { isAuthorizedCronRequest } from "@/lib/cronAuth";
+import { maybeSendMidnightDigest, maybeSendSaturdayDigest } from "@/lib/digests";
 
 export const runtime = "nodejs";
 
@@ -19,13 +21,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const recipients = await getAllRecipientEmails();
+  // Meeting reminders go only to that meeting's attendees; task reminders go
+  // to the assignee plus admin-level users (who can already see/manage every
+  // task). Neither broadcasts to every user anymore.
+  const adminEmails = await getAdminLevelRecipientEmails();
 
   // Fire each email in the background and mark it sent right away — a slow
   // or failing send from the relay shouldn't block marking the reminder
   // (or hold up the rest of this sweep's items behind it).
   const meetings = await listMeetingsNeedingStartReminder();
   for (const meeting of meetings) {
+    const recipients = await getEmailsByIds(meeting.attendees.map((a) => a.id));
     const { subject, html } = meetingStartingSoonEmail(meeting);
     sendMailInBackground({ to: recipients, subject, html });
     await markStartReminderSent(meeting.id);
@@ -33,14 +39,24 @@ export async function GET(req: NextRequest) {
 
   const tasks = await listTasksNeedingEndReminder();
   for (const task of tasks) {
+    const assigneeEmails = task.assignee_id ? await getEmailsByIds([task.assignee_id]) : [];
+    const recipients = Array.from(new Set([...assigneeEmails, ...adminEmails]));
     const { subject, html } = taskDueSoonEmail(task);
     sendMailInBackground({ to: recipients, subject, html });
     await markEndReminderSent(task.id);
   }
 
+  // The digests' actual configured send time (Super Admin Settings page) is
+  // checked here, on every frequent external ping, rather than relying on
+  // vercel.json's fixed once-a-day schedule — see src/lib/digests.ts.
+  const midnightDigest = await maybeSendMidnightDigest();
+  const saturdayDigest = await maybeSendSaturdayDigest();
+
   return NextResponse.json({
     ok: true,
     meetingsNotified: meetings.length,
     tasksNotified: tasks.length,
+    midnightDigest,
+    saturdayDigest,
   });
 }

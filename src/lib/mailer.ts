@@ -1,5 +1,6 @@
 import { waitUntil } from "@vercel/functions";
 import { query } from "@/lib/db";
+import type { UserRole } from "@/lib/users";
 
 // Default endpoint for the Google Apps Script mail relay; override with
 // EMAIL_ENDPOINT_URL in .env if you ever redeploy the script elsewhere.
@@ -17,6 +18,19 @@ export async function getAllRecipientEmails(): Promise<string[]> {
       : "SELECT email FROM users ORDER BY id ASC"
   );
   return res.rows.map((r) => r.email);
+}
+
+// Same shape as getAllRecipientEmails, but with id/role too — needed so the
+// digest cron routes can build a per-recipient (attendee/assignee-scoped)
+// event list for each user rather than one broadcast email to everyone.
+export async function getAllRecipients(): Promise<{ id: number; email: string; role: UserRole }[]> {
+  const testMode = process.env.EMAIL_TEST_MODE === "true";
+  const res = await query<{ id: number; email: string; role: UserRole }>(
+    testMode
+      ? "SELECT id, email, role FROM users WHERE role = 'super_admin' ORDER BY id ASC"
+      : "SELECT id, email, role FROM users ORDER BY id ASC"
+  );
+  return res.rows;
 }
 
 // Procurement Planning is Admin-level only, so its notifications go to

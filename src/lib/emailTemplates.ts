@@ -94,6 +94,18 @@ export function eventUpdatedEmail(e: EventRow, who: string): { subject: string; 
   };
 }
 
+export function meetingAttendeeRemovedEmail(e: EventRow, who: string): { subject: string; html: string } {
+  const whoSafe = escapeHtml(who);
+  return {
+    subject: `Removed from meeting: ${e.title}`,
+    html: wrap(
+      `${whoSafe} removed you from "${e.title}"`,
+      "Removed from meeting",
+      introText(`${whoSafe} removed you as an attendee of this meeting:`) + eventCard(e)
+    ),
+  };
+}
+
 export function eventCanceledEmail(e: EventRow, who: string): { subject: string; html: string } {
   const label = typeLabel(e).toLowerCase();
   const whoSafe = escapeHtml(who);

@@ -12,6 +12,8 @@ import {
 
 export type EventType = "meeting" | "task";
 
+export type EventAttendee = { id: number; username: string };
+
 export type EventItem = {
   id: number;
   title: string;
@@ -20,10 +22,12 @@ export type EventItem = {
   is_tentative: boolean;
   start_at: string;
   end_at: string | null;
+  created_by: number | null;
   created_by_username: string | null;
   assignee_id: number | null;
   assignee_username: string | null;
   status: TaskStatus;
+  attendees: EventAttendee[];
 };
 
 type AssignableUser = { id: number; username: string };
@@ -62,6 +66,11 @@ export default function EventModal({
   const initialStart = event ? new Date(event.start_at) : defaultDate ?? new Date();
   const initialEnd = event?.end_at ? new Date(event.end_at) : null;
   const canPickAnyAssignee = currentUser.role !== "user";
+  // Anyone can invite attendees to a meeting they're creating; editing an
+  // existing meeting's attendee list is limited to its creator or Admin-level
+  // (mirrors canManageAttendees in src/lib/events.ts).
+  const canManageAttendees =
+    !isEdit || currentUser.role !== "user" || currentUser.uid === event?.created_by;
 
   const [type, setType] = useState<EventType>(event?.type ?? defaultType);
   const [isTentative, setIsTentative] = useState(event?.is_tentative ?? false);
@@ -80,6 +89,10 @@ export default function EventModal({
     event?.status ?? (assigneeId === null ? "backlog" : "pending")
   );
   const [assignableUsers, setAssignableUsers] = useState<AssignableUser[]>([]);
+  const [allUsers, setAllUsers] = useState<AssignableUser[]>([]);
+  const [attendeeIds, setAttendeeIds] = useState<number[]>(
+    event ? event.attendees.map((a) => a.id) : [currentUser.uid]
+  );
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -94,6 +107,17 @@ export default function EventModal({
       .then((data) => setAssignableUsers(data.users ?? []))
       .catch(() => setAssignableUsers([]));
   }, [canPickAnyAssignee]);
+
+  useEffect(() => {
+    fetch("/api/users/basic")
+      .then((res) => (res.ok ? res.json() : { users: [] }))
+      .then((data) => setAllUsers(data.users ?? []))
+      .catch(() => setAllUsers([]));
+  }, []);
+
+  function toggleAttendee(userId: number, checked: boolean) {
+    setAttendeeIds((prev) => (checked ? [...prev, userId] : prev.filter((id) => id !== userId)));
+  }
 
   function selectType(next: EventType) {
     setType(next);
@@ -156,6 +180,7 @@ export default function EventModal({
           endAt,
           assigneeId: isTask ? assigneeId : null,
           status: isTask ? status : "backlog",
+          attendeeIds: !isTask ? attendeeIds : [],
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -330,6 +355,40 @@ export default function EventModal({
           <p className="text-xs text-black/40 dark:text-white/40 -mt-2">
             You&rsquo;ll get a reminder email 1 hour before this meeting starts.
           </p>
+        )}
+
+        {!isTask && (
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Attendees</label>
+            {canManageAttendees ? (
+              <div className="max-h-40 overflow-y-auto rounded-lg border border-black/10 dark:border-white/10 p-2 space-y-1">
+                {allUsers.map((u) => {
+                  const isCreator = isEdit ? u.id === event?.created_by : u.id === currentUser.uid;
+                  return (
+                    <label key={u.id} className="flex items-center gap-2 text-sm py-0.5">
+                      <input
+                        type="checkbox"
+                        checked={attendeeIds.includes(u.id) || isCreator}
+                        disabled={isCreator}
+                        onChange={(e) => toggleAttendee(u.id, e.target.checked)}
+                      />
+                      {u.username}
+                      {isCreator ? " (creator)" : ""}
+                    </label>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-black/60 dark:text-white/60">
+                {event && event.attendees.length > 0
+                  ? event.attendees.map((a) => a.username).join(", ")
+                  : "No attendees yet"}
+                <span className="block text-xs text-black/40 dark:text-white/40 mt-1">
+                  Only the creator or an Admin can change who&rsquo;s invited.
+                </span>
+              </p>
+            )}
+          </div>
         )}
 
         {isTask && (

@@ -46,6 +46,21 @@ export function muscatTodayRangeUTC(): { start: Date; end: Date } {
   return { start, end };
 }
 
+const WEEKDAY_INDEX: Record<string, number> = {
+  Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
+};
+
+// Current Muscat-local date/time/weekday, as of the moment this is called —
+// used to check a configured "send at HH:mm" digest time against right now.
+export function getMuscatNowParts(): { dateKey: string; hhmm: string; weekday: number } {
+  const now = new Date();
+  return {
+    dateKey: toMuscatDateInput(now),
+    hhmm: toMuscatTimeInput(now),
+    weekday: WEEKDAY_INDEX[formatMuscat(now, { weekday: "short" })],
+  };
+}
+
 // "YYYY-MM-DD" / "HH:mm" for pre-filling <input type="date"/"time"> in Muscat local time.
 export function toMuscatDateInput(date: Date): string {
   const y = formatMuscat(date, { year: "numeric" });

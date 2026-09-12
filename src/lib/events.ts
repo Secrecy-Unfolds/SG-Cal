@@ -13,6 +13,8 @@ export function isEventType(value: unknown): value is EventType {
 export type { TaskStatus } from "@/lib/eventDisplay";
 export { TASK_STATUSES, TASK_STATUS_LABELS, isTaskStatus } from "@/lib/eventDisplay";
 
+export type EventAttendee = { id: number; username: string };
+
 export type EventRow = {
   id: number;
   title: string;
@@ -27,12 +29,19 @@ export type EventRow = {
   assignee_id: number | null;
   assignee_username: string | null;
   status: TaskStatus;
+  attendees: EventAttendee[];
 };
 
 const SELECT_BASE = `
   SELECT e.id, e.title, e.description, e.type, e.is_tentative, e.start_at, e.end_at, e.created_by,
          u.username AS created_by_username, e.created_at,
-         e.assignee_id, au.username AS assignee_username, e.status
+         e.assignee_id, au.username AS assignee_username, e.status,
+         COALESCE(
+           (SELECT json_agg(json_build_object('id', ea.user_id, 'username', eu.username) ORDER BY eu.username)
+            FROM event_attendees ea JOIN users eu ON eu.id = ea.user_id
+            WHERE ea.event_id = e.id),
+           '[]'
+         ) AS attendees
   FROM events e
   LEFT JOIN users u ON u.id = e.created_by
   LEFT JOIN users au ON au.id = e.assignee_id
@@ -154,6 +163,15 @@ export function canEditTask(
   return existing.assignee_id === null || existing.assignee_id === actor.uid;
 }
 
+// Unlike general meeting edit rights (open to everyone above), only a
+// meeting's creator or an Admin-level user can change who's invited.
+export function canManageAttendees(
+  actor: { uid: number; role: UserRole },
+  existing: Pick<EventRow, "created_by">
+): boolean {
+  return actor.role !== "user" || actor.uid === existing.created_by;
+}
+
 export async function getEventById(id: number): Promise<EventRow | null> {
   const res = await query<EventRow>(`${SELECT_BASE} WHERE e.id = $1`, [id]);
   return res.rows[0] ?? null;
@@ -266,4 +284,87 @@ export async function markStartReminderSent(id: number): Promise<void> {
 
 export async function markEndReminderSent(id: number): Promise<void> {
   await query(`UPDATE events SET end_reminder_sent_at = now() WHERE id = $1`, [id]);
+}
+
+export async function getAttendeeIds(eventId: number): Promise<number[]> {
+  const res = await query<{ user_id: number }>(
+    `SELECT user_id FROM event_attendees WHERE event_id = $1 ORDER BY user_id ASC`,
+    [eventId]
+  );
+  return res.rows.map((r) => r.user_id);
+}
+
+// Replaces a meeting's full attendee list, always keeping the creator
+// included (they're never removable via the UI). Returns which ids were
+// newly added/removed vs. before, so the caller can email the right people.
+export async function setAttendees(
+  eventId: number,
+  creatorId: number,
+  requestedIds: number[]
+): Promise<{ added: number[]; removed: number[] }> {
+  const before = await getAttendeeIds(eventId);
+  const beforeSet = new Set(before);
+  const nextSet = new Set(requestedIds);
+  nextSet.add(creatorId);
+  const next = Array.from(nextSet);
+
+  const added = next.filter((id) => !beforeSet.has(id));
+  const removed = before.filter((id) => !nextSet.has(id));
+
+  await query(`DELETE FROM event_attendees WHERE event_id = $1`, [eventId]);
+  if (next.length > 0) {
+    const values = next.map((_, i) => `($1, $${i + 2})`).join(", ");
+    await query(`INSERT INTO event_attendees (event_id, user_id) VALUES ${values}`, [eventId, ...next]);
+  }
+  return { added, removed };
+}
+
+// Same window as listEventsBetween/listUpcomingEvents, but scoped to one
+// recipient: meetings only count if they're an attendee; tasks count if
+// they're the assignee, or always for admin-level (mirrors the elevated
+// task visibility/permissions admin-level already has via resolveTaskAssignment/
+// canEditTask). Used to build per-recipient digest emails.
+export async function listEventsForRecipient(
+  start: Date,
+  end: Date,
+  userId: number,
+  role: UserRole
+): Promise<EventRow[]> {
+  const includeAllTasks = role !== "user";
+  const res = await query<EventRow>(
+    `${SELECT_BASE}
+     WHERE (
+       (e.is_tentative = false AND e.start_at >= $1 AND e.start_at < $2)
+       OR (e.is_tentative = true AND e.start_at < $2 AND e.end_at >= $1)
+     )
+     AND (
+       (e.type = 'meeting' AND EXISTS (SELECT 1 FROM event_attendees ea WHERE ea.event_id = e.id AND ea.user_id = $3))
+       OR (e.type = 'task' AND ($4 OR e.assignee_id = $3))
+     )
+     ORDER BY e.start_at ASC`,
+    [start, end, userId, includeAllTasks]
+  );
+  return res.rows;
+}
+
+export async function listUpcomingEventsForRecipient(
+  from: Date,
+  userId: number,
+  role: UserRole
+): Promise<EventRow[]> {
+  const includeAllTasks = role !== "user";
+  const res = await query<EventRow>(
+    `${SELECT_BASE}
+     WHERE (
+       (e.is_tentative = false AND e.start_at >= $1)
+       OR (e.is_tentative = true AND e.end_at >= $1)
+     )
+     AND (
+       (e.type = 'meeting' AND EXISTS (SELECT 1 FROM event_attendees ea WHERE ea.event_id = e.id AND ea.user_id = $2))
+       OR (e.type = 'task' AND ($3 OR e.assignee_id = $2))
+     )
+     ORDER BY e.start_at ASC`,
+    [from, userId, includeAllTasks]
+  );
+  return res.rows;
 }

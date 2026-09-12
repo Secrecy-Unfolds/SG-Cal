@@ -47,6 +47,26 @@ export async function getUserById(id: number): Promise<UserSummary | null> {
   return res.rows[0] ?? null;
 }
 
+// Trimmed, role-unrestricted user list — used for pickers (e.g. meeting
+// attendees) that any authenticated user, not just Admin-level, needs to see.
+// Deliberately excludes email/role/etc. (that's what `/api/users` + listUsers
+// above are for, and that route stays Admin-only).
+export type UserBasic = { id: number; username: string };
+
+export async function listUsersBasic(): Promise<UserBasic[]> {
+  const res = await query<UserBasic>(`SELECT id, username FROM users ORDER BY username ASC`);
+  return res.rows;
+}
+
+export async function getEmailsByIds(ids: number[]): Promise<string[]> {
+  if (ids.length === 0) return [];
+  const res = await query<{ email: string }>(
+    `SELECT email FROM users WHERE id = ANY($1::int[])`,
+    [ids]
+  );
+  return res.rows.map((r) => r.email);
+}
+
 // Excludes selfId so a user saving their profile without changing their own
 // username doesn't collide with themselves.
 export async function usernameExists(username: string, excludeId?: number): Promise<boolean> {

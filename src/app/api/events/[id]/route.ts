@@ -2,16 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import {
   canEditTask,
+  canManageAttendees,
   deleteEvent,
   getEventById,
   isEventType,
   isTaskStatus,
   resolveTaskAssignment,
+  setAttendees,
   updateEvent,
   validateEventTiming,
 } from "@/lib/events";
+import { getEmailsByIds } from "@/lib/users";
 import { sendMailInBackground, getAllRecipientEmails } from "@/lib/mailer";
-import { eventCanceledEmail, eventUpdatedEmail } from "@/lib/emailTemplates";
+import { eventCanceledEmail, eventUpdatedEmail, meetingAttendeeRemovedEmail } from "@/lib/emailTemplates";
 
 export const runtime = "nodejs";
 
@@ -46,6 +49,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const endAtStr = typeof body?.endAt === "string" ? body.endAt : "";
   const requestedAssigneeId = typeof body?.assigneeId === "number" ? body.assigneeId : null;
   const requestedStatus = isTaskStatus(body?.status) ? body.status : null;
+  const requestedAttendeeIds: number[] = Array.isArray(body?.attendeeIds)
+    ? body.attendeeIds.filter((id: unknown): id is number => typeof id === "number")
+    : [];
 
   if (!title || !startAtStr) {
     return NextResponse.json({ error: "title and startAt are required" }, { status: 400 });
@@ -72,7 +78,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json({ error: assignment.error }, { status: assignment.httpStatus });
   }
 
-  const event = await updateEvent(id, {
+  let event = await updateEvent(id, {
     title,
     description,
     type,
@@ -84,7 +90,29 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   });
   if (!event) return NextResponse.json({ error: "Event not found" }, { status: 404 });
 
-  const recipients = await getAllRecipientEmails();
+  let recipients: string[];
+  if (type === "meeting") {
+    if (canManageAttendees({ uid: session.uid, role: session.role }, existing)) {
+      const { removed } = await setAttendees(
+        event.id,
+        existing.created_by ?? session.uid,
+        requestedAttendeeIds
+      );
+      if (removed.length > 0) {
+        const removedEmails = await getEmailsByIds(removed);
+        const { subject: removedSubject, html: removedHtml } = meetingAttendeeRemovedEmail(
+          event,
+          session.username
+        );
+        sendMailInBackground({ to: removedEmails, subject: removedSubject, html: removedHtml });
+      }
+      event = (await getEventById(event.id)) ?? event;
+    }
+    recipients = await getEmailsByIds(event.attendees.map((a) => a.id));
+  } else {
+    recipients = await getAllRecipientEmails();
+  }
+
   const { subject, html } = eventUpdatedEmail(event, session.username);
   sendMailInBackground({ to: recipients, subject, html });
 
@@ -108,9 +136,13 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     );
   }
 
+  const recipients =
+    existing.type === "meeting"
+      ? await getEmailsByIds(existing.attendees.map((a) => a.id))
+      : await getAllRecipientEmails();
+
   await deleteEvent(id);
 
-  const recipients = await getAllRecipientEmails();
   const { subject, html } = eventCanceledEmail(existing, session.username);
   sendMailInBackground({ to: recipients, subject, html });
 

@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import {
   createEvent,
+  getEventById,
   isEventType,
   isTaskStatus,
   listEventsBetween,
   resolveTaskAssignment,
+  setAttendees,
   validateEventTiming,
 } from "@/lib/events";
+import { getEmailsByIds } from "@/lib/users";
 import { sendMailInBackground, getAllRecipientEmails } from "@/lib/mailer";
 import { eventCreatedEmail } from "@/lib/emailTemplates";
 
@@ -44,6 +47,9 @@ export async function POST(req: NextRequest) {
   const endAtStr = typeof body?.endAt === "string" ? body.endAt : "";
   const requestedAssigneeId = typeof body?.assigneeId === "number" ? body.assigneeId : null;
   const requestedStatus = isTaskStatus(body?.status) ? body.status : null;
+  const requestedAttendeeIds: number[] = Array.isArray(body?.attendeeIds)
+    ? body.attendeeIds.filter((id: unknown): id is number => typeof id === "number")
+    : [];
 
   if (!title || !startAtStr) {
     return NextResponse.json({ error: "title and startAt are required" }, { status: 400 });
@@ -70,7 +76,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: assignment.error }, { status: assignment.httpStatus });
   }
 
-  const event = await createEvent({
+  let event = await createEvent({
     title,
     description,
     type,
@@ -82,7 +88,15 @@ export async function POST(req: NextRequest) {
     status: assignment.status,
   });
 
-  const recipients = await getAllRecipientEmails();
+  let recipients: string[];
+  if (type === "meeting") {
+    await setAttendees(event.id, session.uid, requestedAttendeeIds);
+    event = (await getEventById(event.id)) ?? event;
+    recipients = await getEmailsByIds(event.attendees.map((a) => a.id));
+  } else {
+    recipients = await getAllRecipientEmails();
+  }
+
   const { subject, html } = eventCreatedEmail(event);
   sendMailInBackground({ to: recipients, subject, html });
 
