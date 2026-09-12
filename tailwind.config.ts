@@ -10,6 +10,7 @@ const config: Config = {
         ink: "#0b1220",
         paper: "#f4f6f9",
         accent: "rgb(var(--accent-rgb) / <alpha-value>)",
+        radar: "rgb(var(--radar-rgb) / <alpha-value>)",
         neutral: {
           ...colors.neutral,
           900: "#0d1b2a",

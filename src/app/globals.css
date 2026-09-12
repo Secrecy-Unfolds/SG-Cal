@@ -7,6 +7,11 @@
     /* Deeper green in light mode — the vivid dark-mode accent fails
        contrast as bare text/borders on a light background. */
     --accent-rgb: 8 122 64;
+    /* Radar background is purely decorative (no text/contrast concerns),
+       so it stays the same vivid neon green in both themes — the muted
+       light-mode --accent-rgb reads as gray, not green, at radar's low
+       opacity. Deliberately not overridden under .dark. */
+    --radar-rgb: 0 230 118;
   }
   .dark {
     /* Vivid neon green, sampled from sea-guard-web.vercel.app. */
@@ -55,5 +60,36 @@
     box-shadow:
       0 0 10px 1px rgb(var(--accent-rgb) / 0.6),
       0 0 22px 4px rgb(var(--accent-rgb) / 0.3);
+  }
+
+  /* Radar background — rotating sweep beam + pulsing contact blips. */
+  .radar-sweep {
+    background: conic-gradient(
+      from 0deg,
+      rgb(var(--radar-rgb) / 0.5),
+      transparent 45deg,
+      transparent 360deg
+    );
+    animation: radar-spin 8s linear infinite;
+  }
+  @keyframes radar-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  .radar-blip {
+    box-shadow: 0 0 6px 1px rgb(var(--radar-rgb) / 0.8);
+    animation: radar-blip 2.6s ease-in-out infinite;
+  }
+  @keyframes radar-blip {
+    0%,
+    100% {
+      opacity: 0.35;
+      transform: translate(-50%, -50%) scale(0.7);
+    }
+    50% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.3);
+    }
   }
 }
