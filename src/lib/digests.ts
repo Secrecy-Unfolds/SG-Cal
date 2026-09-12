@@ -1,7 +1,7 @@
 import { listEventsForRecipient, listUpcomingEventsForRecipient } from "@/lib/events";
 import { getAllRecipients, sendMail } from "@/lib/mailer";
 import { midnightDigestEmail, saturdayDigestEmail } from "@/lib/emailTemplates";
-import { getMuscatNowParts, muscatTodayRangeUTC } from "@/lib/time";
+import { getMuscatNowParts } from "@/lib/time";
 import { getDigestSettings, markSent, wasSentToday } from "@/lib/settings";
 
 export type DigestOutcome = {
@@ -12,7 +12,11 @@ export type DigestOutcome = {
 };
 
 async function sendMidnightDigestNow(): Promise<number> {
-  const { start, end } = muscatTodayRangeUTC();
+  // A rolling look-ahead from the moment it actually sends, not a fixed
+  // calendar-day window — so setting the send time earlier/later changes
+  // what's included, not just when you're told about the same fixed day.
+  const start = new Date();
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
   const recipients = await getAllRecipients();
   let recipientsNotified = 0;
   for (const recipient of recipients) {

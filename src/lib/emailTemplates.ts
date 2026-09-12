@@ -135,10 +135,10 @@ export function saturdayDigestEmail(events: EventRow[]): { subject: string; html
 export function midnightDigestEmail(events: EventRow[]): { subject: string; html: string } {
   const count = events.length;
   return {
-    subject: `Today: ${count} item${count === 1 ? "" : "s"}`,
+    subject: `Next 24 hours: ${count} item${count === 1 ? "" : "s"}`,
     html: wrap(
-      `${count} item${count === 1 ? "" : "s"} scheduled today`,
-      "Today's schedule",
+      `${count} item${count === 1 ? "" : "s"} scheduled in the next 24 hours`,
+      "Next 24 hours",
       events.map(eventCard).join("")
     ),
   };
