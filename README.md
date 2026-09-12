@@ -1,4 +1,4 @@
-# SG Calendar
+# SG-ERP
 
 A private calendar for a small trusted group (login required — no public
 sign-up). Every entry is either a **Meeting** or a **Task**, with a
@@ -17,21 +17,22 @@ Also has a dark mode toggle and a profile page for changing your password.
 ### Roles
 
 Meetings stay open to everyone to create/edit/delete. Roles control two
-things: the **Manage Users** page (`/users`), and who a task can be
+things: the **Users** tab on the HR page (`/hr`), and who a task can be
 assigned to / who can edit an assigned task:
 
-- **User** — no access to Manage Users. Can only assign a task to
+- **User** — no access to the HR page. Can only assign a task to
   themselves (or leave it unassigned), and can only edit/delete a task
   that's assigned to them or still unassigned.
-- **Admin** — everything a User can do, plus: can open Manage Users and add
-  new **User** accounts (not Admin/Super Admin), can assign a task to
-  *anyone*, and can edit/delete any task regardless of who it's assigned to.
+- **Admin** — everything a User can do, plus: can open the HR page's Users
+  tab and add new **User** accounts (not Admin/Super Admin), can assign a
+  task to *anyone*, and can edit/delete any task regardless of who it's
+  assigned to.
 - **Super Admin** — same task powers as Admin, plus can add User or Admin
   accounts. There can only ever be one Super Admin in the system (currently
   MUTahir); it isn't an assignable role in the Add User form at all — the
   API rejects it outright.
 
-New accounts are added from the Manage Users page now, not through `.env`
+New accounts are added from the HR page's Users tab now, not through `.env`
 seed values (those only bootstrap the first account or two — see SETUP.md).
 
 ### Task assignment & status

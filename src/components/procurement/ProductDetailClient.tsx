@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import ConfirmModal from "@/components/ConfirmModal";
 import ProductFormModal, { ProductData } from "@/components/procurement/ProductFormModal";
 import VendorFormModal, { ProductVendorData } from "@/components/procurement/VendorFormModal";
+import { HudFrame } from "@/components/hud/HudFrame";
+import SectionLabel from "@/components/hud/SectionLabel";
 import {
   computeCapitalNeeded,
   formatDateOnly,
@@ -181,7 +183,7 @@ export default function ProductDetailClient({
           <div className="flex gap-2 mt-3">
             <button
               onClick={() => setEditingProduct(true)}
-              className="rounded-lg bg-accent text-white px-4 py-2 text-sm font-medium"
+              className="bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-4 py-2 text-sm font-medium"
             >
               Edit
             </button>
@@ -207,7 +209,10 @@ export default function ProductDetailClient({
       {error && <p className="text-sm text-red-600 dark:text-red-400 mb-4">{error}</p>}
       {poCreatedMessage && <p className="text-sm text-green-600 dark:text-green-400 mb-4">{poCreatedMessage}</p>}
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl p-4 mb-6">
+      <HudFrame
+        corners="all"
+        className="grid grid-cols-2 sm:grid-cols-3 gap-4 bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl p-4 mb-6"
+      >
         <Field label="Required for" value={product.required_for} />
         <Field label="Required by" value={formatDateOnly(product.required_by)} />
         <Field label="Quantity" value={`${product.quantity_needed} ${product.quantity_unit}`} />
@@ -229,25 +234,28 @@ export default function ProductDetailClient({
         <Field label="Customs notes" value={product.customs_notes} />
         <Field label="Purchase date (expected)" value={formatDateOnly(product.purchase_date_expected)} />
         <Field label="Expected arrival" value={formatDateOnly(product.expected_arrival)} />
-      </div>
+      </HudFrame>
 
       {product.preference_remarks && (
-        <div className="bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl p-4 mb-6">
+        <HudFrame corners="all" className="bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl p-4 mb-6">
           <div className="text-xs text-black/40 dark:text-white/40 uppercase tracking-wide mb-1">
             Preference remarks
           </div>
           <p className="text-sm whitespace-pre-wrap">{product.preference_remarks}</p>
-        </div>
+        </HudFrame>
       )}
 
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-base font-semibold">Possible vendors</h2>
-        <button
-          onClick={() => setVendorModal({ mode: "add" })}
-          className="rounded-lg bg-amber-600 text-white px-4 py-2 text-sm font-medium"
-        >
-          + Add Vendor
-        </button>
+      <div className="mb-3">
+        <SectionLabel>VENDORS</SectionLabel>
+        <div className="flex items-center justify-between">
+          <h2 className="font-heading font-semibold text-base uppercase tracking-wide">Possible vendors</h2>
+          <button
+            onClick={() => setVendorModal({ mode: "add" })}
+            className="rounded-lg bg-amber-600 text-white px-4 py-2 text-sm font-medium"
+          >
+            + Add Vendor
+          </button>
+        </div>
       </div>
 
       {vendors.length === 0 ? (
@@ -258,8 +266,9 @@ export default function ProductDetailClient({
             const isPreferred = product.preferred_vendor_id === v.vendor_id;
             const busy = busyVendorId === v.id;
             return (
-              <div
+              <HudFrame
                 key={v.id}
+                corners="tl-br"
                 className={`bg-white dark:bg-neutral-900 border rounded-2xl p-4 ${
                   isPreferred ? "border-accent" : "border-black/5 dark:border-white/10"
                 }`}
@@ -307,7 +316,7 @@ export default function ProductDetailClient({
                   <Field label="Delivery period" value={v.delivery_period} />
                   <Field label="Warranty" value={v.warranty} />
                 </div>
-              </div>
+              </HudFrame>
             );
           })}
         </div>

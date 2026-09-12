@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PayrollRunRow } from "@/lib/accounting";
+import { HudFrame } from "@/components/hud/HudFrame";
 
 function currentMonthInput(): string {
   const now = new Date();
@@ -48,7 +49,10 @@ export default function PayrollRunsClient({ runs }: { runs: PayrollRunRow[] }) {
 
   return (
     <div>
-      <div className="bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl p-4 mb-4 flex flex-wrap items-end gap-3">
+      <HudFrame
+        corners="all"
+        className="bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl p-4 mb-4 flex flex-wrap items-end gap-3"
+      >
         <div className="space-y-1">
           <label className="text-sm font-medium">Month</label>
           <input
@@ -61,30 +65,31 @@ export default function PayrollRunsClient({ runs }: { runs: PayrollRunRow[] }) {
         <button
           onClick={handleRunPayroll}
           disabled={running}
-          className="rounded-lg bg-accent text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
+          className="bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-4 py-2 text-sm font-medium disabled:opacity-50"
         >
           {running ? "Running..." : "Run payroll"}
         </button>
-      </div>
+      </HudFrame>
 
       {error && <p className="text-sm text-red-600 dark:text-red-400 mb-3">{error}</p>}
       {successMessage && <p className="text-sm text-green-600 dark:text-green-400 mb-3">{successMessage}</p>}
 
-      <h2 className="text-sm font-semibold mb-2">Past runs</h2>
+      <h2 className="font-heading font-semibold text-sm uppercase tracking-wide mb-2">Past runs</h2>
       {runs.length === 0 ? (
         <p className="text-sm text-black/50 dark:text-white/50">No payroll runs yet.</p>
       ) : (
         <div className="space-y-2">
           {runs.map((r) => (
-            <div
+            <HudFrame
               key={r.id}
+              corners="tl-br"
               className="flex items-center justify-between bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-xl p-4"
             >
               <span className="text-sm font-medium">{formatRunMonth(r.run_month)}</span>
               <span className="text-xs text-black/50 dark:text-white/50">
                 Run by {r.run_by_username ?? "—"}
               </span>
-            </div>
+            </HudFrame>
           ))}
         </div>
       )}

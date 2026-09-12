@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { HudFrameForm } from "@/components/hud/HudFrame";
+import SectionLabel from "@/components/hud/SectionLabel";
 
 type DigestSettings = { midnightDigestTime: string; saturdayDigestTime: string };
 
@@ -36,12 +38,14 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Dig
   }
 
   return (
-    <form
+    <HudFrameForm
       onSubmit={handleSubmit}
+      corners="all"
       className="bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl p-6 space-y-4"
     >
       <div>
-        <h2 className="text-sm font-semibold">Digest email timing</h2>
+        <SectionLabel>Digest timing</SectionLabel>
+        <h2 className="font-heading font-semibold text-sm uppercase tracking-wide">Digest email timing</h2>
         <p className="text-xs text-black/40 dark:text-white/40 mt-1">
           Times are Asia/Muscat (UTC+4). Changes take effect within about
           10-15 minutes, since the reminder-sweep endpoint is what actually
@@ -79,11 +83,11 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Dig
         <button
           type="submit"
           disabled={saving}
-          className="rounded-lg bg-accent text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
+          className="bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-4 py-2 text-sm font-medium disabled:opacity-50"
         >
           {saving ? "Saving..." : "Save"}
         </button>
       </div>
-    </form>
+    </HudFrameForm>
   );
 }

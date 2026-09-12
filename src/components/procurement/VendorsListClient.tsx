@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import ConfirmModal from "@/components/ConfirmModal";
 import EditVendorModal from "@/components/procurement/EditVendorModal";
 import type { VendorWithProductsRow } from "@/lib/procurement";
+import { HudFrame } from "@/components/hud/HudFrame";
 
 export default function VendorsListClient({ vendors }: { vendors: VendorWithProductsRow[] }) {
   const router = useRouter();
@@ -46,8 +47,9 @@ export default function VendorsListClient({ vendors }: { vendors: VendorWithProd
       {error && <p className="text-sm text-red-600 dark:text-red-400 mb-4">{error}</p>}
       <div className="space-y-3">
         {vendors.map((v) => (
-          <div
+          <HudFrame
             key={v.id}
+            corners="tl-br"
             className="bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl p-4"
           >
             <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
@@ -92,7 +94,7 @@ export default function VendorsListClient({ vendors }: { vendors: VendorWithProd
                 ))}
               </div>
             )}
-          </div>
+          </HudFrame>
         ))}
       </div>
 

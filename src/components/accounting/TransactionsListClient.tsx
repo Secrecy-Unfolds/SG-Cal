@@ -6,6 +6,7 @@ import ConfirmModal from "@/components/ConfirmModal";
 import TransactionFormModal from "@/components/accounting/TransactionFormModal";
 import type { AccountingTransactionRow } from "@/lib/accounting";
 import { formatMoney } from "@/lib/procurementDisplay";
+import { HudFrame } from "@/components/hud/HudFrame";
 
 export default function TransactionsListClient({ transactions }: { transactions: AccountingTransactionRow[] }) {
   const router = useRouter();
@@ -47,7 +48,11 @@ export default function TransactionsListClient({ transactions }: { transactions:
       <div className="flex items-center justify-between mb-4">
         <div className="flex flex-wrap gap-4">
           {totalsByCurrency.map(([currency, { income, expense }]) => (
-            <div key={currency} className="bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-xl px-4 py-2">
+            <HudFrame
+              key={currency}
+              corners="all"
+              className="bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-xl px-4 py-2"
+            >
               <div className="text-xs text-black/40 dark:text-white/40 uppercase tracking-wide">{currency}</div>
               <div className="text-sm">
                 Income {formatMoney(income, currency)} · Expense {formatMoney(expense, currency)} · Net{" "}
@@ -55,12 +60,12 @@ export default function TransactionsListClient({ transactions }: { transactions:
                   {formatMoney(income - expense, currency)}
                 </span>
               </div>
-            </div>
+            </HudFrame>
           ))}
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="rounded-lg bg-accent text-white px-4 py-2 text-sm font-medium shrink-0"
+          className="bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-4 py-2 text-sm font-medium shrink-0"
         >
           + Add Transaction
         </button>
@@ -71,8 +76,9 @@ export default function TransactionsListClient({ transactions }: { transactions:
       ) : (
         <div className="space-y-2">
           {transactions.map((t) => (
-            <div
+            <HudFrame
               key={t.id}
+              corners="tl-br"
               className="flex items-center justify-between gap-3 bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-xl p-4"
             >
               <div className="min-w-0">
@@ -103,7 +109,7 @@ export default function TransactionsListClient({ transactions }: { transactions:
                   Delete
                 </button>
               </div>
-            </div>
+            </HudFrame>
           ))}
         </div>
       )}

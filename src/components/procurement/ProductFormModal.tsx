@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { HudFrameForm } from "@/components/hud/HudFrame";
 import {
   computeCapitalNeeded,
   formatMoney,
@@ -135,12 +136,13 @@ export default function ProductFormModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
-      <form
+      <HudFrameForm
         onSubmit={handleSubmit}
+        corners="all"
         className="w-full max-w-lg bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">{isEdit ? "Edit product" : "New product"}</h2>
+          <h2 className="font-heading font-semibold text-lg uppercase tracking-wide">{isEdit ? "Edit product" : "New product"}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -355,12 +357,12 @@ export default function ProductFormModal({
           <button
             type="submit"
             disabled={saving || uploading}
-            className="rounded-lg bg-accent text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
+            className="bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
             {saving ? "Saving..." : "Save"}
           </button>
         </div>
-      </form>
+      </HudFrameForm>
     </div>
   );
 }

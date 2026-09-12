@@ -15,7 +15,6 @@ import {
   Settings as SettingsIcon,
   Sun,
   User,
-  Users,
   UserCog,
   Wallet,
   X,
@@ -45,7 +44,6 @@ const NAV_ITEMS = [
   { href: "/accounting", label: "Accounting", icon: Wallet, adminOnly: true, superAdminOnly: false },
   { href: "/hr", label: "HR", icon: UserCog, adminOnly: true, superAdminOnly: false },
   { href: "/ideas", label: "Ideas", icon: Lightbulb, adminOnly: true, superAdminOnly: false },
-  { href: "/users", label: "Manage Users", icon: Users, adminOnly: true, superAdminOnly: false },
   { href: "/settings", label: "Settings", icon: SettingsIcon, adminOnly: false, superAdminOnly: true },
   { href: "/profile", label: "Profile", icon: User, adminOnly: false, superAdminOnly: false },
 ];
@@ -95,7 +93,10 @@ export default function AppShell({
   const sidebarContent = (
     <div className="flex flex-col h-full">
       <div className="px-5 py-5 flex items-center justify-between">
-        <span className="text-lg font-semibold">SG Calendar</span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo-wide-navy.png" alt="SG-ERP" className="h-7 w-auto dark:hidden" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo-wide-white.png" alt="SG-ERP" className="h-7 w-auto hidden dark:block" />
         <button
           type="button"
           onClick={() => setMobileOpen(false)}
@@ -115,10 +116,10 @@ export default function AppShell({
               key={item.href}
               href={item.href}
               onClick={() => setMobileOpen(false)}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-3 rounded-lg border-l-2 px-3 py-2 text-sm font-mono font-medium uppercase tracking-wide transition-colors ${
                 active
-                  ? "bg-accent text-white"
-                  : "text-black/70 dark:text-white/70 hover:bg-black/[0.03] dark:hover:bg-white/5"
+                  ? "border-accent bg-accent/10 text-accent dark:bg-accent/15"
+                  : "border-transparent text-black/70 dark:text-white/70 hover:bg-black/[0.03] dark:hover:bg-white/5"
               }`}
             >
               <Icon size={18} />
@@ -171,7 +172,7 @@ export default function AppShell({
         >
           <Menu size={22} />
         </button>
-        <span className="text-sm font-semibold">{activeItem?.label ?? "SG Calendar"}</span>
+        <span className="font-heading font-semibold text-sm uppercase tracking-wide">{activeItem?.label ?? "SG-ERP"}</span>
         <span className="w-[22px]" />
       </div>
 

@@ -1,10 +1,11 @@
 // Shared HTML email shell (branded header/footer) and small helpers, reused
 // by both the calendar's email templates and procurement's.
 
-export const ACCENT = "#3b5bdb";
+export const ACCENT = "#0d1b2a";
+export const ACCENT_LINE = "#00e676";
 
 export function brandName(): string {
-  return process.env.EMAIL_SENDER_NAME?.trim() || "SG Calendar";
+  return process.env.EMAIL_SENDER_NAME?.trim() || "SG-ERP";
 }
 
 export function escapeHtml(str: string): string {
@@ -34,6 +35,9 @@ export function wrap(preheader: string, heading: string, bodyHtml: string): stri
                 <h1 style="margin:0 0 18px; font-size:20px; line-height:1.3; color:#111827;">${escapeHtml(heading)}</h1>
                 ${bodyHtml}
               </td>
+            </tr>
+            <tr>
+              <td style="padding:0; background:${ACCENT_LINE}; height:3px; line-height:3px; font-size:0;">&nbsp;</td>
             </tr>
             <tr>
               <td style="padding:18px 32px; background:#f9fafb; border-top:1px solid #eef0f2;">

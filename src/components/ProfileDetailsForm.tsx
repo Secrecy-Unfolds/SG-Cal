@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { User as UserIcon } from "lucide-react";
+import { HudFrame } from "@/components/hud/HudFrame";
 import type { UserSummary } from "@/lib/users";
 
 type ProfileFields = {
@@ -79,7 +80,7 @@ function EditableField({
               type="button"
               onClick={save}
               disabled={saving}
-              className="rounded-lg bg-accent text-white px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+              className="bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-3 py-1.5 text-xs font-medium disabled:opacity-50"
             >
               {saving ? "Saving..." : "Save"}
             </button>
@@ -180,8 +181,8 @@ export default function ProfileDetailsForm({ user }: { user: UserSummary }) {
   }
 
   return (
-    <div className="bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl p-6">
-      <h2 className="text-sm font-semibold mb-4">Account details</h2>
+    <HudFrame corners="all" className="bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl p-6">
+      <h2 className="font-heading font-semibold text-sm uppercase tracking-wide mb-4">Account details</h2>
 
       <div className="flex items-center gap-4 mb-2 pb-4 border-b border-black/5 dark:border-white/10">
         <div className="w-16 h-16 rounded-full overflow-hidden bg-black/5 dark:bg-white/10 flex items-center justify-center shrink-0">
@@ -233,6 +234,6 @@ export default function ProfileDetailsForm({ user }: { user: UserSummary }) {
         required
       />
       <EditableField label="Phone number" value={profile.phone} onSave={(v) => saveField("phone", v)} type="tel" />
-    </div>
+    </HudFrame>
   );
 }

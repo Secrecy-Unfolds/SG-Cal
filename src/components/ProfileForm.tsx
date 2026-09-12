@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { HudFrameForm } from "@/components/hud/HudFrame";
 
 export default function ProfileForm() {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -44,11 +45,12 @@ export default function ProfileForm() {
   }
 
   return (
-    <form
+    <HudFrameForm
       onSubmit={handleSubmit}
+      corners="all"
       className="bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl p-6 space-y-4"
     >
-      <h2 className="text-sm font-semibold">Change password</h2>
+      <h2 className="font-heading font-semibold text-sm uppercase tracking-wide">Change password</h2>
 
       <div className="space-y-1">
         <label className="text-sm font-medium">Current password</label>
@@ -91,10 +93,10 @@ export default function ProfileForm() {
       <button
         type="submit"
         disabled={saving}
-        className="w-full rounded-lg bg-accent text-white py-2 text-sm font-medium disabled:opacity-50"
+        className="w-full bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] py-2 text-sm font-medium disabled:opacity-50"
       >
         {saving ? "Saving..." : "Update password"}
       </button>
-    </form>
+    </HudFrameForm>
   );
 }

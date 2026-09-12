@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { EmployeeDetails } from "@/lib/hr";
+import { HudFrameForm } from "@/components/hud/HudFrame";
 
 const inputClass =
   "w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent";
@@ -58,12 +59,13 @@ export default function EmployeeDetailsModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
-      <form
+      <HudFrameForm
         onSubmit={handleSubmit}
+        corners="all"
         className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">{employee.username}</h2>
+          <h2 className="font-heading font-semibold text-lg uppercase tracking-wide">{employee.username}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -144,12 +146,12 @@ export default function EmployeeDetailsModal({
           <button
             type="submit"
             disabled={saving}
-            className="rounded-lg bg-accent text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
+            className="bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
             {saving ? "Saving..." : "Save changes"}
           </button>
         </div>
-      </form>
+      </HudFrameForm>
     </div>
   );
 }

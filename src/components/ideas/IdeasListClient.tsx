@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import IdeaFormModal from "@/components/ideas/IdeaFormModal";
 import type { IdeaRow } from "@/lib/ideas";
 import { formatDateOnly } from "@/lib/procurementDisplay";
+import PageHeader from "@/components/hud/PageHeader";
+import { HudFrameButton } from "@/components/hud/HudFrame";
 
 export default function IdeasListClient({ ideas }: { ideas: IdeaRow[] }) {
   const router = useRouter();
@@ -19,23 +21,23 @@ export default function IdeasListClient({ ideas }: { ideas: IdeaRow[] }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-semibold">Ideas</h1>
+      <PageHeader label="IDEAS" title="Ideas">
         <button
           onClick={() => setShowCreate(true)}
-          className="rounded-lg bg-accent text-white px-4 py-2 text-sm font-medium"
+          className="bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-4 py-2 text-sm font-medium"
         >
           + New Idea
         </button>
-      </div>
+      </PageHeader>
 
       {ideas.length === 0 ? (
         <p className="text-sm text-black/50 dark:text-white/50">No ideas yet — add the first one.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {ideas.map((idea) => (
-            <button
+            <HudFrameButton
               key={idea.id}
+              corners="tl-br"
               onClick={() => setEditing(idea)}
               className="text-left bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl p-4 hover:border-accent/40"
             >
@@ -53,7 +55,7 @@ export default function IdeasListClient({ ideas }: { ideas: IdeaRow[] }) {
                   Added by {idea.created_by_username}
                 </div>
               )}
-            </button>
+            </HudFrameButton>
           ))}
         </div>
       )}

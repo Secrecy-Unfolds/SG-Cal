@@ -6,6 +6,8 @@ import InventoryItemModal from "@/components/inventory/InventoryItemModal";
 import type { InventoryItemRow } from "@/lib/inventory";
 import { ASSET_TYPE_BADGE_CLASS, ASSET_TYPE_LABELS } from "@/lib/inventoryDisplay";
 import { formatDateOnly, formatMoney } from "@/lib/procurementDisplay";
+import PageHeader from "@/components/hud/PageHeader";
+import { HudFrameButton } from "@/components/hud/HudFrame";
 
 export default function InventoryListClient({ items }: { items: InventoryItemRow[] }) {
   const router = useRouter();
@@ -20,15 +22,14 @@ export default function InventoryListClient({ items }: { items: InventoryItemRow
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-semibold">Inventory</h1>
+      <PageHeader label="INVENTORY" title="Inventory">
         <button
           onClick={() => setShowCreate(true)}
-          className="rounded-lg bg-accent text-white px-4 py-2 text-sm font-medium"
+          className="bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-4 py-2 text-sm font-medium"
         >
           + Add Item
         </button>
-      </div>
+      </PageHeader>
 
       {items.length === 0 ? (
         <p className="text-sm text-black/50 dark:text-white/50">
@@ -37,8 +38,9 @@ export default function InventoryListClient({ items }: { items: InventoryItemRow
       ) : (
         <div className="space-y-2">
           {items.map((item) => (
-            <button
+            <HudFrameButton
               key={item.id}
+              corners="tl-br"
               onClick={() => setEditing(item)}
               className="w-full text-left flex items-center justify-between gap-3 bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-xl p-4 hover:border-accent/40"
             >
@@ -60,7 +62,7 @@ export default function InventoryListClient({ items }: { items: InventoryItemRow
                   {formatMoney(item.current_value, item.currency)}
                 </div>
               </div>
-            </button>
+            </HudFrameButton>
           ))}
         </div>
       )}

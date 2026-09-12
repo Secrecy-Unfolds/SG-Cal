@@ -6,6 +6,7 @@ import ConfirmModal from "@/components/ConfirmModal";
 import type { LeaveRequestRow } from "@/lib/hr";
 import { LEAVE_STATUS_BADGE_CLASS, LEAVE_STATUS_LABELS } from "@/lib/hrDisplay";
 import { formatDateOnly } from "@/lib/procurementDisplay";
+import { HudFrame } from "@/components/hud/HudFrame";
 
 type PendingDecision = { request: LeaveRequestRow; status: "approved" | "rejected" };
 
@@ -46,8 +47,9 @@ export default function LeaveRequestsAdminClient({ requests }: { requests: Leave
       ) : (
         <div className="space-y-2">
           {requests.map((r) => (
-            <div
+            <HudFrame
               key={r.id}
+              corners="tl-br"
               className="flex items-center justify-between gap-3 bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-xl p-4"
             >
               <div className="min-w-0">
@@ -88,7 +90,7 @@ export default function LeaveRequestsAdminClient({ requests }: { requests: Leave
                   </button>
                 </div>
               )}
-            </div>
+            </HudFrame>
           ))}
         </div>
       )}

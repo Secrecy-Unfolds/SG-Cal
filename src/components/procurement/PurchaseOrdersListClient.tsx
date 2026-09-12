@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { PurchaseOrderRow } from "@/lib/purchaseOrders";
 import { PO_STATUSES, PO_STATUS_BADGE_CLASS, PO_STATUS_LABELS, type POStatus } from "@/lib/purchaseOrdersDisplay";
 import { computeCapitalNeeded, formatDateOnly, formatMoney } from "@/lib/procurementDisplay";
+import { HudFrame } from "@/components/hud/HudFrame";
 
 export default function PurchaseOrdersListClient({ orders }: { orders: PurchaseOrderRow[] }) {
   const router = useRouter();
@@ -44,8 +45,9 @@ export default function PurchaseOrdersListClient({ orders }: { orders: PurchaseO
       {error && <p className="text-sm text-red-600 dark:text-red-400 mb-3">{error}</p>}
       <div className="space-y-2">
         {orders.map((po) => (
-          <div
+          <HudFrame
             key={po.id}
+            corners="tl-br"
             className="flex items-center justify-between gap-3 bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-xl p-4"
           >
             <div className="min-w-0">
@@ -87,7 +89,7 @@ export default function PurchaseOrdersListClient({ orders }: { orders: PurchaseO
                 </option>
               ))}
             </select>
-          </div>
+          </HudFrame>
         ))}
       </div>
     </div>

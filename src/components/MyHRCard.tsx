@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import LeaveRequestModal from "@/components/LeaveRequestModal";
 import ConfirmModal from "@/components/ConfirmModal";
+import { HudFrame } from "@/components/hud/HudFrame";
 import type { AttendanceRecordRow, EmployeeDetails, LeaveRequestRow } from "@/lib/hr";
 import { LEAVE_STATUS_BADGE_CLASS, LEAVE_STATUS_LABELS } from "@/lib/hrDisplay";
 import { formatDateOnly, formatMoney } from "@/lib/procurementDisplay";
@@ -93,15 +94,15 @@ export default function MyHRCard({ userId }: { userId: number }) {
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl p-6">
+      <HudFrame corners="all" className="bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl p-6">
         <p className="text-sm text-black/40 dark:text-white/40">Loading…</p>
-      </div>
+      </HudFrame>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl p-6 space-y-5">
-      <h2 className="text-sm font-semibold">My HR</h2>
+    <HudFrame corners="all" className="bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl p-6 space-y-5">
+      <h2 className="font-heading font-semibold text-sm uppercase tracking-wide">My HR</h2>
 
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
@@ -145,7 +146,7 @@ export default function MyHRCard({ userId }: { userId: number }) {
               type="button"
               onClick={handleCheckIn}
               disabled={working}
-              className="rounded-lg bg-accent text-white px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+              className="bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-3 py-1.5 text-xs font-medium disabled:opacity-50"
             >
               Check in
             </button>
@@ -154,7 +155,7 @@ export default function MyHRCard({ userId }: { userId: number }) {
               type="button"
               onClick={handleCheckOut}
               disabled={working}
-              className="rounded-lg bg-accent text-white px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+              className="bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-3 py-1.5 text-xs font-medium disabled:opacity-50"
             >
               Check out
             </button>
@@ -248,6 +249,6 @@ export default function MyHRCard({ userId }: { userId: number }) {
           onCancel={() => setCancelingRequest(null)}
         />
       )}
-    </div>
+    </HudFrame>
   );
 }

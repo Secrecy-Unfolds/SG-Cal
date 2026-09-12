@@ -3,6 +3,7 @@
 import { EventItem, EventType } from "@/components/EventModal";
 import { eventBadgeClass, eventTypeLabel, formatEventWhen } from "@/lib/eventDisplay";
 import { formatMuscat } from "@/lib/time";
+import { HudFrame, HudFrameButton } from "@/components/hud/HudFrame";
 
 export default function DayEventsModal({
   date,
@@ -26,9 +27,9 @@ export default function DayEventsModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
-      <div className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4">
+      <HudFrame corners="all" className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">{dateLabel}</h2>
+          <h2 className="text-lg font-heading font-semibold uppercase tracking-wide">{dateLabel}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -43,8 +44,9 @@ export default function DayEventsModal({
             <p className="text-sm text-black/40 dark:text-white/40">Nothing scheduled this day.</p>
           )}
           {events.map((ev) => (
-            <button
+            <HudFrameButton
               key={ev.id}
+              corners="tl-br"
               type="button"
               onClick={() => onSelectEvent(ev)}
               className="w-full text-left bg-black/[0.02] dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl p-3 hover:border-accent/40"
@@ -58,7 +60,7 @@ export default function DayEventsModal({
               </span>
               <div className="text-sm font-medium truncate">{ev.title}</div>
               <div className="text-xs text-black/50 dark:text-white/50">{formatEventWhen(ev)}</div>
-            </button>
+            </HudFrameButton>
           ))}
         </div>
 
@@ -66,7 +68,7 @@ export default function DayEventsModal({
           <button
             type="button"
             onClick={() => onAddNew("meeting")}
-            className="flex-1 rounded-lg bg-accent text-white px-4 py-2 text-sm font-medium"
+            className="flex-1 bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-4 py-2 text-sm font-medium"
           >
             + Meeting
           </button>
@@ -78,7 +80,7 @@ export default function DayEventsModal({
             + Task
           </button>
         </div>
-      </div>
+      </HudFrame>
     </div>
   );
 }

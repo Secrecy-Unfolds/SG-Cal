@@ -394,7 +394,7 @@ takes about 2 minutes to set up.
    your email.
 2. Once logged in, click **Create cronjob**.
 3. Fill in:
-   - **Title**: `SG Calendar reminders` (anything you like)
+   - **Title**: `SG-ERP reminders` (anything you like)
    - **Address (URL)**: `https://YOUR-SITE.vercel.app/api/cron/reminder-sweep`
      (use your real Vercel URL from Part 8e)
    - **Schedule**: choose "Every 15 minutes" (under the "Custom" or common

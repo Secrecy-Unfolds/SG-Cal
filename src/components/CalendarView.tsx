@@ -7,6 +7,9 @@ import EventViewModal from "@/components/EventViewModal";
 import DayEventsModal from "@/components/DayEventsModal";
 import { eachMuscatDateKeyInRange, toMuscatDateInput } from "@/lib/time";
 import { eventBadgeClass, formatEventWhen, eventTypeLabel, type CurrentUser } from "@/lib/eventDisplay";
+import PageHeader from "@/components/hud/PageHeader";
+import SectionLabel from "@/components/hud/SectionLabel";
+import { HudFrameButton } from "@/components/hud/HudFrame";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -114,12 +117,11 @@ export default function CalendarView({
 
   return (
     <div>
-      <header className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <h1 className="text-xl font-semibold">Calendar</h1>
+      <PageHeader label="CALENDAR" title="Calendar" className="flex-wrap mb-6">
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setModalState({ mode: "create", date: new Date(), type: "meeting" })}
-            className="rounded-lg bg-accent text-white px-4 py-2 text-sm font-medium"
+            className="bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-4 py-2 text-sm font-medium"
           >
             + Meeting
           </button>
@@ -130,7 +132,7 @@ export default function CalendarView({
             + Task
           </button>
         </div>
-      </header>
+      </PageHeader>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6">
         <section>
@@ -141,7 +143,7 @@ export default function CalendarView({
             >
               ← Prev
             </button>
-            <h2 className="text-base font-medium">
+            <h2 className="text-base font-heading font-semibold uppercase tracking-wide">
               {monthCursor.toLocaleString("en-US", { month: "long", year: "numeric" })}
             </h2>
             <button
@@ -176,7 +178,7 @@ export default function CalendarView({
                 >
                   <div
                     className={`text-xs mb-1 inline-flex items-center justify-center w-5 h-5 rounded-full ${
-                      isToday ? "bg-accent text-white" : "text-black/60 dark:text-white/60"
+                      isToday ? "bg-accent text-ink" : "text-black/60 dark:text-white/60"
                     }`}
                   >
                     {day.getDate()}
@@ -216,7 +218,8 @@ export default function CalendarView({
         </section>
 
         <aside>
-          <h3 className="text-sm font-semibold mb-3">Upcoming</h3>
+          <SectionLabel>Schedule</SectionLabel>
+          <h3 className="text-sm font-heading font-semibold uppercase tracking-wide mb-3">Upcoming</h3>
           <div className="space-y-2">
             {upcoming.length === 0 && (
               <p className="text-sm text-black/40 dark:text-white/40">
@@ -224,8 +227,9 @@ export default function CalendarView({
               </p>
             )}
             {upcoming.map((ev) => (
-              <button
+              <HudFrameButton
                 key={ev.id}
+                corners="tl-br"
                 onClick={() => setModalState({ mode: "view", event: ev })}
                 className="w-full text-left bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-xl p-3 hover:border-accent/40"
               >
@@ -238,7 +242,7 @@ export default function CalendarView({
                 </span>
                 <div className="text-sm font-medium truncate">{ev.title}</div>
                 <div className="text-xs text-black/50 dark:text-white/50">{formatEventWhen(ev)}</div>
-              </button>
+              </HudFrameButton>
             ))}
           </div>
         </aside>

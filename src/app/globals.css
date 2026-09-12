@@ -1,3 +1,15 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    /* Deeper green in light mode — the vivid dark-mode accent fails
+       contrast as bare text/borders on a light background. */
+    --accent-rgb: 8 122 64;
+  }
+  .dark {
+    /* Vivid neon green, sampled from sea-guard-web.vercel.app. */
+    --accent-rgb: 0 230 118;
+  }
+}

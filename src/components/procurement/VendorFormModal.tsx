@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { HudFrame } from "@/components/hud/HudFrame";
 
 // One vendor's offering on one product (procurement_product_vendors joined
 // with its vendor's identity) — vendors are global and can be linked to
@@ -144,9 +145,12 @@ export default function VendorFormModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
-      <div className="w-full max-w-lg bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+      <HudFrame
+        corners="all"
+        className="w-full max-w-lg bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto"
+      >
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">
+          <h2 className="font-heading font-semibold text-lg uppercase tracking-wide">
             {isEdit ? "Edit vendor" : stage === "search" ? "Add vendor" : "Vendor details"}
           </h2>
           <button
@@ -319,7 +323,7 @@ export default function VendorFormModal({
                 <button
                   type="submit"
                   disabled={saving}
-                  className="rounded-lg bg-accent text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
+                  className="bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-4 py-2 text-sm font-medium disabled:opacity-50"
                 >
                   {saving ? "Saving..." : "Save"}
                 </button>
@@ -327,7 +331,7 @@ export default function VendorFormModal({
             </div>
           </form>
         )}
-      </div>
+      </HudFrame>
     </div>
   );
 }

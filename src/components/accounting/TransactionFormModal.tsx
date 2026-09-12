@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { TransactionType } from "@/lib/accounting";
 import { toMuscatDateInput } from "@/lib/time";
+import { HudFrameForm } from "@/components/hud/HudFrame";
 
 const inputClass =
   "w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent";
@@ -53,12 +54,13 @@ export default function TransactionFormModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
-      <form
+      <HudFrameForm
         onSubmit={handleSubmit}
+        corners="all"
         className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4"
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">New transaction</h2>
+          <h2 className="font-heading font-semibold text-lg uppercase tracking-wide">New transaction</h2>
           <button
             type="button"
             onClick={onClose}
@@ -73,7 +75,7 @@ export default function TransactionFormModal({
             type="button"
             onClick={() => setType("expense")}
             className={`flex-1 rounded-md py-1.5 font-medium transition-colors ${
-              type === "expense" ? "bg-accent text-white" : "text-black/50 dark:text-white/50"
+              type === "expense" ? "bg-accent text-ink" : "text-black/50 dark:text-white/50"
             }`}
           >
             Expense
@@ -82,7 +84,7 @@ export default function TransactionFormModal({
             type="button"
             onClick={() => setType("income")}
             className={`flex-1 rounded-md py-1.5 font-medium transition-colors ${
-              type === "income" ? "bg-accent text-white" : "text-black/50 dark:text-white/50"
+              type === "income" ? "bg-accent text-ink" : "text-black/50 dark:text-white/50"
             }`}
           >
             Income
@@ -142,12 +144,12 @@ export default function TransactionFormModal({
           <button
             type="submit"
             disabled={saving}
-            className="rounded-lg bg-accent text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
+            className="bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
             {saving ? "Saving..." : "Save"}
           </button>
         </div>
-      </form>
+      </HudFrameForm>
     </div>
   );
 }

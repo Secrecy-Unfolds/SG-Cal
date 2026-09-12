@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { getDigestSettings } from "@/lib/settings";
 import SettingsForm from "@/components/SettingsForm";
+import PageHeader from "@/components/hud/PageHeader";
 
 export default async function SettingsPage() {
   const session = await getSession();
@@ -12,7 +13,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <h1 className="text-xl font-semibold">Settings</h1>
+      <PageHeader label="CONFIGURATION" title="Settings" />
       <SettingsForm initialSettings={settings} />
     </div>
   );

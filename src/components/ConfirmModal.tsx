@@ -1,5 +1,7 @@
 "use client";
 
+import { HudFrame } from "@/components/hud/HudFrame";
+
 export default function ConfirmModal({
   title,
   message,
@@ -19,8 +21,8 @@ export default function ConfirmModal({
 }) {
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-[60]">
-      <div className="w-full max-w-sm bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4">
-        <h2 className="text-lg font-semibold">{title}</h2>
+      <HudFrame corners="all" className="w-full max-w-sm bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4">
+        <h2 className="text-lg font-heading font-semibold uppercase tracking-wide">{title}</h2>
         <p className="text-sm text-black/60 dark:text-white/60">{message}</p>
         <div className="flex justify-end gap-2 pt-2">
           <button
@@ -36,13 +38,13 @@ export default function ConfirmModal({
             onClick={onConfirm}
             disabled={loading}
             className={`rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50 ${
-              danger ? "bg-red-600 text-white" : "bg-accent text-white"
+              danger ? "bg-red-600 text-white" : "bg-accent text-ink"
             }`}
           >
             {loading ? "Working..." : confirmLabel}
           </button>
         </div>
-      </div>
+      </HudFrame>
     </div>
   );
 }

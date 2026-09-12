@@ -10,6 +10,7 @@ import {
   TASK_STATUS_LABELS,
   type CurrentUser,
 } from "@/lib/eventDisplay";
+import { HudFrame } from "@/components/hud/HudFrame";
 
 export default function EventViewModal({
   event,
@@ -26,7 +27,7 @@ export default function EventViewModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
-      <div className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4">
+      <HudFrame corners="all" className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <span
@@ -36,7 +37,7 @@ export default function EventViewModal({
             >
               {eventTypeLabel(event)}
             </span>
-            <h2 className="text-lg font-semibold leading-snug break-words">{event.title}</h2>
+            <h2 className="text-lg font-heading font-semibold uppercase tracking-wide leading-snug break-words">{event.title}</h2>
           </div>
           <button
             type="button"
@@ -99,13 +100,13 @@ export default function EventViewModal({
             <button
               type="button"
               onClick={onEdit}
-              className="rounded-lg bg-accent text-white px-4 py-2 text-sm font-medium"
+              className="bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-4 py-2 text-sm font-medium"
             >
               Edit
             </button>
           )}
         </div>
-      </div>
+      </HudFrame>
     </div>
   );
 }

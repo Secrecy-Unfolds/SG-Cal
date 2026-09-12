@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import ConfirmModal from "@/components/ConfirmModal";
+import { HudFrameForm } from "@/components/hud/HudFrame";
 import { muscatInputToUTC, toMuscatDateInput, toMuscatTimeInput } from "@/lib/time";
 import {
   TASK_STATUSES,
@@ -234,12 +235,13 @@ export default function EventModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
-      <form
+      <HudFrameForm
+        corners="all"
         onSubmit={handleSubmit}
         className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">
+          <h2 className="text-lg font-heading font-semibold uppercase tracking-wide">
             {isEdit ? `Edit ${isTask ? "task" : "meeting"}` : `New ${isTask ? "task" : "meeting"}`}
           </h2>
           <button
@@ -256,7 +258,7 @@ export default function EventModal({
             type="button"
             onClick={() => selectType("meeting")}
             className={`flex-1 rounded-md py-1.5 font-medium transition-colors ${
-              !isTask ? "bg-accent text-white" : "text-black/50 dark:text-white/50"
+              !isTask ? "bg-accent text-ink" : "text-black/50 dark:text-white/50"
             }`}
           >
             Meeting
@@ -265,7 +267,7 @@ export default function EventModal({
             type="button"
             onClick={() => selectType("task")}
             className={`flex-1 rounded-md py-1.5 font-medium transition-colors ${
-              isTask ? "bg-accent text-white" : "text-black/50 dark:text-white/50"
+              isTask ? "bg-accent text-ink" : "text-black/50 dark:text-white/50"
             }`}
           >
             Task
@@ -496,7 +498,7 @@ export default function EventModal({
                         onClick={() => setStatus(s)}
                         className={`rounded-full px-3 py-1 text-xs font-medium border transition-colors ${
                           status === s
-                            ? "bg-accent text-white border-accent"
+                            ? "bg-accent text-ink border-accent"
                             : "border-black/10 dark:border-white/10 text-black/60 dark:text-white/60 hover:bg-black/[0.03] dark:hover:bg-white/5"
                         } ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
                       >
@@ -546,13 +548,13 @@ export default function EventModal({
             <button
               type="submit"
               disabled={saving}
-              className="rounded-lg bg-accent text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
+              className="bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-4 py-2 text-sm font-medium disabled:opacity-50"
             >
               {saving ? "Saving..." : "Save"}
             </button>
           </div>
         </div>
-      </form>
+      </HudFrameForm>
 
       {confirmingDelete && event && (
         <ConfirmModal

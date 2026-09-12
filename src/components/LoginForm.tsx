@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ThemeToggle from "@/components/ThemeToggle";
+import { HudFrameForm } from "@/components/hud/HudFrame";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -40,13 +41,20 @@ export default function LoginForm() {
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
-      <form
+      <HudFrameForm
         onSubmit={handleSubmit}
+        corners="all"
         className="w-full max-w-sm bg-white dark:bg-neutral-900 rounded-2xl shadow-sm border border-black/5 dark:border-white/10 p-8 space-y-4"
       >
-        <div>
-          <h1 className="text-xl font-semibold">SG Calendar</h1>
-          <p className="text-sm text-black/50 dark:text-white/50">Sign in to continue</p>
+        <div className="flex flex-col items-center text-center gap-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-square-navy.png" alt="SG-ERP" className="h-16 w-16 dark:hidden" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-square-white.png" alt="SG-ERP" className="h-16 w-16 hidden dark:block" />
+          <div>
+            <h1 className="font-heading font-semibold text-xl uppercase tracking-wide">SG-ERP</h1>
+            <p className="text-sm text-black/50 dark:text-white/50">Sign in to continue</p>
+          </div>
         </div>
 
         <div className="space-y-1">
@@ -76,11 +84,11 @@ export default function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-accent text-white py-2 text-sm font-medium disabled:opacity-50"
+          className="w-full bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] py-2 text-sm font-semibold uppercase tracking-wide disabled:opacity-50"
         >
           {loading ? "Signing in..." : "Sign in"}
         </button>
-      </form>
+      </HudFrameForm>
     </main>
   );
 }

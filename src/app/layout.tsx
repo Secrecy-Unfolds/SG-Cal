@@ -1,9 +1,22 @@
 import type { Metadata } from "next";
+import { Orbitron, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
+const orbitron = Orbitron({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-heading",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["500", "600"],
+  variable: "--font-mono",
+});
+
 export const metadata: Metadata = {
-  title: "SG Calendar",
-  description: "Private calendar for two",
+  title: "SG-ERP",
+  description: "Internal ERP for Seaguard Marine Systems",
 };
 
 const THEME_INIT_SCRIPT = `
@@ -18,7 +31,7 @@ const THEME_INIT_SCRIPT = `
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={`${orbitron.variable} ${jetbrainsMono.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>

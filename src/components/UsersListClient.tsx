@@ -6,8 +6,12 @@ import { Search, ShieldCheck, User as UserIcon, UserPlus } from "lucide-react";
 import AddUserForm from "@/components/AddUserForm";
 import ConfirmModal from "@/components/ConfirmModal";
 import EditUserDetailsModal from "@/components/EditUserDetailsModal";
+import EmployeeDetailsModal from "@/components/hr/EmployeeDetailsModal";
+import { HudFrame } from "@/components/hud/HudFrame";
 import { formatMuscat } from "@/lib/time";
 import type { UserRole, UserSummary } from "@/lib/users";
+import type { EmployeeDetails } from "@/lib/hr";
+import { formatDateOnly, formatMoney } from "@/lib/procurementDisplay";
 
 // Mirrors lib/users.ts's canEditUserDetails — duplicated here for the same
 // client-bundle reason as ROLE_LABELS below.
@@ -58,9 +62,9 @@ function Avatar({ user, size = 40 }: { user: Pick<UserSummary, "picture_url" | "
 function ViewUserModal({ user, onClose }: { user: UserSummary; onClose: () => void }) {
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
-      <div className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4">
+      <HudFrame corners="all" className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">User details</h2>
+          <h2 className="font-heading font-semibold text-lg uppercase tracking-wide">User details</h2>
           <button
             type="button"
             onClick={onClose}
@@ -105,7 +109,7 @@ function ViewUserModal({ user, onClose }: { user: UserSummary; onClose: () => vo
             Close
           </button>
         </div>
-      </div>
+      </HudFrame>
     </div>
   );
 }
@@ -150,9 +154,9 @@ function UpdateRoleModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
-      <div className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4">
+      <HudFrame corners="all" className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Update role</h2>
+          <h2 className="font-heading font-semibold text-lg uppercase tracking-wide">Update role</h2>
           <button
             type="button"
             onClick={onClose}
@@ -174,7 +178,7 @@ function UpdateRoleModal({
               type="button"
               onClick={() => setRole(opt)}
               className={`flex-1 rounded-md py-1.5 font-medium transition-colors ${
-                role === opt ? "bg-accent text-white" : "text-black/50 dark:text-white/50"
+                role === opt ? "bg-accent text-ink" : "text-black/50 dark:text-white/50"
               }`}
             >
               {ROLE_LABELS[opt]}
@@ -196,22 +200,24 @@ function UpdateRoleModal({
             type="button"
             onClick={handleSave}
             disabled={saving || role === user.role}
-            className="rounded-lg bg-accent text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
+            className="bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
             {saving ? "Saving..." : "Save"}
           </button>
         </div>
-      </div>
+      </HudFrame>
     </div>
   );
 }
 
 export default function UsersListClient({
   users,
+  employees,
   actorRole,
   actorUid,
 }: {
   users: UserSummary[];
+  employees: EmployeeDetails[];
   actorRole: "admin" | "super_admin";
   actorUid: number;
 }) {
@@ -221,9 +227,12 @@ export default function UsersListClient({
   const [viewing, setViewing] = useState<UserSummary | null>(null);
   const [editingRole, setEditingRole] = useState<UserSummary | null>(null);
   const [editingDetails, setEditingDetails] = useState<UserSummary | null>(null);
+  const [editingHr, setEditingHr] = useState<EmployeeDetails | null>(null);
   const [resettingId, setResettingId] = useState<number | null>(null);
   const [actionMessage, setActionMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [confirmingReset, setConfirmingReset] = useState<UserSummary | null>(null);
+
+  const employeeByUserId = useMemo(() => new Map(employees.map((e) => [e.user_id, e])), [employees]);
 
   async function handleResetPassword(u: UserSummary) {
     setConfirmingReset(null);
@@ -252,28 +261,29 @@ export default function UsersListClient({
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return users;
-    return users.filter(
-      (u) =>
+    return users.filter((u) => {
+      const emp = employeeByUserId.get(u.id);
+      return (
         u.name.toLowerCase().includes(q) ||
         u.username.toLowerCase().includes(q) ||
-        u.email.toLowerCase().includes(q)
-    );
-  }, [users, query]);
+        u.email.toLowerCase().includes(q) ||
+        (emp?.position ?? "").toLowerCase().includes(q) ||
+        (emp?.department ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [users, employeeByUserId, query]);
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-3 mb-6">
-        <div>
-          <h1 className="text-xl font-semibold">Manage Users</h1>
-          <p className="text-sm text-black/50 dark:text-white/50 mt-1">
-            Admins and Super Admins can see this page. Admins can only add/promote User accounts; only the Super
-            Admin can add Admins.
-          </p>
-        </div>
+      <div className="flex items-center justify-between gap-4 mb-4">
+        <p className="text-sm text-black/50 dark:text-white/50">
+          Admins and Super Admins can see this page. Admins can only add/promote User accounts; only the Super Admin
+          can add Admins.
+        </p>
         <button
           type="button"
           onClick={() => setAdding(true)}
-          className="shrink-0 flex items-center gap-2 rounded-lg bg-accent text-white px-4 py-2 text-sm font-medium"
+          className="shrink-0 flex items-center gap-2 bg-accent text-ink [clip-path:polygon(6%_0,100%_0,94%_100%,0_100%)] px-4 py-2 text-sm font-medium"
         >
           <UserPlus size={16} />
           Add User
@@ -284,8 +294,9 @@ export default function UsersListClient({
         {STATS.map((stat, i) => {
           const Icon = stat.icon;
           return (
-            <div
+            <HudFrame
               key={stat.label}
+              corners="tl-br"
               className="bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl p-4 flex items-center gap-3"
             >
               <div className="w-9 h-9 rounded-lg bg-accent/10 dark:bg-accent/20 flex items-center justify-center text-accent dark:text-blue-300 shrink-0">
@@ -295,7 +306,7 @@ export default function UsersListClient({
                 <div className="text-lg font-semibold leading-tight">{statCounts[i]}</div>
                 <div className="text-xs text-black/50 dark:text-white/50 truncate">{stat.label}</div>
               </div>
-            </div>
+            </HudFrame>
           );
         })}
       </div>
@@ -320,7 +331,7 @@ export default function UsersListClient({
         </p>
       )}
 
-      <div className="bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl overflow-hidden">
+      <HudFrame corners="all" className="bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl overflow-hidden">
         {filtered.length === 0 ? (
           <p className="text-sm text-black/50 dark:text-white/50 px-4 py-6 text-center">No users match your search.</p>
         ) : (
@@ -329,6 +340,7 @@ export default function UsersListClient({
             const canUpdateRole = !isSelf && u.role !== "super_admin";
             const canEditDetails = !isSelf && canEditUserDetails(actorRole, u.role);
             const canResetPassword = !isSelf && actorRole === "super_admin";
+            const emp = employeeByUserId.get(u.id);
             return (
               <div
                 key={u.id}
@@ -340,6 +352,13 @@ export default function UsersListClient({
                   <div className="text-xs text-black/50 dark:text-white/50 truncate">
                     @{u.username} · {u.email}
                     {u.phone ? ` · ${u.phone}` : ""}
+                  </div>
+                  <div className="text-xs text-black/40 dark:text-white/40 truncate mt-0.5">
+                    {emp && (emp.position || emp.department)
+                      ? [emp.position, emp.department].filter(Boolean).join(" · ")
+                      : "No position/department set"}
+                    {emp?.salary ? ` · ${formatMoney(emp.salary, emp.salary_currency)}` : ""}
+                    {emp?.join_date ? ` · Joined ${formatDateOnly(emp.join_date)}` : ""}
                   </div>
                 </div>
                 <span
@@ -362,6 +381,15 @@ export default function UsersListClient({
                       className="text-xs rounded-lg border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
                     >
                       Edit details
+                    </button>
+                  )}
+                  {emp && (
+                    <button
+                      type="button"
+                      onClick={() => setEditingHr(emp)}
+                      className="text-xs rounded-lg border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
+                    >
+                      Edit HR details
                     </button>
                   )}
                   {canUpdateRole && (
@@ -388,7 +416,7 @@ export default function UsersListClient({
             );
           })
         )}
-      </div>
+      </HudFrame>
 
       {adding && <AddUserForm actorRole={actorRole} onClose={() => setAdding(false)} />}
       {viewing && <ViewUserModal user={viewing} onClose={() => setViewing(null)} />}
@@ -409,6 +437,16 @@ export default function UsersListClient({
           onClose={() => setEditingRole(null)}
           onSaved={() => {
             setEditingRole(null);
+            router.refresh();
+          }}
+        />
+      )}
+      {editingHr && (
+        <EmployeeDetailsModal
+          employee={editingHr}
+          onClose={() => setEditingHr(null)}
+          onSaved={() => {
+            setEditingHr(null);
             router.refresh();
           }}
         />
