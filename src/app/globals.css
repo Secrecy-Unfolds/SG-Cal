@@ -51,15 +51,86 @@
     clip-path: polygon(6% 0, 100% 0, 94% 100%, 0 100%);
   }
 
-  /* Accent-colored glow on hover, independent of the button's own color —
-     reads as a consistent HUD highlight rather than a per-button effect. */
-  .btn-glow {
-    transition: box-shadow 150ms ease;
+  /* Hover glow, colored to match the element's own theme instead of always
+     glowing accent-green. Uses `filter: drop-shadow(...)`.
+     IMPORTANT — verified live (2026-09-13) via direct DOM/computed-style
+     inspection in Chrome: `clip-path` clips the painted output of
+     `filter: drop-shadow()` too when they're on the SAME element, despite
+     `getComputedStyle` reporting the correct (unclipped-looking) filter
+     value — the computed value lies about what actually paints. The only
+     reliable fix is putting the glow on a separate ANCESTOR element that
+     does NOT itself have `clip-path`, wrapping the clipped `.btn-skew`
+     button. So every `.btn-skew` button is now wrapped in a plain element
+     carrying `.btn-glow*` instead of having both classes on the same node
+     (see e.g. UsersListClient.tsx for the wrapper pattern). Because that
+     wrapper is a `<span>`/`<div>`, never itself `:disabled`, the disabled
+     check changed from `:not(:disabled)` to `:not(:has(:disabled))` (looks
+     at the wrapped button's own disabled state instead).
+     `.card-glow*` still applies directly to unwrapped clickable cards (no
+     clip-path involved there), so it keeps `:not(:disabled)`.
+     Two stacked drop-shadows approximate box-shadow's old tight+wide-blur
+     layering (drop-shadow has no spread-radius param).
+     `.btn-glow*` = full intensity (wrapper around a `.btn-skew` button).
+     `.card-glow*` = half intensity (direct on an unwrapped card/chip). */
+  .btn-glow,
+  .btn-glow-amber,
+  .btn-glow-red,
+  .btn-glow-blue,
+  .btn-glow-violet,
+  .btn-glow-green,
+  .btn-glow-gray,
+  .card-glow,
+  .card-glow-amber,
+  .card-glow-red,
+  .card-glow-blue,
+  .card-glow-violet,
+  .card-glow-green,
+  .card-glow-gray {
+    transition: filter 150ms ease;
   }
-  .btn-glow:hover:not(:disabled) {
-    box-shadow:
-      0 0 10px 1px rgb(var(--accent-rgb) / 0.6),
-      0 0 22px 4px rgb(var(--accent-rgb) / 0.3);
+  .btn-glow:hover:not(:has(:disabled)) {
+    filter: drop-shadow(0 0 6px rgb(var(--accent-rgb) / 0.7)) drop-shadow(0 0 14px rgb(var(--accent-rgb) / 0.35));
+  }
+  .btn-glow-amber:hover:not(:has(:disabled)) {
+    filter: drop-shadow(0 0 6px rgb(245 158 11 / 0.7)) drop-shadow(0 0 14px rgb(245 158 11 / 0.35));
+  }
+  .btn-glow-red:hover:not(:has(:disabled)) {
+    filter: drop-shadow(0 0 6px rgb(220 38 38 / 0.7)) drop-shadow(0 0 14px rgb(220 38 38 / 0.35));
+  }
+  .btn-glow-blue:hover:not(:has(:disabled)) {
+    filter: drop-shadow(0 0 6px rgb(59 130 246 / 0.7)) drop-shadow(0 0 14px rgb(59 130 246 / 0.35));
+  }
+  .btn-glow-violet:hover:not(:has(:disabled)) {
+    filter: drop-shadow(0 0 6px rgb(139 92 246 / 0.7)) drop-shadow(0 0 14px rgb(139 92 246 / 0.35));
+  }
+  .btn-glow-green:hover:not(:has(:disabled)) {
+    filter: drop-shadow(0 0 6px rgb(34 197 94 / 0.7)) drop-shadow(0 0 14px rgb(34 197 94 / 0.35));
+  }
+  .btn-glow-gray:hover:not(:has(:disabled)) {
+    filter: drop-shadow(0 0 6px rgb(115 115 115 / 0.7)) drop-shadow(0 0 14px rgb(115 115 115 / 0.35));
+  }
+
+  /* Card variants — same colors, half the intensity. */
+  .card-glow:hover:not(:disabled) {
+    filter: drop-shadow(0 0 6px rgb(var(--accent-rgb) / 0.35)) drop-shadow(0 0 14px rgb(var(--accent-rgb) / 0.18));
+  }
+  .card-glow-amber:hover:not(:disabled) {
+    filter: drop-shadow(0 0 6px rgb(245 158 11 / 0.35)) drop-shadow(0 0 14px rgb(245 158 11 / 0.18));
+  }
+  .card-glow-red:hover:not(:disabled) {
+    filter: drop-shadow(0 0 6px rgb(220 38 38 / 0.35)) drop-shadow(0 0 14px rgb(220 38 38 / 0.18));
+  }
+  .card-glow-blue:hover:not(:disabled) {
+    filter: drop-shadow(0 0 6px rgb(59 130 246 / 0.35)) drop-shadow(0 0 14px rgb(59 130 246 / 0.18));
+  }
+  .card-glow-violet:hover:not(:disabled) {
+    filter: drop-shadow(0 0 6px rgb(139 92 246 / 0.35)) drop-shadow(0 0 14px rgb(139 92 246 / 0.18));
+  }
+  .card-glow-green:hover:not(:disabled) {
+    filter: drop-shadow(0 0 6px rgb(34 197 94 / 0.35)) drop-shadow(0 0 14px rgb(34 197 94 / 0.18));
+  }
+  .card-glow-gray:hover:not(:disabled) {
+    filter: drop-shadow(0 0 6px rgb(115 115 115 / 0.35)) drop-shadow(0 0 14px rgb(115 115 115 / 0.18));
   }
 
   /* Radar background — rotating sweep beam + pulsing contact blips. */

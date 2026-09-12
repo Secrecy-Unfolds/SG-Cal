@@ -69,24 +69,28 @@ export default function TransactionFormModal({
         </div>
 
         <div className="flex rounded-lg border border-black/10 dark:border-white/10 p-1 text-sm">
-          <button
-            type="button"
-            onClick={() => setType("expense")}
-            className={`flex-1 btn-skew btn-glow py-1.5 font-medium transition-colors ${
-              type === "expense" ? "bg-accent text-ink" : "text-black/50 dark:text-white/50"
-            }`}
-          >
-            Expense
-          </button>
-          <button
-            type="button"
-            onClick={() => setType("income")}
-            className={`flex-1 btn-skew btn-glow py-1.5 font-medium transition-colors ${
-              type === "income" ? "bg-accent text-ink" : "text-black/50 dark:text-white/50"
-            }`}
-          >
-            Income
-          </button>
+          <span className="btn-glow flex-1">
+            <button
+              type="button"
+              onClick={() => setType("expense")}
+              className={`w-full btn-skew py-1.5 font-medium transition-colors ${
+                type === "expense" ? "bg-accent text-ink" : "text-black/50 dark:text-white/50"
+              }`}
+            >
+              Expense
+            </button>
+          </span>
+          <span className="btn-glow flex-1">
+            <button
+              type="button"
+              onClick={() => setType("income")}
+              className={`w-full btn-skew py-1.5 font-medium transition-colors ${
+                type === "income" ? "bg-accent text-ink" : "text-black/50 dark:text-white/50"
+              }`}
+            >
+              Income
+            </button>
+          </span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -132,20 +136,24 @@ export default function TransactionFormModal({
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn-skew btn-glow px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className="bg-accent text-ink btn-skew btn-glow px-4 py-2 text-sm font-medium disabled:opacity-50"
-          >
-            {saving ? "Saving..." : "Save"}
-          </button>
+          <span className="btn-glow inline-block">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn-skew px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
+            >
+              Cancel
+            </button>
+          </span>
+          <span className="btn-glow inline-block">
+            <button
+              type="submit"
+              disabled={saving}
+              className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium disabled:opacity-50"
+            >
+              {saving ? "Saving..." : "Save"}
+            </button>
+          </span>
         </div>
       </form>
     </div>

@@ -346,24 +346,3 @@ export async function listEventsForRecipient(
   return res.rows;
 }
 
-export async function listUpcomingEventsForRecipient(
-  from: Date,
-  userId: number,
-  role: UserRole
-): Promise<EventRow[]> {
-  const includeAllTasks = role !== "user";
-  const res = await query<EventRow>(
-    `${SELECT_BASE}
-     WHERE (
-       (e.is_tentative = false AND e.start_at >= $1)
-       OR (e.is_tentative = true AND e.end_at >= $1)
-     )
-     AND (
-       (e.type = 'meeting' AND EXISTS (SELECT 1 FROM event_attendees ea WHERE ea.event_id = e.id AND ea.user_id = $2))
-       OR (e.type = 'task' AND ($3 OR e.assignee_id = $2))
-     )
-     ORDER BY e.start_at ASC`,
-    [from, userId, includeAllTasks]
-  );
-  return res.rows;
-}

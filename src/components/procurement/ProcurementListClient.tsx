@@ -19,12 +19,14 @@ export default function ProcurementListClient({ products }: { products: ProductD
   return (
     <div>
       <div className="flex items-center justify-end mb-4">
-        <button
-          onClick={() => setShowCreate(true)}
-          className="bg-accent text-ink btn-skew btn-glow px-4 py-2 text-sm font-medium"
-        >
-          + New Product
-        </button>
+        <span className="btn-glow inline-block">
+          <button
+            onClick={() => setShowCreate(true)}
+            className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium"
+          >
+            + New Product
+          </button>
+        </span>
       </div>
 
       {products.length === 0 ? (
@@ -35,7 +37,7 @@ export default function ProcurementListClient({ products }: { products: ProductD
             <Link
               key={p.id}
               href={`/procurement/${p.id}`}
-              className="block bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl overflow-hidden hover:border-accent/40"
+              className="block bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl overflow-hidden hover:border-accent/40 card-glow"
             >
               <div className="aspect-[16/9] bg-black/5 dark:bg-white/5 flex items-center justify-center">
                 {p.picture_url ? (

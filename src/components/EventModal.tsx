@@ -252,24 +252,28 @@ export default function EventModal({
         </div>
 
         <div className="flex rounded-lg border border-black/10 dark:border-white/10 p-1 text-sm">
-          <button
-            type="button"
-            onClick={() => selectType("meeting")}
-            className={`flex-1 btn-skew btn-glow py-1.5 font-medium transition-colors ${
-              !isTask ? "bg-accent text-ink" : "text-black/50 dark:text-white/50"
-            }`}
-          >
-            Meeting
-          </button>
-          <button
-            type="button"
-            onClick={() => selectType("task")}
-            className={`flex-1 btn-skew btn-glow py-1.5 font-medium transition-colors ${
-              isTask ? "bg-accent text-ink" : "text-black/50 dark:text-white/50"
-            }`}
-          >
-            Task
-          </button>
+          <span className="btn-glow flex-1">
+            <button
+              type="button"
+              onClick={() => selectType("meeting")}
+              className={`w-full btn-skew py-1.5 font-medium transition-colors ${
+                !isTask ? "bg-accent text-ink" : "text-black/50 dark:text-white/50"
+              }`}
+            >
+              Meeting
+            </button>
+          </span>
+          <span className="btn-glow flex-1">
+            <button
+              type="button"
+              onClick={() => selectType("task")}
+              className={`w-full btn-skew py-1.5 font-medium transition-colors ${
+                isTask ? "bg-accent text-ink" : "text-black/50 dark:text-white/50"
+              }`}
+            >
+              Task
+            </button>
+          </span>
         </div>
 
         <div className="space-y-1">
@@ -447,13 +451,19 @@ export default function EventModal({
               <label className="text-sm font-medium">Assigned to</label>
               {canPickAnyAssignee ? (
                 <select
-                  className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-2 text-sm [color-scheme:light]"
+                  className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-2 text-sm [color-scheme:light] dark:[color-scheme:dark]"
                   value={assigneeId ?? ""}
                   onChange={(e) => changeAssignee(e.target.value ? Number(e.target.value) : null)}
                 >
-                  <option value="">Unassigned (Backlog)</option>
+                  <option className="bg-white text-ink dark:bg-neutral-900 dark:text-neutral-100" value="">
+                    Unassigned (Backlog)
+                  </option>
                   {assignableUsers.map((u) => (
-                    <option key={u.id} value={u.id}>
+                    <option
+                      key={u.id}
+                      className="bg-white text-ink dark:bg-neutral-900 dark:text-neutral-100"
+                      value={u.id}
+                    >
                       {u.username}
                       {u.id === currentUser.uid ? " (you)" : ""}
                     </option>
@@ -488,20 +498,21 @@ export default function EventModal({
                     const isClosed = s === "closed";
                     const disabled = isClosed && currentUser.role === "user";
                     return (
-                      <button
-                        key={s}
-                        type="button"
-                        disabled={disabled}
-                        title={disabled ? "Only Admin level can close a task" : undefined}
-                        onClick={() => setStatus(s)}
-                        className={`btn-skew btn-glow px-3 py-1 text-xs font-medium border transition-colors ${
-                          status === s
-                            ? "bg-accent text-ink border-accent"
-                            : "border-black/10 dark:border-white/10 text-black/60 dark:text-white/60 hover:bg-black/[0.03] dark:hover:bg-white/5"
-                        } ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
-                      >
-                        {TASK_STATUS_LABELS[s]}
-                      </button>
+                      <span key={s} className="btn-glow inline-block">
+                        <button
+                          type="button"
+                          disabled={disabled}
+                          title={disabled ? "Only Admin level can close a task" : undefined}
+                          onClick={() => setStatus(s)}
+                          className={`btn-skew px-3 py-1 text-xs font-medium border transition-colors ${
+                            status === s
+                              ? "bg-accent text-ink border-accent"
+                              : "border-black/10 dark:border-white/10 text-black/60 dark:text-white/60 hover:bg-black/[0.03] dark:hover:bg-white/5"
+                          } ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+                        >
+                          {TASK_STATUS_LABELS[s]}
+                        </button>
+                      </span>
                     );
                   })}
                 </div>
@@ -524,32 +535,38 @@ export default function EventModal({
 
         <div className="flex items-center justify-between pt-2">
           {isEdit ? (
-            <button
-              type="button"
-              onClick={() => setConfirmingDelete(true)}
-              disabled={deleting}
-              className="btn-skew btn-glow text-sm text-red-600 dark:text-red-400 disabled:opacity-50"
-            >
-              {deleting ? "Deleting..." : "Delete"}
-            </button>
+            <span className="btn-glow inline-block">
+              <button
+                type="button"
+                onClick={() => setConfirmingDelete(true)}
+                disabled={deleting}
+                className="btn-skew text-sm text-red-600 dark:text-red-400 disabled:opacity-50"
+              >
+                {deleting ? "Deleting..." : "Delete"}
+              </button>
+            </span>
           ) : (
             <span />
           )}
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn-skew btn-glow px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="bg-accent text-ink btn-skew btn-glow px-4 py-2 text-sm font-medium disabled:opacity-50"
-            >
-              {saving ? "Saving..." : "Save"}
-            </button>
+            <span className="btn-glow inline-block">
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn-skew px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
+              >
+                Cancel
+              </button>
+            </span>
+            <span className="btn-glow inline-block">
+              <button
+                type="submit"
+                disabled={saving}
+                className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium disabled:opacity-50"
+              >
+                {saving ? "Saving..." : "Save"}
+              </button>
+            </span>
           </div>
         </div>
       </form>

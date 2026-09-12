@@ -84,7 +84,11 @@ export default function PurchaseOrdersListClient({ orders }: { orders: PurchaseO
               className="shrink-0 rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-1.5 text-xs [color-scheme:light] dark:[color-scheme:dark]"
             >
               {PO_STATUSES.map((s) => (
-                <option key={s} value={s}>
+                <option
+                  key={s}
+                  className="bg-white text-ink dark:bg-neutral-900 dark:text-neutral-100"
+                  value={s}
+                >
                   {PO_STATUS_LABELS[s]}
                 </option>
               ))}

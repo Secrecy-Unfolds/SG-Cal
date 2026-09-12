@@ -90,13 +90,15 @@ export default function ProfileForm() {
       {error && <p className="text-sm text-red-600">{error}</p>}
       {success && <p className="text-sm text-green-600">Password updated.</p>}
 
-      <button
-        type="submit"
-        disabled={saving}
-        className="w-full bg-accent text-ink btn-skew btn-glow py-2 text-sm font-medium disabled:opacity-50"
-      >
-        {saving ? "Saving..." : "Update password"}
-      </button>
+      <span className="btn-glow block w-full">
+        <button
+          type="submit"
+          disabled={saving}
+          className="w-full bg-accent text-ink btn-skew py-2 text-sm font-medium disabled:opacity-50"
+        >
+          {saving ? "Saving..." : "Update password"}
+        </button>
+      </span>
     </HudFrameForm>
   );
 }

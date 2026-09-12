@@ -205,7 +205,7 @@ export default function ProductFormModal({
             <label className="text-sm font-medium">Required by</label>
             <input
               type="date"
-              className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-2 text-sm [color-scheme:light]"
+              className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-2 text-sm [color-scheme:light] dark:[color-scheme:dark]"
               value={requiredBy}
               onChange={(e) => setRequiredBy(e.target.value)}
             />
@@ -235,12 +235,16 @@ export default function ProductFormModal({
           <div className="space-y-1">
             <label className="text-sm font-medium">Status</label>
             <select
-              className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-2 text-sm [color-scheme:light]"
+              className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-2 text-sm [color-scheme:light] dark:[color-scheme:dark]"
               value={status}
               onChange={(e) => setStatus(e.target.value as ProcurementStatus)}
             >
               {PROCUREMENT_STATUSES.map((s) => (
-                <option key={s} value={s}>
+                <option
+                  key={s}
+                  className="bg-white text-ink dark:bg-neutral-900 dark:text-neutral-100"
+                  value={s}
+                >
                   {PROCUREMENT_STATUS_LABELS[s]}
                 </option>
               ))}
@@ -316,7 +320,7 @@ export default function ProductFormModal({
             <label className="text-sm font-medium">Purchase date (expected)</label>
             <input
               type="date"
-              className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-2 text-sm [color-scheme:light]"
+              className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-2 text-sm [color-scheme:light] dark:[color-scheme:dark]"
               value={purchaseDateExpected}
               onChange={(e) => setPurchaseDateExpected(e.target.value)}
             />
@@ -325,7 +329,7 @@ export default function ProductFormModal({
             <label className="text-sm font-medium">Expected arrival</label>
             <input
               type="date"
-              className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-2 text-sm [color-scheme:light]"
+              className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-2 text-sm [color-scheme:light] dark:[color-scheme:dark]"
               value={expectedArrival}
               onChange={(e) => setExpectedArrival(e.target.value)}
             />
@@ -345,20 +349,24 @@ export default function ProductFormModal({
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn-skew btn-glow px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={saving || uploading}
-            className="bg-accent text-ink btn-skew btn-glow px-4 py-2 text-sm font-medium disabled:opacity-50"
-          >
-            {saving ? "Saving..." : "Save"}
-          </button>
+          <span className="btn-glow inline-block">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn-skew px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
+            >
+              Cancel
+            </button>
+          </span>
+          <span className="btn-glow inline-block">
+            <button
+              type="submit"
+              disabled={saving || uploading}
+              className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium disabled:opacity-50"
+            >
+              {saving ? "Saving..." : "Save"}
+            </button>
+          </span>
         </div>
       </form>
     </div>

@@ -60,21 +60,25 @@ export default function VendorsListClient({ vendors }: { vendors: VendorWithProd
                 </div>
               </div>
               <div className="shrink-0 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setEditing(v)}
-                  className="text-xs btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
-                >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmingDelete(v)}
-                  disabled={deletingId === v.id}
-                  className="text-xs btn-skew btn-glow border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 px-3 py-1.5 disabled:opacity-50"
-                >
-                  {deletingId === v.id ? "Deleting..." : "Delete"}
-                </button>
+                <span className="btn-glow inline-block">
+                  <button
+                    type="button"
+                    onClick={() => setEditing(v)}
+                    className="text-xs btn-skew border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
+                  >
+                    Edit
+                  </button>
+                </span>
+                <span className="btn-glow-red inline-block">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingDelete(v)}
+                    disabled={deletingId === v.id}
+                    className="text-xs btn-skew border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 px-3 py-1.5 disabled:opacity-50"
+                  >
+                    {deletingId === v.id ? "Deleting..." : "Delete"}
+                  </button>
+                </span>
               </div>
             </div>
 

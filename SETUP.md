@@ -270,8 +270,8 @@ Saturday or midnight, open a **second** terminal window (leave `npm run dev`
 running in the first) and run:
 
 ```
-curl.exe -H "Authorization: Bearer PASTE_YOUR_CRON_SECRET_HERE" http://localhost:3000/api/cron/saturday-digest
-curl.exe -H "Authorization: Bearer PASTE_YOUR_CRON_SECRET_HERE" http://localhost:3000/api/cron/midnight-digest
+curl.exe -H "Authorization: Bearer PASTE_YOUR_CRON_SECRET_HERE" http://localhost:3000/api/cron/weekly-digest
+curl.exe -H "Authorization: Bearer PASTE_YOUR_CRON_SECRET_HERE" http://localhost:3000/api/cron/daily-digest
 ```
 
 Replace `PASTE_YOUR_CRON_SECRET_HERE` with the actual `CRON_SECRET` value
@@ -360,18 +360,22 @@ Wait for it to finish — it prints a URL at the end, something like
 1. Go to your project on https://vercel.com, open it, click the **Cron
    Jobs** or **Settings → Cron Jobs** tab.
 2. You should see two entries:
-   - `/api/cron/saturday-digest` — runs every Saturday
-   - `/api/cron/midnight-digest` — runs every day at midnight
+   - `/api/cron/weekly-digest` — pings once a day; only actually sends on
+     the day/time configured on the Settings page (Super Admin only)
+   - `/api/cron/daily-digest` — runs every day; only actually sends at the
+     configured time
 3. On Vercel's free (Hobby) plan, these fire once a day at most and may run
    up to roughly an hour later than the exact scheduled time — that's
-   normal and not a bug.
+   normal and not a bug. In practice `/api/cron/reminder-sweep`'s frequent
+   external ping (see below) is what actually catches the configured time
+   precisely; these two are just a same-day fallback.
 
 You can trigger either one manually anytime (e.g. to double check it still
 works after deploying) the same way as Part 7, just swap `localhost:3000`
 for your live URL:
 
 ```
-curl.exe -H "Authorization: Bearer PASTE_YOUR_CRON_SECRET_HERE" https://YOUR-SITE.vercel.app/api/cron/saturday-digest
+curl.exe -H "Authorization: Bearer PASTE_YOUR_CRON_SECRET_HERE" https://YOUR-SITE.vercel.app/api/cron/weekly-digest
 ```
 
 ---

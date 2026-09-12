@@ -81,13 +81,15 @@ export default function LoginForm() {
 
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-accent text-ink btn-skew btn-glow py-2 text-sm font-semibold uppercase tracking-wide disabled:opacity-50"
-        >
-          {loading ? "Signing in..." : "Sign in"}
-        </button>
+        <span className="btn-glow block w-full">
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-accent text-ink btn-skew py-2 text-sm font-semibold uppercase tracking-wide disabled:opacity-50"
+          >
+            {loading ? "Signing in..." : "Sign in"}
+          </button>
+        </span>
       </HudFrameForm>
     </main>
   );

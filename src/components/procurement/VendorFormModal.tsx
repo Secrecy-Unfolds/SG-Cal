@@ -196,13 +196,15 @@ export default function VendorFormModal({
               )}
             </div>
             <div className="flex justify-end pt-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="btn-skew btn-glow px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
-              >
-                Cancel
-              </button>
+              <span className="btn-glow inline-block">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="btn-skew px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
+                >
+                  Cancel
+                </button>
+              </span>
             </div>
           </div>
         )}
@@ -309,20 +311,24 @@ export default function VendorFormModal({
                 <span />
               )}
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="btn-skew btn-glow px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="bg-accent text-ink btn-skew btn-glow px-4 py-2 text-sm font-medium disabled:opacity-50"
-                >
-                  {saving ? "Saving..." : "Save"}
-                </button>
+                <span className="btn-glow inline-block">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="btn-skew px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
+                  >
+                    Cancel
+                  </button>
+                </span>
+                <span className="btn-glow inline-block">
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium disabled:opacity-50"
+                  >
+                    {saving ? "Saving..." : "Save"}
+                  </button>
+                </span>
               </div>
             </div>
           </form>

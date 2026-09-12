@@ -76,34 +76,40 @@ function EditableField({
           />
           {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={save}
-              disabled={saving}
-              className="bg-accent text-ink btn-skew btn-glow px-3 py-1.5 text-xs font-medium disabled:opacity-50"
-            >
-              {saving ? "Saving..." : "Save"}
-            </button>
-            <button
-              type="button"
-              onClick={cancel}
-              disabled={saving}
-              className="btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-1.5 text-xs hover:bg-black/[0.03] dark:hover:bg-white/5"
-            >
-              Cancel
-            </button>
+            <span className="btn-glow inline-block">
+              <button
+                type="button"
+                onClick={save}
+                disabled={saving}
+                className="bg-accent text-ink btn-skew px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+              >
+                {saving ? "Saving..." : "Save"}
+              </button>
+            </span>
+            <span className="btn-glow inline-block">
+              <button
+                type="button"
+                onClick={cancel}
+                disabled={saving}
+                className="btn-skew border border-black/10 dark:border-white/10 px-3 py-1.5 text-xs hover:bg-black/[0.03] dark:hover:bg-white/5"
+              >
+                Cancel
+              </button>
+            </span>
           </div>
         </div>
       ) : (
         <div className="flex items-center justify-between gap-3">
           <span className="text-sm truncate">{value || "—"}</span>
-          <button
-            type="button"
-            onClick={startEditing}
-            className="shrink-0 text-xs btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
-          >
-            Update
-          </button>
+          <span className="btn-glow shrink-0 inline-block">
+            <button
+              type="button"
+              onClick={startEditing}
+              className="text-xs btn-skew border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
+            >
+              Update
+            </button>
+          </span>
         </div>
       )}
     </div>

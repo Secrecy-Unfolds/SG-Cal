@@ -74,20 +74,24 @@ export default function LeaveRequestsAdminClient({ requests }: { requests: Leave
               </div>
               {r.status === "pending" && (
                 <div className="flex gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setPending({ request: r, status: "approved" })}
-                    className="btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-1.5 text-xs text-green-700 dark:text-green-300 hover:bg-black/[0.03] dark:hover:bg-white/5"
-                  >
-                    Approve
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPending({ request: r, status: "rejected" })}
-                    className="btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-1.5 text-xs text-red-600 dark:text-red-400 hover:bg-black/[0.03] dark:hover:bg-white/5"
-                  >
-                    Reject
-                  </button>
+                  <span className="btn-glow inline-block">
+                    <button
+                      type="button"
+                      onClick={() => setPending({ request: r, status: "approved" })}
+                      className="btn-skew border border-black/10 dark:border-white/10 px-3 py-1.5 text-xs text-green-700 dark:text-green-300 hover:bg-black/[0.03] dark:hover:bg-white/5"
+                    >
+                      Approve
+                    </button>
+                  </span>
+                  <span className="btn-glow inline-block">
+                    <button
+                      type="button"
+                      onClick={() => setPending({ request: r, status: "rejected" })}
+                      className="btn-skew border border-black/10 dark:border-white/10 px-3 py-1.5 text-xs text-red-600 dark:text-red-400 hover:bg-black/[0.03] dark:hover:bg-white/5"
+                    >
+                      Reject
+                    </button>
+                  </span>
                 </div>
               )}
             </HudFrame>

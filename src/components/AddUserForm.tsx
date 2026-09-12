@@ -110,24 +110,28 @@ export default function AddUserForm({
           <div className="space-y-1">
             <label className="text-sm font-medium">Role</label>
             <div className="flex rounded-lg border border-black/10 dark:border-white/10 p-1 text-sm">
-              <button
-                type="button"
-                onClick={() => setRole("user")}
-                className={`flex-1 btn-skew btn-glow py-1.5 font-medium transition-colors ${
-                  role === "user" ? "bg-accent text-ink" : "text-black/50 dark:text-white/50"
-                }`}
-              >
-                User
-              </button>
-              <button
-                type="button"
-                onClick={() => setRole("admin")}
-                className={`flex-1 btn-skew btn-glow py-1.5 font-medium transition-colors ${
-                  role === "admin" ? "bg-accent text-ink" : "text-black/50 dark:text-white/50"
-                }`}
-              >
-                Admin
-              </button>
+              <span className="btn-glow flex-1">
+                <button
+                  type="button"
+                  onClick={() => setRole("user")}
+                  className={`w-full btn-skew py-1.5 font-medium transition-colors ${
+                    role === "user" ? "bg-accent text-ink" : "text-black/50 dark:text-white/50"
+                  }`}
+                >
+                  User
+                </button>
+              </span>
+              <span className="btn-glow flex-1">
+                <button
+                  type="button"
+                  onClick={() => setRole("admin")}
+                  className={`w-full btn-skew py-1.5 font-medium transition-colors ${
+                    role === "admin" ? "bg-accent text-ink" : "text-black/50 dark:text-white/50"
+                  }`}
+                >
+                  Admin
+                </button>
+              </span>
             </div>
           </div>
         ) : (
@@ -139,20 +143,24 @@ export default function AddUserForm({
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn-skew btn-glow px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className="bg-accent text-ink btn-skew btn-glow px-4 py-2 text-sm font-medium disabled:opacity-50"
-          >
-            {saving ? "Adding..." : "Add user"}
-          </button>
+          <span className="btn-glow inline-block">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn-skew px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
+            >
+              Cancel
+            </button>
+          </span>
+          <span className="btn-glow inline-block">
+            <button
+              type="submit"
+              disabled={saving}
+              className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium disabled:opacity-50"
+            >
+              {saving ? "Adding..." : "Add user"}
+            </button>
+          </span>
         </div>
       </form>
     </div>

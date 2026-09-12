@@ -132,8 +132,8 @@ create a test event — you should get an email within a few seconds.
 To test the digest emails locally without waiting for Saturday/midnight:
 
 ```
-curl -H "Authorization: Bearer <your CRON_SECRET>" http://localhost:3000/api/cron/saturday-digest
-curl -H "Authorization: Bearer <your CRON_SECRET>" http://localhost:3000/api/cron/midnight-digest
+curl -H "Authorization: Bearer <your CRON_SECRET>" http://localhost:3000/api/cron/weekly-digest
+curl -H "Authorization: Bearer <your CRON_SECRET>" http://localhost:3000/api/cron/daily-digest
 ```
 
 ## 3. Deploy to Vercel

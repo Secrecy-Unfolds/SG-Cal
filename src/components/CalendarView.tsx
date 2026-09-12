@@ -8,6 +8,7 @@ import DayEventsModal from "@/components/DayEventsModal";
 import { eachMuscatDateKeyInRange, toMuscatDateInput } from "@/lib/time";
 import {
   eventBadgeClass,
+  eventGlowClass,
   formatEventWhen,
   eventTypeLabel,
   TASK_STATUS_BADGE_CLASS,
@@ -125,39 +126,47 @@ export default function CalendarView({
     <div>
       <PageHeader label="CALENDAR" title="Calendar" className="flex-wrap mb-6">
         <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => setModalState({ mode: "create", date: new Date(), type: "meeting" })}
-            className="bg-accent text-ink btn-skew btn-glow px-4 py-2 text-sm font-medium"
-          >
-            + Meeting
-          </button>
-          <button
-            onClick={() => setModalState({ mode: "create", date: new Date(), type: "task" })}
-            className="bg-amber-600 text-white btn-skew btn-glow px-4 py-2 text-sm font-medium"
-          >
-            + Task
-          </button>
+          <span className="btn-glow inline-block">
+            <button
+              onClick={() => setModalState({ mode: "create", date: new Date(), type: "meeting" })}
+              className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium"
+            >
+              + Meeting
+            </button>
+          </span>
+          <span className="btn-glow-amber inline-block">
+            <button
+              onClick={() => setModalState({ mode: "create", date: new Date(), type: "task" })}
+              className="bg-amber-600 text-white btn-skew px-4 py-2 text-sm font-medium"
+            >
+              + Task
+            </button>
+          </span>
         </div>
       </PageHeader>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6">
         <section>
           <div className="flex items-center justify-between mb-3">
-            <button
-              onClick={() => setMonthCursor((m) => addMonths(m, -1))}
-              className="btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-1.5 text-sm hover:bg-black/[0.03] dark:hover:bg-white/5"
-            >
-              ← Prev
-            </button>
+            <span className="btn-glow inline-block">
+              <button
+                onClick={() => setMonthCursor((m) => addMonths(m, -1))}
+                className="btn-skew border border-black/10 dark:border-white/10 px-3 py-1.5 text-sm hover:bg-black/[0.03] dark:hover:bg-white/5"
+              >
+                ← Prev
+              </button>
+            </span>
             <h2 className="text-base font-heading font-semibold uppercase tracking-wide">
               {monthCursor.toLocaleString("en-US", { month: "long", year: "numeric" })}
             </h2>
-            <button
-              onClick={() => setMonthCursor((m) => addMonths(m, 1))}
-              className="btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-1.5 text-sm hover:bg-black/[0.03] dark:hover:bg-white/5"
-            >
-              Next →
-            </button>
+            <span className="btn-glow inline-block">
+              <button
+                onClick={() => setMonthCursor((m) => addMonths(m, 1))}
+                className="btn-skew border border-black/10 dark:border-white/10 px-3 py-1.5 text-sm hover:bg-black/[0.03] dark:hover:bg-white/5"
+              >
+                Next →
+              </button>
+            </span>
           </div>
 
           <div className="grid grid-cols-7 gap-px bg-black/5 dark:bg-white/10 rounded-xl overflow-hidden border border-black/5 dark:border-white/10">
@@ -197,7 +206,9 @@ export default function CalendarView({
                           e.stopPropagation();
                           setModalState({ mode: "view", event: ev });
                         }}
-                        className={`block w-full text-left text-[11px] leading-tight rounded px-1 py-0.5 truncate ${
+                        className={`block w-full text-left text-[11px] leading-tight rounded px-1 py-0.5 truncate transition-shadow ${eventGlowClass(
+                          ev
+                        )} ${
                           ev.type === "task"
                             ? `${TASK_STATUS_BADGE_CLASS[ev.status]} hover:opacity-80`
                             : ev.is_tentative
@@ -237,7 +248,9 @@ export default function CalendarView({
                 key={ev.id}
                 corners="tl-br"
                 onClick={() => setModalState({ mode: "view", event: ev })}
-                className="w-full text-left bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-xl p-3 hover:border-accent/40"
+                className={`w-full text-left bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-xl p-3 hover:border-accent/40 ${eventGlowClass(
+                  ev
+                )}`}
               >
                 <span
                   className={`inline-block text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 mb-1 ${eventBadgeClass(

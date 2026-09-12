@@ -119,26 +119,34 @@ export function eventCanceledEmail(e: EventRow, who: string): { subject: string;
   };
 }
 
-export function saturdayDigestEmail(events: EventRow[]): { subject: string; html: string } {
+export function saturdayDigestEmail(
+  events: EventRow[],
+  windowDays: number
+): { subject: string; html: string } {
   const count = events.length;
+  const windowLabel = windowDays === 7 ? "the next week" : `the next ${windowDays} day${windowDays === 1 ? "" : "s"}`;
   return {
     subject: `Get ready: ${count} upcoming item${count === 1 ? "" : "s"}`,
     html: wrap(
       `${count} upcoming item${count === 1 ? "" : "s"} to prepare for`,
-      "This week's heads-up",
-      introText("Here's everything on the calendar so you can start preparing:") +
+      "Your upcoming heads-up",
+      introText(`Here's everything on the calendar for ${windowLabel} so you can start preparing:`) +
         events.map(eventCard).join("")
     ),
   };
 }
 
-export function midnightDigestEmail(events: EventRow[]): { subject: string; html: string } {
+export function midnightDigestEmail(
+  events: EventRow[],
+  windowHours: number
+): { subject: string; html: string } {
   const count = events.length;
+  const windowLabel = windowHours === 24 ? "24 hours" : `${windowHours} hour${windowHours === 1 ? "" : "s"}`;
   return {
-    subject: `Next 24 hours: ${count} item${count === 1 ? "" : "s"}`,
+    subject: `Next ${windowLabel}: ${count} item${count === 1 ? "" : "s"}`,
     html: wrap(
-      `${count} item${count === 1 ? "" : "s"} scheduled in the next 24 hours`,
-      "Next 24 hours",
+      `${count} item${count === 1 ? "" : "s"} scheduled in the next ${windowLabel}`,
+      `Next ${windowLabel}`,
       events.map(eventCard).join("")
     ),
   };

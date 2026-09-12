@@ -9,7 +9,7 @@ import { getEmailsByIds } from "@/lib/users";
 import { sendMailInBackground, getAdminLevelRecipientEmails } from "@/lib/mailer";
 import { meetingStartingSoonEmail, taskDueSoonEmail } from "@/lib/emailTemplates";
 import { isAuthorizedCronRequest } from "@/lib/cronAuth";
-import { maybeSendMidnightDigest, maybeSendSaturdayDigest } from "@/lib/digests";
+import { maybeSendDailyDigest, maybeSendWeeklyDigest } from "@/lib/digests";
 
 export const runtime = "nodejs";
 
@@ -49,14 +49,14 @@ export async function GET(req: NextRequest) {
   // The digests' actual configured send time (Super Admin Settings page) is
   // checked here, on every frequent external ping, rather than relying on
   // vercel.json's fixed once-a-day schedule — see src/lib/digests.ts.
-  const midnightDigest = await maybeSendMidnightDigest();
-  const saturdayDigest = await maybeSendSaturdayDigest();
+  const dailyDigest = await maybeSendDailyDigest();
+  const weeklyDigest = await maybeSendWeeklyDigest();
 
   return NextResponse.json({
     ok: true,
     meetingsNotified: meetings.length,
     tasksNotified: tasks.length,
-    midnightDigest,
-    saturdayDigest,
+    dailyDigest,
+    weeklyDigest,
   });
 }

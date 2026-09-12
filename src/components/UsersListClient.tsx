@@ -94,13 +94,15 @@ function ViewUserModal({ user, onClose }: { user: UserSummary; onClose: () => vo
         </div>
 
         <div className="flex justify-end pt-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn-skew btn-glow px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
-          >
-            Close
-          </button>
+          <span className="btn-glow inline-block">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn-skew px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
+            >
+              Close
+            </button>
+          </span>
         </div>
       </div>
     </div>
@@ -166,37 +168,42 @@ function UpdateRoleModal({
 
         <div className="flex rounded-lg border border-black/10 dark:border-white/10 p-1 text-sm">
           {options.map((opt) => (
-            <button
-              key={opt}
-              type="button"
-              onClick={() => setRole(opt)}
-              className={`flex-1 btn-skew btn-glow py-1.5 font-medium transition-colors ${
-                role === opt ? "bg-accent text-ink" : "text-black/50 dark:text-white/50"
-              }`}
-            >
-              {ROLE_LABELS[opt]}
-            </button>
+            <span key={opt} className="btn-glow flex-1">
+              <button
+                type="button"
+                onClick={() => setRole(opt)}
+                className={`w-full btn-skew py-1.5 font-medium transition-colors ${
+                  role === opt ? "bg-accent text-ink" : "text-black/50 dark:text-white/50"
+                }`}
+              >
+                {ROLE_LABELS[opt]}
+              </button>
+            </span>
           ))}
         </div>
 
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn-skew btn-glow px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving || role === user.role}
-            className="bg-accent text-ink btn-skew btn-glow px-4 py-2 text-sm font-medium disabled:opacity-50"
-          >
-            {saving ? "Saving..." : "Save"}
-          </button>
+          <span className="btn-glow inline-block">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn-skew px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
+            >
+              Cancel
+            </button>
+          </span>
+          <span className="btn-glow inline-block">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving || role === user.role}
+              className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium disabled:opacity-50"
+            >
+              {saving ? "Saving..." : "Save"}
+            </button>
+          </span>
         </div>
       </div>
     </div>
@@ -268,14 +275,16 @@ export default function UsersListClient({
           Admins and Super Admins can see this page. Admins can only add/promote User accounts; only the Super Admin
           can add Admins.
         </p>
-        <button
-          type="button"
-          onClick={() => setAdding(true)}
-          className="shrink-0 flex items-center gap-2 bg-accent text-ink btn-skew btn-glow px-4 py-2 text-sm font-medium"
-        >
-          <UserPlus size={16} />
-          Add User
-        </button>
+        <span className="btn-glow shrink-0 inline-block">
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className="flex items-center gap-2 bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium"
+          >
+            <UserPlus size={16} />
+            Add User
+          </button>
+        </span>
       </div>
 
       <div className="relative mb-4">
@@ -335,49 +344,59 @@ export default function UsersListClient({
                   {ROLE_LABELS[u.role]}
                 </span>
                 <div className="shrink-0 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setViewing(u)}
-                    className="text-xs btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
-                  >
-                    View
-                  </button>
-                  {canEditDetails && (
+                  <span className="btn-glow inline-block">
                     <button
                       type="button"
-                      onClick={() => setEditingDetails(u)}
-                      className="text-xs btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
+                      onClick={() => setViewing(u)}
+                      className="text-xs btn-skew border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
                     >
-                      Edit details
+                      View
                     </button>
+                  </span>
+                  {canEditDetails && (
+                    <span className="btn-glow inline-block">
+                      <button
+                        type="button"
+                        onClick={() => setEditingDetails(u)}
+                        className="text-xs btn-skew border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
+                      >
+                        Edit details
+                      </button>
+                    </span>
                   )}
                   {emp && (
-                    <button
-                      type="button"
-                      onClick={() => setEditingHr(emp)}
-                      className="text-xs btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
-                    >
-                      Edit HR details
-                    </button>
+                    <span className="btn-glow inline-block">
+                      <button
+                        type="button"
+                        onClick={() => setEditingHr(emp)}
+                        className="text-xs btn-skew border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
+                      >
+                        Edit HR details
+                      </button>
+                    </span>
                   )}
                   {canUpdateRole && (
-                    <button
-                      type="button"
-                      onClick={() => setEditingRole(u)}
-                      className="text-xs btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
-                    >
-                      Update type
-                    </button>
+                    <span className="btn-glow inline-block">
+                      <button
+                        type="button"
+                        onClick={() => setEditingRole(u)}
+                        className="text-xs btn-skew border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
+                      >
+                        Update type
+                      </button>
+                    </span>
                   )}
                   {canResetPassword && (
-                    <button
-                      type="button"
-                      onClick={() => setConfirmingReset(u)}
-                      disabled={resettingId === u.id}
-                      className="text-xs btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5 disabled:opacity-50"
-                    >
-                      {resettingId === u.id ? "Resetting..." : "Reset password"}
-                    </button>
+                    <span className="btn-glow inline-block">
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingReset(u)}
+                        disabled={resettingId === u.id}
+                        className="text-xs btn-skew border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5 disabled:opacity-50"
+                      >
+                        {resettingId === u.id ? "Resetting..." : "Reset password"}
+                      </button>
+                    </span>
                   )}
                 </div>
               </div>

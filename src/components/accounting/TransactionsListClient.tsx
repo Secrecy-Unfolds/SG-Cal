@@ -63,12 +63,14 @@ export default function TransactionsListClient({ transactions }: { transactions:
             </HudFrame>
           ))}
         </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="bg-accent text-ink btn-skew btn-glow px-4 py-2 text-sm font-medium shrink-0"
-        >
-          + Add Transaction
-        </button>
+        <span className="btn-glow shrink-0 inline-block">
+          <button
+            onClick={() => setShowCreate(true)}
+            className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium"
+          >
+            + Add Transaction
+          </button>
+        </span>
       </div>
 
       {transactions.length === 0 ? (

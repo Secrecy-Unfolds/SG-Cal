@@ -62,13 +62,15 @@ export default function PayrollRunsClient({ runs }: { runs: PayrollRunRow[] }) {
             className="rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 text-sm dark:[color-scheme:dark]"
           />
         </div>
-        <button
-          onClick={handleRunPayroll}
-          disabled={running}
-          className="bg-accent text-ink btn-skew btn-glow px-4 py-2 text-sm font-medium disabled:opacity-50"
-        >
-          {running ? "Running..." : "Run payroll"}
-        </button>
+        <span className="btn-glow inline-block">
+          <button
+            onClick={handleRunPayroll}
+            disabled={running}
+            className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium disabled:opacity-50"
+          >
+            {running ? "Running..." : "Run payroll"}
+          </button>
+        </span>
       </HudFrame>
 
       {error && <p className="text-sm text-red-600 dark:text-red-400 mb-3">{error}</p>}

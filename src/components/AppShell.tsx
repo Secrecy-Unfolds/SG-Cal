@@ -193,17 +193,19 @@ export default function AppShell({
               </button>
             </div>
           )}
-          <button
-            type="button"
-            onClick={handleLogout}
-            title={collapsedView ? "Log out" : undefined}
-            className={`w-full flex items-center btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-2 text-sm hover:bg-black/[0.03] dark:hover:bg-white/5 ${
-              collapsedView ? "justify-center" : "gap-2"
-            }`}
-          >
-            <LogOut size={16} />
-            {!collapsedView && "Log out"}
-          </button>
+          <span className="btn-glow block w-full">
+            <button
+              type="button"
+              onClick={handleLogout}
+              title={collapsedView ? "Log out" : undefined}
+              className={`w-full flex items-center btn-skew border border-black/10 dark:border-white/10 px-3 py-2 text-sm hover:bg-black/[0.03] dark:hover:bg-white/5 ${
+                collapsedView ? "justify-center" : "gap-2"
+              }`}
+            >
+              <LogOut size={16} />
+              {!collapsedView && "Log out"}
+            </button>
+          </span>
         </div>
       </div>
     );
@@ -246,7 +248,7 @@ export default function AppShell({
           onClick={toggleCollapsed}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          className="absolute top-6 -right-3 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-black/10 dark:border-white/10 bg-white dark:bg-neutral-900 text-black/50 dark:text-white/50 hover:text-accent hover:border-accent/40"
+          className="absolute top-6 -right-3 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-black/10 dark:border-white/10 bg-white dark:bg-neutral-900 text-black/50 dark:text-white/50 hover:text-accent hover:border-accent/40 card-glow"
         >
           {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
         </button>

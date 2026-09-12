@@ -181,27 +181,33 @@ export default function ProductDetailClient({
             <p className="text-sm text-black/70 dark:text-white/70 mt-1 whitespace-pre-wrap">{product.description}</p>
           )}
           <div className="flex flex-wrap gap-2 mt-3">
-            <button
-              onClick={() => setEditingProduct(true)}
-              className="bg-accent text-ink btn-skew btn-glow px-4 py-2 text-sm font-medium"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => setConfirmingDeleteProduct(true)}
-              disabled={deleting}
-              className="btn-skew btn-glow border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 px-4 py-2 text-sm font-medium disabled:opacity-50"
-            >
-              {deleting ? "Deleting..." : "Delete"}
-            </button>
-            <button
-              onClick={handleSendToProcurement}
-              disabled={sendingToProcurement || !product.preferred_vendor_id}
-              title={!product.preferred_vendor_id ? "Mark a vendor preferred first" : undefined}
-              className="btn-skew btn-glow border border-black/10 dark:border-white/10 px-4 py-2 text-sm font-medium hover:bg-black/[0.03] dark:hover:bg-white/5 disabled:opacity-40"
-            >
-              {sendingToProcurement ? "Sending..." : "Send to Procurement"}
-            </button>
+            <span className="btn-glow inline-block">
+              <button
+                onClick={() => setEditingProduct(true)}
+                className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium"
+              >
+                Edit
+              </button>
+            </span>
+            <span className="btn-glow-red inline-block">
+              <button
+                onClick={() => setConfirmingDeleteProduct(true)}
+                disabled={deleting}
+                className="btn-skew border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 px-4 py-2 text-sm font-medium disabled:opacity-50"
+              >
+                {deleting ? "Deleting..." : "Delete"}
+              </button>
+            </span>
+            <span className="btn-glow inline-block">
+              <button
+                onClick={handleSendToProcurement}
+                disabled={sendingToProcurement || !product.preferred_vendor_id}
+                title={!product.preferred_vendor_id ? "Mark a vendor preferred first" : undefined}
+                className="btn-skew border border-black/10 dark:border-white/10 px-4 py-2 text-sm font-medium hover:bg-black/[0.03] dark:hover:bg-white/5 disabled:opacity-40"
+              >
+                {sendingToProcurement ? "Sending..." : "Send to Procurement"}
+              </button>
+            </span>
           </div>
         </div>
       </div>
@@ -249,12 +255,14 @@ export default function ProductDetailClient({
         <SectionLabel>VENDORS</SectionLabel>
         <div className="flex items-center justify-between">
           <h2 className="font-heading font-semibold text-base uppercase tracking-wide">Possible vendors</h2>
-          <button
-            onClick={() => setVendorModal({ mode: "add" })}
-            className="btn-skew btn-glow bg-amber-600 text-white px-4 py-2 text-sm font-medium"
-          >
-            + Add Vendor
-          </button>
+          <span className="btn-glow-amber inline-block">
+            <button
+              onClick={() => setVendorModal({ mode: "add" })}
+              className="btn-skew bg-amber-600 text-white px-4 py-2 text-sm font-medium"
+            >
+              + Add Vendor
+            </button>
+          </span>
         </div>
       </div>
 
@@ -286,26 +294,32 @@ export default function ProductDetailClient({
                     <Stars rating={v.quality_rating} />
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() => handleSetPreferred(v.id, isPreferred ? null : v.vendor_id)}
-                      disabled={busy}
-                      className="text-xs btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5 disabled:opacity-50"
-                    >
-                      {isPreferred ? "Unmark preferred" : "Mark preferred"}
-                    </button>
-                    <button
-                      onClick={() => setVendorModal({ mode: "edit", vendor: v })}
-                      className="text-xs btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => setConfirmingRemoveVendor(v)}
-                      disabled={busy}
-                      className="text-xs btn-skew btn-glow border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 px-3 py-1.5 disabled:opacity-50"
-                    >
-                      Remove
-                    </button>
+                    <span className="btn-glow inline-block">
+                      <button
+                        onClick={() => handleSetPreferred(v.id, isPreferred ? null : v.vendor_id)}
+                        disabled={busy}
+                        className="text-xs btn-skew border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5 disabled:opacity-50"
+                      >
+                        {isPreferred ? "Unmark preferred" : "Mark preferred"}
+                      </button>
+                    </span>
+                    <span className="btn-glow inline-block">
+                      <button
+                        onClick={() => setVendorModal({ mode: "edit", vendor: v })}
+                        className="text-xs btn-skew border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
+                      >
+                        Edit
+                      </button>
+                    </span>
+                    <span className="btn-glow-red inline-block">
+                      <button
+                        onClick={() => setConfirmingRemoveVendor(v)}
+                        disabled={busy}
+                        className="text-xs btn-skew border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 px-3 py-1.5 disabled:opacity-50"
+                      >
+                        Remove
+                      </button>
+                    </span>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">

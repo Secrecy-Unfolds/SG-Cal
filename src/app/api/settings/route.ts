@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { getDigestSettings, isValidTime, setDigestTime } from "@/lib/settings";
+import {
+  getDigestSettings,
+  isValidTime,
+  isValidWindowHours,
+  isValidWindowDays,
+  isValidWeekday,
+  setDigestTime,
+  setMidnightDigestWindowHours,
+  setSaturdayDigestWindowDays,
+  setSaturdayDigestWeekday,
+} from "@/lib/settings";
 
 export const runtime = "nodejs";
 
@@ -31,13 +41,28 @@ export async function PUT(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const midnightDigestTime = typeof body?.midnightDigestTime === "string" ? body.midnightDigestTime : "";
   const saturdayDigestTime = typeof body?.saturdayDigestTime === "string" ? body.saturdayDigestTime : "";
+  const midnightDigestWindowHours = Number(body?.midnightDigestWindowHours);
+  const saturdayDigestWindowDays = Number(body?.saturdayDigestWindowDays);
+  const saturdayDigestWeekday = Number(body?.saturdayDigestWeekday);
 
   if (!isValidTime(midnightDigestTime) || !isValidTime(saturdayDigestTime)) {
     return NextResponse.json({ error: "Times must be in HH:mm 24-hour format" }, { status: 400 });
   }
+  if (!isValidWindowHours(midnightDigestWindowHours)) {
+    return NextResponse.json({ error: "Daily digest window must be a whole number of hours (1-720)" }, { status: 400 });
+  }
+  if (!isValidWindowDays(saturdayDigestWindowDays)) {
+    return NextResponse.json({ error: "Weekly digest window must be a whole number of days (1-180)" }, { status: 400 });
+  }
+  if (!isValidWeekday(saturdayDigestWeekday)) {
+    return NextResponse.json({ error: "Weekly digest day must be a day of the week" }, { status: 400 });
+  }
 
   await setDigestTime("midnight", midnightDigestTime);
   await setDigestTime("saturday", saturdayDigestTime);
+  await setMidnightDigestWindowHours(midnightDigestWindowHours);
+  await setSaturdayDigestWindowDays(saturdayDigestWindowDays);
+  await setSaturdayDigestWeekday(saturdayDigestWeekday);
 
   const settings = await getDigestSettings();
   return NextResponse.json({ settings });

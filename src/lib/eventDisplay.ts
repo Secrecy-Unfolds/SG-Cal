@@ -25,6 +25,19 @@ export const TASK_STATUS_BADGE_CLASS: Record<TaskStatus, string> = {
   closed: "bg-green-500/10 dark:bg-green-500/20 text-green-700 dark:text-green-300",
 };
 
+// Same palette as TASK_STATUS_BADGE_CLASS, mapped to the matching
+// .card-glow-* utility class (globals.css) — so a clickable task chip glows
+// its own status color on hover instead of the flat accent-green default.
+// Uses the "card" (half-intensity) variant since every caller is a
+// card/chip, not a .btn-skew'd button.
+export const TASK_STATUS_GLOW_CLASS: Record<TaskStatus, string> = {
+  backlog: "card-glow-gray",
+  pending: "card-glow-amber",
+  in_progress: "card-glow-blue",
+  review_needed: "card-glow-violet",
+  closed: "card-glow-green",
+};
+
 export type DisplayEvent = {
   type: "meeting" | "task";
   is_tentative: boolean;
@@ -45,6 +58,16 @@ export function eventBadgeClass(ev: DisplayEvent): string {
   if (ev.type === "task") return TASK_STATUS_BADGE_CLASS[ev.status];
   if (ev.is_tentative) return "bg-violet-500/10 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300";
   return "bg-accent/10 dark:bg-accent/20 text-accent dark:text-blue-300";
+}
+
+// Same idea as eventBadgeClass, but returns a .card-glow-* utility class
+// name for a clickable event's hover glow — a tentative meeting glows
+// violet (matching its badge), a confirmed meeting glows the default accent
+// green (plain .card-glow), and a task glows its own status color.
+export function eventGlowClass(ev: DisplayEvent): string {
+  if (ev.type === "task") return TASK_STATUS_GLOW_CLASS[ev.status];
+  if (ev.is_tentative) return "card-glow-violet";
+  return "card-glow";
 }
 
 export function formatEventWhen(ev: DisplayEvent): string {

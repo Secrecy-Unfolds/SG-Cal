@@ -142,23 +142,27 @@ export default function MyHRCard({ userId }: { userId: number }) {
             Attendance
           </h3>
           {!today ? (
-            <button
-              type="button"
-              onClick={handleCheckIn}
-              disabled={working}
-              className="bg-accent text-ink btn-skew btn-glow px-3 py-1.5 text-xs font-medium disabled:opacity-50"
-            >
-              Check in
-            </button>
+            <span className="btn-glow inline-block">
+              <button
+                type="button"
+                onClick={handleCheckIn}
+                disabled={working}
+                className="bg-accent text-ink btn-skew px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+              >
+                Check in
+              </button>
+            </span>
           ) : !today.check_out_at ? (
-            <button
-              type="button"
-              onClick={handleCheckOut}
-              disabled={working}
-              className="bg-accent text-ink btn-skew btn-glow px-3 py-1.5 text-xs font-medium disabled:opacity-50"
-            >
-              Check out
-            </button>
+            <span className="btn-glow inline-block">
+              <button
+                type="button"
+                onClick={handleCheckOut}
+                disabled={working}
+                className="bg-accent text-ink btn-skew px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+              >
+                Check out
+              </button>
+            </span>
           ) : (
             <span className="text-xs text-black/40 dark:text-white/40">Done for today</span>
           )}
@@ -185,13 +189,15 @@ export default function MyHRCard({ userId }: { userId: number }) {
           <h3 className="text-xs font-semibold uppercase tracking-wide text-black/40 dark:text-white/40">
             Leave requests
           </h3>
-          <button
-            type="button"
-            onClick={() => setShowRequestModal(true)}
-            className="btn-skew btn-glow border border-black/10 dark:border-white/10 px-3 py-1.5 text-xs hover:bg-black/[0.03] dark:hover:bg-white/5"
-          >
-            + Request leave
-          </button>
+          <span className="btn-glow inline-block">
+            <button
+              type="button"
+              onClick={() => setShowRequestModal(true)}
+              className="btn-skew border border-black/10 dark:border-white/10 px-3 py-1.5 text-xs hover:bg-black/[0.03] dark:hover:bg-white/5"
+            >
+              + Request leave
+            </button>
+          </span>
         </div>
         {requests.length === 0 ? (
           <p className="text-xs text-black/40 dark:text-white/40">No leave requests yet.</p>

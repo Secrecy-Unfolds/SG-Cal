@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { maybeSendSaturdayDigest } from "@/lib/digests";
+import { maybeSendWeeklyDigest } from "@/lib/digests";
 import { isAuthorizedCronRequest } from "@/lib/cronAuth";
 
 export const runtime = "nodejs";
@@ -12,6 +12,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const result = await maybeSendSaturdayDigest();
+  const result = await maybeSendWeeklyDigest();
   return NextResponse.json({ ok: true, ...result });
 }

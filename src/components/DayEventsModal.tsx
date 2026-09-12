@@ -1,7 +1,7 @@
 "use client";
 
 import { EventItem, EventType } from "@/components/EventModal";
-import { eventBadgeClass, eventTypeLabel, formatEventWhen } from "@/lib/eventDisplay";
+import { eventBadgeClass, eventGlowClass, eventTypeLabel, formatEventWhen } from "@/lib/eventDisplay";
 import { formatMuscat } from "@/lib/time";
 
 export default function DayEventsModal({
@@ -47,7 +47,9 @@ export default function DayEventsModal({
               key={ev.id}
               type="button"
               onClick={() => onSelectEvent(ev)}
-              className="w-full text-left bg-black/[0.02] dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl p-3 hover:border-accent/40"
+              className={`w-full text-left bg-black/[0.02] dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl p-3 hover:border-accent/40 ${eventGlowClass(
+                ev
+              )}`}
             >
               <span
                 className={`inline-block text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 mb-1 ${eventBadgeClass(
@@ -63,20 +65,24 @@ export default function DayEventsModal({
         </div>
 
         <div className="flex gap-2 pt-2">
-          <button
-            type="button"
-            onClick={() => onAddNew("meeting")}
-            className="flex-1 bg-accent text-ink btn-skew btn-glow px-4 py-2 text-sm font-medium"
-          >
-            + Meeting
-          </button>
-          <button
-            type="button"
-            onClick={() => onAddNew("task")}
-            className="flex-1 bg-amber-600 text-white btn-skew btn-glow px-4 py-2 text-sm font-medium"
-          >
-            + Task
-          </button>
+          <span className="btn-glow flex-1">
+            <button
+              type="button"
+              onClick={() => onAddNew("meeting")}
+              className="w-full bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium"
+            >
+              + Meeting
+            </button>
+          </span>
+          <span className="btn-glow-amber flex-1">
+            <button
+              type="button"
+              onClick={() => onAddNew("task")}
+              className="w-full bg-amber-600 text-white btn-skew px-4 py-2 text-sm font-medium"
+            >
+              + Task
+            </button>
+          </span>
         </div>
       </div>
     </div>

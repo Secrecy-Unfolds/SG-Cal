@@ -23,12 +23,14 @@ export default function InventoryListClient({ items }: { items: InventoryItemRow
   return (
     <div>
       <PageHeader label="INVENTORY" title="Inventory">
-        <button
-          onClick={() => setShowCreate(true)}
-          className="bg-accent text-ink btn-skew btn-glow px-4 py-2 text-sm font-medium"
-        >
-          + Add Item
-        </button>
+        <span className="btn-glow inline-block">
+          <button
+            onClick={() => setShowCreate(true)}
+            className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium"
+          >
+            + Add Item
+          </button>
+        </span>
       </PageHeader>
 
       {items.length === 0 ? (
@@ -42,7 +44,7 @@ export default function InventoryListClient({ items }: { items: InventoryItemRow
               key={item.id}
               corners="tl-br"
               onClick={() => setEditing(item)}
-              className="w-full text-left flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-xl p-4 hover:border-accent/40"
+              className="w-full text-left flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-xl p-4 hover:border-accent/40 card-glow"
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-1">

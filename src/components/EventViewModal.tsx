@@ -88,21 +88,25 @@ export default function EventViewModal({
               Only the assignee or an Admin can edit this
             </span>
           )}
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn-skew btn-glow px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
-          >
-            Close
-          </button>
-          {editable && (
+          <span className="btn-glow inline-block">
             <button
               type="button"
-              onClick={onEdit}
-              className="bg-accent text-ink btn-skew btn-glow px-4 py-2 text-sm font-medium"
+              onClick={onClose}
+              className="btn-skew px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
             >
-              Edit
+              Close
             </button>
+          </span>
+          {editable && (
+            <span className="btn-glow inline-block">
+              <button
+                type="button"
+                onClick={onEdit}
+                className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium"
+              >
+                Edit
+              </button>
+            </span>
           )}
         </div>
       </div>
