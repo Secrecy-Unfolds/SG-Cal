@@ -83,10 +83,10 @@ export default function PayrollRunsClient({ runs }: { runs: PayrollRunRow[] }) {
             <HudFrame
               key={r.id}
               corners="tl-br"
-              className="flex items-center justify-between bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-xl p-4"
+              className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-xl p-4"
             >
-              <span className="text-sm font-medium">{formatRunMonth(r.run_month)}</span>
-              <span className="text-xs text-black/50 dark:text-white/50">
+              <span className="min-w-0 truncate text-sm font-medium">{formatRunMonth(r.run_month)}</span>
+              <span className="min-w-0 truncate text-xs text-black/50 dark:text-white/50">
                 Run by {r.run_by_username ?? "—"}
               </span>
             </HudFrame>

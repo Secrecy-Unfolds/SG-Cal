@@ -53,7 +53,7 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Dig
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1">
           <label className="text-sm font-medium">Midnight digest (daily)</label>
           <input

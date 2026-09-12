@@ -180,7 +180,7 @@ export default function ProductDetailClient({
           {product.description && (
             <p className="text-sm text-black/70 dark:text-white/70 mt-1 whitespace-pre-wrap">{product.description}</p>
           )}
-          <div className="flex gap-2 mt-3">
+          <div className="flex flex-wrap gap-2 mt-3">
             <button
               onClick={() => setEditingProduct(true)}
               className="bg-accent text-ink btn-skew btn-glow px-4 py-2 text-sm font-medium"
@@ -274,18 +274,18 @@ export default function ProductDetailClient({
                 }`}
               >
                 <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold">{v.name}</span>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-sm font-semibold truncate">{v.name}</span>
                       {isPreferred && (
-                        <span className="text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 bg-accent/10 dark:bg-accent/20 text-accent dark:text-blue-300">
+                        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 bg-accent/10 dark:bg-accent/20 text-accent dark:text-blue-300">
                           Preferred
                         </span>
                       )}
                     </div>
                     <Stars rating={v.quality_rating} />
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => handleSetPreferred(v.id, isPreferred ? null : v.vendor_id)}
                       disabled={busy}

@@ -42,13 +42,13 @@ export default function InventoryListClient({ items }: { items: InventoryItemRow
               key={item.id}
               corners="tl-br"
               onClick={() => setEditing(item)}
-              className="w-full text-left flex items-center justify-between gap-3 bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-xl p-4 hover:border-accent/40"
+              className="w-full text-left flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-xl p-4 hover:border-accent/40"
             >
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-medium">{item.name}</span>
+                  <span className="text-sm font-medium truncate min-w-0">{item.name}</span>
                   <span
-                    className={`inline-block text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 ${ASSET_TYPE_BADGE_CLASS[item.asset_type]}`}
+                    className={`shrink-0 inline-block text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 ${ASSET_TYPE_BADGE_CLASS[item.asset_type]}`}
                   >
                     {ASSET_TYPE_LABELS[item.asset_type]}
                   </span>

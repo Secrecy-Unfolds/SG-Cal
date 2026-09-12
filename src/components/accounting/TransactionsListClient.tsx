@@ -45,7 +45,7 @@ export default function TransactionsListClient({ transactions }: { transactions:
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
         <div className="flex flex-wrap gap-4">
           {totalsByCurrency.map(([currency, { income, expense }]) => (
             <HudFrame
@@ -79,12 +79,12 @@ export default function TransactionsListClient({ transactions }: { transactions:
             <HudFrame
               key={t.id}
               corners="tl-br"
-              className="flex items-center justify-between gap-3 bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-xl p-4"
+              className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-xl p-4"
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <span
-                    className={`inline-block text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 ${
+                    className={`shrink-0 inline-block text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 ${
                       t.type === "income"
                         ? "bg-green-500/10 dark:bg-green-500/20 text-green-700 dark:text-green-300"
                         : "bg-red-500/10 dark:bg-red-500/20 text-red-700 dark:text-red-300"
@@ -92,9 +92,9 @@ export default function TransactionsListClient({ transactions }: { transactions:
                   >
                     {t.type === "income" ? "Income" : "Expense"}
                   </span>
-                  <span className="text-sm font-medium">{t.description || t.category || "—"}</span>
+                  <span className="min-w-0 truncate text-sm font-medium">{t.description || t.category || "—"}</span>
                 </div>
-                <div className="text-xs text-black/50 dark:text-white/50">
+                <div className="text-xs text-black/50 dark:text-white/50 truncate">
                   {t.date} {t.category ? `· ${t.category}` : ""}
                   {t.purchase_order_id ? ` · from PO #${t.purchase_order_id}` : ""}
                   {t.payroll_run_id ? " · from a payroll run" : ""}

@@ -53,13 +53,13 @@ export default function VendorsListClient({ vendors }: { vendors: VendorWithProd
             className="bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl p-4"
           >
             <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
-              <div>
-                <div className="text-sm font-semibold">{v.name}</div>
-                <div className="text-xs text-black/50 dark:text-white/50">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold truncate">{v.name}</div>
+                <div className="text-xs text-black/50 dark:text-white/50 truncate">
                   {[v.country, v.niche].filter(Boolean).join(" · ") || "No further details"}
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="shrink-0 flex gap-2">
                 <button
                   type="button"
                   onClick={() => setEditing(v)}

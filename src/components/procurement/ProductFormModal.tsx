@@ -191,7 +191,7 @@ export default function ProductFormModal({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1">
             <label className="text-sm font-medium">Required for</label>
             <input
@@ -212,7 +212,7 @@ export default function ProductFormModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="space-y-1">
             <label className="text-sm font-medium">Quantity</label>
             <input
@@ -248,7 +248,7 @@ export default function ProductFormModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="space-y-1">
             <label className="text-sm font-medium">Unit price</label>
             <input
@@ -282,7 +282,7 @@ export default function ProductFormModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 items-end">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
           <div className="space-y-1">
             <label className="text-sm font-medium">Currency</label>
             <input
@@ -311,7 +311,7 @@ export default function ProductFormModal({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1">
             <label className="text-sm font-medium">Purchase date (expected)</label>
             <input

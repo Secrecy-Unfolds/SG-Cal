@@ -27,12 +27,12 @@ export default function DayEventsModal({
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
       <div className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-heading font-semibold uppercase tracking-wide">{dateLabel}</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="min-w-0 truncate text-lg font-heading font-semibold uppercase tracking-wide">{dateLabel}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="text-black/40 dark:text-white/40 hover:text-black/70 dark:hover:text-white/70"
+            className="shrink-0 text-black/40 dark:text-white/40 hover:text-black/70 dark:hover:text-white/70"
           >
             ✕
           </button>

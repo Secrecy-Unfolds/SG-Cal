@@ -220,7 +220,7 @@ export default function VendorFormModal({
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-sm font-medium">Vendor name</label>
                     <input className={inputClass} value={newName} onChange={(e) => setNewName(e.target.value)} required />
@@ -237,7 +237,7 @@ export default function VendorFormModal({
               </>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-sm font-medium">Pricing</label>
                 <input
@@ -258,7 +258,7 @@ export default function VendorFormModal({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-sm font-medium">Delivery period</label>
                 <input

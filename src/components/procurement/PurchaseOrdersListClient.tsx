@@ -48,20 +48,20 @@ export default function PurchaseOrdersListClient({ orders }: { orders: PurchaseO
           <HudFrame
             key={po.id}
             corners="tl-br"
-            className="flex items-center justify-between gap-3 bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-xl p-4"
+            className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-xl p-4"
           >
             <div className="min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-sm font-medium">
+                <span className="min-w-0 truncate text-sm font-medium">
                   {po.product_name} <span className="text-black/40 dark:text-white/40">#{po.id}</span>
                 </span>
                 <span
-                  className={`inline-block text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 ${PO_STATUS_BADGE_CLASS[po.status]}`}
+                  className={`shrink-0 inline-block text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 ${PO_STATUS_BADGE_CLASS[po.status]}`}
                 >
                   {PO_STATUS_LABELS[po.status]}
                 </span>
               </div>
-              <div className="text-xs text-black/50 dark:text-white/50">
+              <div className="text-xs text-black/50 dark:text-white/50 truncate">
                 Vendor: {po.vendor_name} · Ordered {formatDateOnly(po.order_date)}
               </div>
               <div className="text-xs text-black/40 dark:text-white/40 mt-0.5">

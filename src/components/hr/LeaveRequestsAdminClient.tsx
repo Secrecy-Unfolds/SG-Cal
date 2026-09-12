@@ -50,13 +50,13 @@ export default function LeaveRequestsAdminClient({ requests }: { requests: Leave
             <HudFrame
               key={r.id}
               corners="tl-br"
-              className="flex items-center justify-between gap-3 bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-xl p-4"
+              className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-xl p-4"
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-medium">{r.username}</span>
+                  <span className="min-w-0 truncate text-sm font-medium">{r.username}</span>
                   <span
-                    className={`inline-block text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 ${LEAVE_STATUS_BADGE_CLASS[r.status]}`}
+                    className={`shrink-0 inline-block text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 ${LEAVE_STATUS_BADGE_CLASS[r.status]}`}
                   >
                     {LEAVE_STATUS_LABELS[r.status]}
                   </span>

@@ -89,7 +89,7 @@ export default function TransactionFormModal({
           </button>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1">
             <label className="text-sm font-medium">Date</label>
             <input
@@ -111,7 +111,7 @@ export default function TransactionFormModal({
           <input className={inputClass} value={description} onChange={(e) => setDescription(e.target.value)} autoFocus />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1">
             <label className="text-sm font-medium">Amount</label>
             <input
