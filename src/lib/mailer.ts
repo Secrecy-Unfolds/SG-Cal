@@ -55,17 +55,30 @@ export async function getSuperAdminRecipientEmails(): Promise<string[]> {
   return res.rows.map((r) => r.email);
 }
 
-async function sendOne(to: string, subject: string, html: string) {
+// A generated PDF attached to an email — base64-encoded, since the relay
+// only accepts JSON. Wire shape matches the Apps Script relay's own
+// `data.attachments` array exactly ({fileName, mimeType, content} per
+// entry, decoded there via Utilities.base64Decode) — the relay already
+// supports this, no script changes needed. Every other call site that
+// doesn't pass one just omits `attachments` from the payload, unaffected.
+export type EmailAttachment = { filename: string; mimeType: string; base64: string };
+
+async function sendOne(to: string, subject: string, html: string, attachment?: EmailAttachment) {
   const url = process.env.EMAIL_ENDPOINT_URL || DEFAULT_EMAIL_ENDPOINT_URL;
   const token = process.env.EMAIL_TOKEN;
   const name = process.env.EMAIL_SENDER_NAME;
   if (!token) throw new Error("EMAIL_TOKEN is not set");
   if (!name) throw new Error("EMAIL_SENDER_NAME is not set");
 
+  const body: Record<string, unknown> = { token, to, subject, body: html, name };
+  if (attachment) {
+    body.attachments = [{ fileName: attachment.filename, mimeType: attachment.mimeType, content: attachment.base64 }];
+  }
+
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token, to, subject, body: html, name }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
@@ -74,10 +87,10 @@ async function sendOne(to: string, subject: string, html: string) {
   }
 }
 
-export async function sendMail(opts: { to: string[]; subject: string; html: string }) {
+export async function sendMail(opts: { to: string[]; subject: string; html: string; attachment?: EmailAttachment }) {
   if (opts.to.length === 0) return;
   // The relay's "to" field is a single address, so fire one request per recipient.
-  await Promise.all(opts.to.map((addr) => sendOne(addr, opts.subject, opts.html)));
+  await Promise.all(opts.to.map((addr) => sendOne(addr, opts.subject, opts.html, opts.attachment)));
 }
 
 // For interactive routes (create/update/delete an event): the Apps Script
@@ -86,6 +99,6 @@ export async function sendMail(opts: { to: string[]; subject: string; html: stri
 // underlying database change had already succeeded. waitUntil hands the
 // send off to run in the background — Vercel keeps the function alive long
 // enough to finish it without making the user wait on it.
-export function sendMailInBackground(opts: { to: string[]; subject: string; html: string }) {
+export function sendMailInBackground(opts: { to: string[]; subject: string; html: string; attachment?: EmailAttachment }) {
   waitUntil(sendMail(opts).catch((err) => console.error("Failed to send notification email:", err)));
 }

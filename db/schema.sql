@@ -558,3 +558,60 @@ CREATE INDEX IF NOT EXISTS closed_periods_range_idx ON closed_periods (period_st
 -- "Basic financial statements" (P&L + balance-style summary) needs no new
 -- table — it's a live-computed reporting view over data that already
 -- exists across Accounting/Inventory/Capital. See lib/financialStatements.ts.
+
+-- Document & report generation — Accounting's half: customer invoicing
+-- (scoped 2026-09-16, via `AskUserQuestion`). See docs/erp-v2-roadmap.md.
+
+-- Same shared/reusable-identity shape as procurement_vendors/investors.
+CREATE TABLE IF NOT EXISTS customers (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  contact TEXT NOT NULL DEFAULT '',
+  email TEXT NOT NULL DEFAULT '',
+  address TEXT NOT NULL DEFAULT '',
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- invoice_number is backfilled right after insert (needs the row's own id —
+-- see lib/invoices.ts's createInvoice()). access_token is a random,
+-- unguessable string used only by the public PDF share-link route (the
+-- app's one deliberately unauthenticated route, scoped to a single
+-- invoice's PDF) — confirmed 2026-09-16 via `AskUserQuestion`.
+-- "overdue" is not a stored status — it's computed for display (status =
+-- 'sent' and due_date has passed), so nothing needs to flip it, matching
+-- the app's "compute live, don't store derived state" convention.
+CREATE TABLE IF NOT EXISTS issued_invoices (
+  id SERIAL PRIMARY KEY,
+  customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  invoice_number TEXT NOT NULL DEFAULT '',
+  currency TEXT NOT NULL DEFAULT 'OMR',
+  date DATE NOT NULL DEFAULT CURRENT_DATE,
+  due_date DATE,
+  status TEXT NOT NULL DEFAULT 'draft', -- draft | sent | paid
+  access_token TEXT NOT NULL,
+  transaction_id INTEGER REFERENCES accounting_transactions(id) ON DELETE SET NULL,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS issued_invoices_number_idx ON issued_invoices (invoice_number);
+CREATE UNIQUE INDEX IF NOT EXISTS issued_invoices_token_idx ON issued_invoices (access_token);
+CREATE INDEX IF NOT EXISTS issued_invoices_customer_idx ON issued_invoices (customer_id);
+CREATE INDEX IF NOT EXISTS issued_invoices_status_idx ON issued_invoices (status);
+
+-- Itemized line items — confirmed 2026-09-16 (via `AskUserQuestion`),
+-- replacing a single flat amount+description so an invoice reads properly
+-- once rendered as a PDF. line_amount = quantity * unit_price, computed and
+-- stored at write time (not derived live) so a later unit_price edit on a
+-- *different* line item never silently reflows an already-issued line.
+CREATE TABLE IF NOT EXISTS invoice_line_items (
+  id SERIAL PRIMARY KEY,
+  invoice_id INTEGER NOT NULL REFERENCES issued_invoices(id) ON DELETE CASCADE,
+  description TEXT NOT NULL DEFAULT '',
+  quantity NUMERIC(12, 2) NOT NULL DEFAULT 1,
+  unit_price NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  line_amount NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS invoice_line_items_invoice_idx ON invoice_line_items (invoice_id);

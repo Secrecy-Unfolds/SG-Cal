@@ -12,6 +12,8 @@ import { listCapitalBudgets } from "@/lib/capitalBudgets";
 import { listProducts } from "@/lib/procurement";
 import { listAllPayouts, listInvestments, listInvestors } from "@/lib/investors";
 import { listGovernmentSupport, listGovernmentSupporters } from "@/lib/governmentSupport";
+import { listCustomers } from "@/lib/customers";
+import { listInvoices } from "@/lib/invoices";
 import { getBaseCurrency } from "@/lib/settings";
 import { getExchangeRateMap } from "@/lib/exchangeRates";
 import AccountingTabs from "@/components/accounting/AccountingTabs";
@@ -37,6 +39,8 @@ export default async function AccountingPage() {
     payouts,
     governmentSupporters,
     governmentSupport,
+    invoices,
+    customers,
     baseCurrency,
     exchangeRateMap,
   ] = await Promise.all([
@@ -55,6 +59,8 @@ export default async function AccountingPage() {
     listAllPayouts(),
     listGovernmentSupporters(),
     listGovernmentSupport(),
+    listInvoices(),
+    listCustomers(),
     getBaseCurrency(),
     getExchangeRateMap(),
   ]);
@@ -80,6 +86,8 @@ export default async function AccountingPage() {
       payouts={payouts}
       governmentSupporters={governmentSupporters}
       governmentSupport={governmentSupport}
+      invoices={invoices}
+      customers={customers}
       baseCurrency={baseCurrency}
       exchangeRates={exchangeRates}
       actorRole={session.role}

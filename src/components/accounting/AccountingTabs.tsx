@@ -5,7 +5,10 @@ import LedgerPanel from "@/components/accounting/LedgerPanel";
 import PayrollRunsClient from "@/components/accounting/PayrollRunsClient";
 import CapitalPanel from "@/components/accounting/CapitalPanel";
 import StatementsClient from "@/components/accounting/StatementsClient";
+import InvoicesPanel from "@/components/accounting/InvoicesPanel";
 import type { AccountingTransactionRow, PayrollRunRow } from "@/lib/accounting";
+import type { CustomerRow } from "@/lib/customers";
+import type { IssuedInvoiceRow } from "@/lib/invoices";
 import type { ExpenseBudgetRow } from "@/lib/expenseBudgets";
 import type { RecurringExpenseRow } from "@/lib/recurringExpenses";
 import type { RecurringIncomeRow } from "@/lib/recurringIncome";
@@ -20,7 +23,7 @@ import type { UserRole } from "@/lib/users";
 import PageHeader from "@/components/hud/PageHeader";
 import FolderTabs from "@/components/hud/FolderTabs";
 
-type Tab = "ledger" | "payroll" | "capital" | "statements";
+type Tab = "ledger" | "payroll" | "capital" | "statements" | "invoices";
 
 export default function AccountingTabs({
   transactions,
@@ -38,6 +41,8 @@ export default function AccountingTabs({
   payouts,
   governmentSupporters,
   governmentSupport,
+  invoices,
+  customers,
   baseCurrency,
   exchangeRates,
   actorRole,
@@ -57,6 +62,8 @@ export default function AccountingTabs({
   payouts: InvestmentPayoutRow[];
   governmentSupporters: GovernmentSupporterRow[];
   governmentSupport: GovernmentSupportRow[];
+  invoices: IssuedInvoiceRow[];
+  customers: CustomerRow[];
   baseCurrency: string;
   exchangeRates: Record<string, number>;
   actorRole: UserRole;
@@ -73,6 +80,7 @@ export default function AccountingTabs({
           { key: "payroll", label: "Payroll" },
           { key: "capital", label: "Capital" },
           { key: "statements", label: "Statements" },
+          { key: "invoices", label: "Invoices" },
         ]}
         active={tab}
         onChange={setTab}
@@ -107,6 +115,7 @@ export default function AccountingTabs({
         />
       )}
       {tab === "statements" && <StatementsClient baseCurrency={baseCurrency} exchangeRates={exchangeRates} />}
+      {tab === "invoices" && <InvoicesPanel invoices={invoices} customers={customers} />}
     </div>
   );
 }

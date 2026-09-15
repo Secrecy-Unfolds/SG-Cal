@@ -84,6 +84,16 @@ export default function StatementsClient({
           <label className="text-xs font-medium text-black/50 dark:text-white/50">To</label>
           <input type="date" className={inputClass} value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} />
         </div>
+        <span className="btn-glow inline-block">
+          <a
+            href={`/api/financial-statements/pdf?periodStart=${periodStart}&periodEnd=${periodEnd}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-block bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium"
+          >
+            Download PDF
+          </a>
+        </span>
       </div>
 
       {error && <p className="text-sm text-red-600 dark:text-red-400 mb-4">{error}</p>}
