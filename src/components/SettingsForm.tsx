@@ -10,6 +10,7 @@ type DigestSettings = {
   saturdayDigestTime: string;
   saturdayDigestWindowDays: number | null;
   saturdayDigestWeekday: number | null;
+  baseCurrency: string;
 };
 
 const WEEKDAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -29,6 +30,7 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Dig
   const [saturdayDigestWeekday, setSaturdayDigestWeekday] = useState(
     initialSettings.saturdayDigestWeekday !== null ? String(initialSettings.saturdayDigestWeekday) : ""
   );
+  const [baseCurrency, setBaseCurrency] = useState(initialSettings.baseCurrency);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -48,6 +50,7 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Dig
           saturdayDigestTime,
           saturdayDigestWindowDays: Number(saturdayDigestWindowDays),
           saturdayDigestWeekday: Number(saturdayDigestWeekday),
+          baseCurrency,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -166,6 +169,25 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Dig
               required
             />
           </div>
+        </div>
+      </div>
+
+      <div className="space-y-3 pt-2 border-t border-black/5 dark:border-white/10">
+        <h3 className="text-sm font-medium">Currency blending</h3>
+        <p className="text-xs text-black/40 dark:text-white/40">
+          The currency everything else converts into for blended totals
+          across Accounting, Inventory, and elsewhere. Per-currency figures
+          stay visible too — this only adds one extra blended number.
+          Exchange rates themselves are managed below.
+        </p>
+        <div className="max-w-[200px] space-y-1">
+          <label className="text-sm font-medium">Base currency</label>
+          <input
+            className={inputClass}
+            value={baseCurrency}
+            onChange={(e) => setBaseCurrency(e.target.value)}
+            required
+          />
         </div>
       </div>
 

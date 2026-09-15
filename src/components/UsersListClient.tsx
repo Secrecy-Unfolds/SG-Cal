@@ -55,7 +55,7 @@ function Avatar({ user, size = 40 }: { user: Pick<UserSummary, "picture_url" | "
 function ViewUserModal({ user, onClose }: { user: UserSummary; onClose: () => void }) {
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
-      <div className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4">
+      <div className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between">
           <h2 className="font-heading font-semibold text-lg uppercase tracking-wide">User details</h2>
           <button
@@ -149,7 +149,7 @@ function UpdateRoleModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
-      <div className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4">
+      <div className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between">
           <h2 className="font-heading font-semibold text-lg uppercase tracking-wide">Update role</h2>
           <button

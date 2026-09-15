@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import {
+  getBaseCurrency,
   getDigestSettings,
   isValidTime,
   isValidWindowHours,
   isValidWindowDays,
   isValidWeekday,
+  setBaseCurrency,
   setDigestTime,
   setMidnightDigestWindowHours,
   setSaturdayDigestWindowDays,
@@ -28,8 +30,8 @@ export async function GET() {
   const permissionError = requireSuperAdmin(session.role);
   if (permissionError) return NextResponse.json({ error: permissionError }, { status: 403 });
 
-  const settings = await getDigestSettings();
-  return NextResponse.json({ settings });
+  const [digest, baseCurrency] = await Promise.all([getDigestSettings(), getBaseCurrency()]);
+  return NextResponse.json({ settings: { ...digest, baseCurrency } });
 }
 
 export async function PUT(req: NextRequest) {
@@ -44,6 +46,7 @@ export async function PUT(req: NextRequest) {
   const midnightDigestWindowHours = Number(body?.midnightDigestWindowHours);
   const saturdayDigestWindowDays = Number(body?.saturdayDigestWindowDays);
   const saturdayDigestWeekday = Number(body?.saturdayDigestWeekday);
+  const baseCurrency = typeof body?.baseCurrency === "string" ? body.baseCurrency.trim() : "";
 
   if (!isValidTime(midnightDigestTime) || !isValidTime(saturdayDigestTime)) {
     return NextResponse.json({ error: "Times must be in HH:mm 24-hour format" }, { status: 400 });
@@ -57,13 +60,17 @@ export async function PUT(req: NextRequest) {
   if (!isValidWeekday(saturdayDigestWeekday)) {
     return NextResponse.json({ error: "Weekly digest day must be a day of the week" }, { status: 400 });
   }
+  if (!baseCurrency) {
+    return NextResponse.json({ error: "Base currency is required" }, { status: 400 });
+  }
 
   await setDigestTime("midnight", midnightDigestTime);
   await setDigestTime("saturday", saturdayDigestTime);
   await setMidnightDigestWindowHours(midnightDigestWindowHours);
   await setSaturdayDigestWindowDays(saturdayDigestWindowDays);
   await setSaturdayDigestWeekday(saturdayDigestWeekday);
+  await setBaseCurrency(baseCurrency);
 
-  const settings = await getDigestSettings();
-  return NextResponse.json({ settings });
+  const [digest, savedBaseCurrency] = await Promise.all([getDigestSettings(), getBaseCurrency()]);
+  return NextResponse.json({ settings: { ...digest, baseCurrency: savedBaseCurrency } });
 }

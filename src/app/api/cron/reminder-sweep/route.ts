@@ -10,6 +10,7 @@ import { sendMailInBackground, getAdminLevelRecipientEmails } from "@/lib/mailer
 import { meetingStartingSoonEmail, taskDueSoonEmail } from "@/lib/emailTemplates";
 import { isAuthorizedCronRequest } from "@/lib/cronAuth";
 import { maybeSendDailyDigest, maybeSendWeeklyDigest } from "@/lib/digests";
+import { processRecurringExpenses } from "@/lib/recurringExpenses";
 
 export const runtime = "nodejs";
 
@@ -52,11 +53,15 @@ export async function GET(req: NextRequest) {
   const dailyDigest = await maybeSendDailyDigest();
   const weeklyDigest = await maybeSendWeeklyDigest();
 
+  // Expense management's recurring expenses — see lib/recurringExpenses.ts.
+  const recurringExpenses = await processRecurringExpenses();
+
   return NextResponse.json({
     ok: true,
     meetingsNotified: meetings.length,
     tasksNotified: tasks.length,
     dailyDigest,
     weeklyDigest,
+    recurringExpensesPosted: recurringExpenses.posted,
   });
 }

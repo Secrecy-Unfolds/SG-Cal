@@ -19,7 +19,7 @@ export default function ConfirmModal({
 }) {
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-[60]">
-      <div className="w-full max-w-sm bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4">
+      <div className="w-full max-w-sm bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
         <h2 className="text-lg font-heading font-semibold uppercase tracking-wide">{title}</h2>
         <p className="text-sm text-black/60 dark:text-white/60">{message}</p>
         <div className="flex justify-end gap-2 pt-2">

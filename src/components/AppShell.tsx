@@ -58,10 +58,12 @@ function isActive(pathname: string, href: string): boolean {
 export default function AppShell({
   session,
   presentCount = 0,
+  appVersion,
   children,
 }: {
   session: { uid: number; username: string; role: UserRole };
   presentCount?: number;
+  appVersion?: string;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -176,6 +178,9 @@ export default function AppShell({
             <div className="flex items-center justify-between px-3">
               <div className="min-w-0">
                 <div className="text-sm font-medium truncate">{session.username}</div>
+                {appVersion && (
+                  <div className="text-[10px] font-mono text-black/40 dark:text-white/40">v{appVersion}</div>
+                )}
                 <span
                   className={`inline-block mt-0.5 text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 ${ROLE_BADGE_CLASS[session.role]}`}
                 >

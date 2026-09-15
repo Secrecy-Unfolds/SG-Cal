@@ -3,7 +3,7 @@
 import { useState } from "react";
 import ConfirmModal from "@/components/ConfirmModal";
 import type { InventoryItemRow } from "@/lib/inventory";
-import { ASSET_TYPES, ASSET_TYPE_LABELS, type AssetType } from "@/lib/inventoryDisplay";
+import { ASSET_TYPES, ASSET_TYPE_LABELS, computeDepreciatedValue, type AssetType } from "@/lib/inventoryDisplay";
 
 const inputClass =
   "w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent";
@@ -29,12 +29,19 @@ export default function InventoryItemModal({
   const [currency, setCurrency] = useState(item?.currency ?? "OMR");
   const [purchaseDate, setPurchaseDate] = useState(item?.purchase_date ?? "");
   const [currentValue, setCurrentValue] = useState(item?.current_value ?? "");
+  const [usefulLifeMonths, setUsefulLifeMonths] = useState(item?.useful_life_months ?? "");
   const [location, setLocation] = useState(item?.location ?? "");
   const [notes, setNotes] = useState(item?.notes ?? "");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isDepreciating = assetType === "depreciating";
+  const liveDepreciatedValue =
+    isDepreciating && purchaseCost !== "" && purchaseDate && usefulLifeMonths !== ""
+      ? computeDepreciatedValue(Number(purchaseCost), purchaseDate, Number(usefulLifeMonths))
+      : null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -56,7 +63,16 @@ export default function InventoryItemModal({
           purchaseCost: purchaseCost === "" ? null : Number(purchaseCost),
           currency,
           purchaseDate: purchaseDate || null,
-          currentValue: currentValue === "" ? null : Number(currentValue),
+          // For depreciating assets this is a snapshot only — lib/inventory.ts
+          // recomputes it live from purchase cost/date/useful life on every
+          // read, so what's sent here never actually shows once useful life
+          // is set. Falls back to purchase cost until it can be computed.
+          currentValue: isDepreciating
+            ? liveDepreciatedValue ?? (purchaseCost === "" ? null : Number(purchaseCost))
+            : currentValue === ""
+            ? null
+            : Number(currentValue),
+          usefulLifeMonths: isDepreciating && usefulLifeMonths !== "" ? Number(usefulLifeMonths) : null,
           location,
           notes,
         }),
@@ -178,17 +194,49 @@ export default function InventoryItemModal({
               onChange={(e) => setPurchaseDate(e.target.value)}
             />
           </div>
+          {isDepreciating ? (
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Useful life (months)</label>
+              <input
+                type="number"
+                min={1}
+                className={inputClass}
+                value={usefulLifeMonths}
+                onChange={(e) => setUsefulLifeMonths(e.target.value === "" ? "" : Number(e.target.value))}
+              />
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Current value</label>
+              <input
+                type="number"
+                step="0.01"
+                className={inputClass}
+                value={currentValue}
+                onChange={(e) => setCurrentValue(e.target.value)}
+              />
+            </div>
+          )}
+        </div>
+
+        {isDepreciating && (
           <div className="space-y-1">
             <label className="text-sm font-medium">Current value</label>
             <input
-              type="number"
-              step="0.01"
-              className={inputClass}
-              value={currentValue}
-              onChange={(e) => setCurrentValue(e.target.value)}
+              type="text"
+              disabled
+              className={`${inputClass} opacity-60 cursor-not-allowed`}
+              value={
+                liveDepreciatedValue !== null
+                  ? liveDepreciatedValue.toFixed(2)
+                  : "Set purchase cost, date, and useful life to compute"
+              }
             />
+            <p className="text-xs text-black/40 dark:text-white/40">
+              Computed automatically (straight-line) — not manually editable for depreciating assets.
+            </p>
           </div>
-        </div>
+        )}
 
         <div className="space-y-1">
           <label className="text-sm font-medium">Location</label>

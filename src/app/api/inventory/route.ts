@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
   const currency = typeof body?.currency === "string" && body.currency.trim() ? body.currency.trim() : "OMR";
   const purchaseDate = typeof body?.purchaseDate === "string" && body.purchaseDate ? body.purchaseDate : null;
   const currentValue = typeof body?.currentValue === "number" ? body.currentValue : null;
+  const usefulLifeMonths = typeof body?.usefulLifeMonths === "number" ? body.usefulLifeMonths : null;
   const location = typeof body?.location === "string" ? body.location.trim() : "";
   const notes = typeof body?.notes === "string" ? body.notes.trim() : "";
 
@@ -48,6 +49,7 @@ export async function POST(req: NextRequest) {
     currency,
     purchaseDate,
     currentValue,
+    usefulLifeMonths,
     location,
     notes,
   });

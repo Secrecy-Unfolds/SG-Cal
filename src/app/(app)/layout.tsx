@@ -4,6 +4,7 @@ import { isAdminLevel } from "@/lib/users";
 import { listAllAttendance } from "@/lib/hr";
 import { toMuscatDateInput } from "@/lib/time";
 import AppShell from "@/components/AppShell";
+import packageJson from "../../../package.json";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
@@ -22,7 +23,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <AppShell session={session} presentCount={presentCount}>
+    <AppShell session={session} presentCount={presentCount} appVersion={packageJson.version}>
       {children}
     </AppShell>
   );

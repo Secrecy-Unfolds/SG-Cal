@@ -33,6 +33,8 @@ const LAST_SENT_KEY: Record<DigestKind, string> = {
 const MIDNIGHT_WINDOW_HOURS_KEY = "midnight_digest_window_hours";
 const SATURDAY_WINDOW_DAYS_KEY = "saturday_digest_window_days";
 const SATURDAY_WEEKDAY_KEY = "saturday_digest_weekday";
+const BASE_CURRENCY_KEY = "base_currency";
+const DEFAULT_BASE_CURRENCY = "OMR";
 
 export function isValidTime(value: string): boolean {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
@@ -118,4 +120,16 @@ export async function wasSentToday(kind: DigestKind, dateKey: string): Promise<b
 
 export async function markSent(kind: DigestKind, dateKey: string): Promise<void> {
   await setValue(LAST_SENT_KEY[kind], dateKey);
+}
+
+// v2 currency blending — see docs/erp-v2-roadmap.md's "Currency blending"
+// section. Defaults to OMR (the business's home currency) until a Super
+// Admin changes it.
+export async function getBaseCurrency(): Promise<string> {
+  const value = await getValue(BASE_CURRENCY_KEY);
+  return value ?? DEFAULT_BASE_CURRENCY;
+}
+
+export async function setBaseCurrency(currency: string): Promise<void> {
+  await setValue(BASE_CURRENCY_KEY, currency);
 }

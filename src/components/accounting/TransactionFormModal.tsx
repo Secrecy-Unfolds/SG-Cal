@@ -55,7 +55,7 @@ export default function TransactionFormModal({
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4"
+        className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between">
           <h2 className="font-heading font-semibold text-lg uppercase tracking-wide">New transaction</h2>

@@ -1,5 +1,6 @@
 import { query } from "@/lib/db";
 import type { AssetType } from "@/lib/inventoryDisplay";
+import { computeDepreciatedValue } from "@/lib/inventoryDisplay";
 import { computeCapitalNeeded } from "@/lib/procurementDisplay";
 import type { PurchaseOrderRow } from "@/lib/purchaseOrders";
 
@@ -16,6 +17,7 @@ export type InventoryItemRow = {
   currency: string;
   purchase_date: string | null; // "YYYY-MM-DD"
   current_value: string | null;
+  useful_life_months: number | null;
   location: string;
   notes: string;
   purchase_order_id: number | null;
@@ -25,18 +27,37 @@ export type InventoryItemRow = {
 
 const ITEM_SELECT = `
   SELECT id, name, asset_type, quantity, quantity_unit, purchase_cost, currency,
-         purchase_date, current_value, location, notes, purchase_order_id, created_at, updated_at
+         purchase_date, current_value, useful_life_months, location, notes,
+         purchase_order_id, created_at, updated_at
   FROM inventory_items
 `;
 
+// For asset_type = "depreciating", current_value is computed live from
+// purchase_cost/purchase_date/useful_life_months instead of trusting the
+// stored column (which is never updated for these rows — see the schema
+// comment). Falls back to the stored value when there isn't enough data yet
+// (useful_life_months not set) rather than showing 0/null.
+function withLiveDepreciation(row: InventoryItemRow): InventoryItemRow {
+  if (row.asset_type !== "depreciating" || !row.purchase_cost || !row.purchase_date || !row.useful_life_months) {
+    return row;
+  }
+  const computed = computeDepreciatedValue(
+    parseFloat(row.purchase_cost),
+    row.purchase_date,
+    row.useful_life_months
+  );
+  return computed === null ? row : { ...row, current_value: String(computed) };
+}
+
 export async function listInventoryItems(): Promise<InventoryItemRow[]> {
   const res = await query<InventoryItemRow>(`${ITEM_SELECT} ORDER BY created_at DESC`);
-  return res.rows;
+  return res.rows.map(withLiveDepreciation);
 }
 
 export async function getInventoryItemById(id: number): Promise<InventoryItemRow | null> {
   const res = await query<InventoryItemRow>(`${ITEM_SELECT} WHERE id = $1`, [id]);
-  return res.rows[0] ?? null;
+  const row = res.rows[0];
+  return row ? withLiveDepreciation(row) : null;
 }
 
 export type InventoryItemInput = {
@@ -48,6 +69,7 @@ export type InventoryItemInput = {
   currency: string;
   purchaseDate: string | null;
   currentValue: number | null;
+  usefulLifeMonths: number | null;
   location: string;
   notes: string;
 };
@@ -55,8 +77,8 @@ export type InventoryItemInput = {
 export async function createInventoryItem(input: InventoryItemInput): Promise<InventoryItemRow> {
   const res = await query<{ id: number }>(
     `INSERT INTO inventory_items
-       (name, asset_type, quantity, quantity_unit, purchase_cost, currency, purchase_date, current_value, location, notes)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+       (name, asset_type, quantity, quantity_unit, purchase_cost, currency, purchase_date, current_value, useful_life_months, location, notes)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
     [
       input.name,
       input.assetType,
@@ -66,6 +88,7 @@ export async function createInventoryItem(input: InventoryItemInput): Promise<In
       input.currency,
       input.purchaseDate,
       input.currentValue,
+      input.usefulLifeMonths,
       input.location,
       input.notes,
     ]
@@ -79,8 +102,9 @@ export async function updateInventoryItem(id: number, input: InventoryItemInput)
   await query(
     `UPDATE inventory_items
      SET name = $1, asset_type = $2, quantity = $3, quantity_unit = $4, purchase_cost = $5,
-         currency = $6, purchase_date = $7, current_value = $8, location = $9, notes = $10, updated_at = now()
-     WHERE id = $11`,
+         currency = $6, purchase_date = $7, current_value = $8, useful_life_months = $9,
+         location = $10, notes = $11, updated_at = now()
+     WHERE id = $12`,
     [
       input.name,
       input.assetType,
@@ -90,6 +114,7 @@ export async function updateInventoryItem(id: number, input: InventoryItemInput)
       input.currency,
       input.purchaseDate,
       input.currentValue,
+      input.usefulLifeMonths,
       input.location,
       input.notes,
       id,
@@ -121,6 +146,7 @@ export async function createInventoryItemFromPurchaseOrder(po: PurchaseOrderRow)
     currency: po.currency,
     purchaseDate: po.received_at ? po.received_at.toISOString().slice(0, 10) : null,
     currentValue: cost,
+    usefulLifeMonths: null,
     location: "",
     notes: `Received from Purchase Order #${po.id}`,
   });

@@ -2,6 +2,15 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { isAdminLevel } from "@/lib/users";
 import { listPayrollRuns, listTransactions } from "@/lib/accounting";
+import { listExpenseBudgets } from "@/lib/expenseBudgets";
+import { listRecurringExpenses } from "@/lib/recurringExpenses";
+import { listCapitalEntries } from "@/lib/capital";
+import { listCapitalBudgets } from "@/lib/capitalBudgets";
+import { listProducts } from "@/lib/procurement";
+import { listAllPayouts, listInvestments, listInvestors } from "@/lib/investors";
+import { listGovernmentSupport, listGovernmentSupporters } from "@/lib/governmentSupport";
+import { getBaseCurrency } from "@/lib/settings";
+import { getExchangeRateMap } from "@/lib/exchangeRates";
 import AccountingTabs from "@/components/accounting/AccountingTabs";
 
 export default async function AccountingPage() {
@@ -9,7 +18,59 @@ export default async function AccountingPage() {
   if (!session) redirect("/login");
   if (!isAdminLevel(session.role)) redirect("/");
 
-  const [transactions, payrollRuns] = await Promise.all([listTransactions(), listPayrollRuns()]);
+  const [
+    transactions,
+    expenseBudgets,
+    recurringExpenses,
+    payrollRuns,
+    capitalEntries,
+    capitalBudgets,
+    products,
+    investors,
+    investments,
+    payouts,
+    governmentSupporters,
+    governmentSupport,
+    baseCurrency,
+    exchangeRateMap,
+  ] = await Promise.all([
+    listTransactions(),
+    listExpenseBudgets(),
+    listRecurringExpenses(),
+    listPayrollRuns(),
+    listCapitalEntries(),
+    listCapitalBudgets(),
+    listProducts(),
+    listInvestors(),
+    listInvestments(),
+    listAllPayouts(),
+    listGovernmentSupporters(),
+    listGovernmentSupport(),
+    getBaseCurrency(),
+    getExchangeRateMap(),
+  ]);
 
-  return <AccountingTabs transactions={transactions} payrollRuns={payrollRuns} />;
+  // Map isn't serializable across the server/client boundary — pass as a
+  // plain object, reconstructed into a Map client-side where needed.
+  const exchangeRates = Object.fromEntries(exchangeRateMap);
+
+  return (
+    <AccountingTabs
+      transactions={transactions}
+      expenseBudgets={expenseBudgets}
+      recurringExpenses={recurringExpenses}
+      payrollRuns={payrollRuns}
+      capitalEntries={capitalEntries}
+      capitalBudgets={capitalBudgets}
+      products={products}
+      investors={investors}
+      investments={investments}
+      payouts={payouts}
+      governmentSupporters={governmentSupporters}
+      governmentSupport={governmentSupport}
+      baseCurrency={baseCurrency}
+      exchangeRates={exchangeRates}
+      actorRole={session.role}
+    />
+  );
 }

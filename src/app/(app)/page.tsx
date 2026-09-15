@@ -13,6 +13,9 @@ import { listTransactions } from "@/lib/accounting";
 import { listIdeas } from "@/lib/ideas";
 import { toMuscatDateInput } from "@/lib/time";
 import { formatMoney } from "@/lib/procurementDisplay";
+import { getBaseCurrency } from "@/lib/settings";
+import { getExchangeRateMap } from "@/lib/exchangeRates";
+import { sumBlended } from "@/lib/currencyDisplay";
 import PageHeader from "@/components/hud/PageHeader";
 import SectionLabel from "@/components/hud/SectionLabel";
 import { HudFrame } from "@/components/hud/HudFrame";
@@ -42,6 +45,8 @@ export default async function HomePage() {
           listInventoryItems(),
           listTransactions(),
           listIdeas(),
+          getBaseCurrency(),
+          getExchangeRateMap(),
         ])
       : Promise.resolve(null),
   ]);
@@ -55,7 +60,8 @@ export default async function HomePage() {
   ];
 
   if (admin && adminData) {
-    const [allUsers, allLeave, allAttendance, purchaseOrders, inventoryItems, transactions, ideas] = adminData;
+    const [allUsers, allLeave, allAttendance, purchaseOrders, inventoryItems, transactions, ideas, baseCurrency, exchangeRateMap] =
+      adminData;
 
     const openPOs = purchaseOrders.filter((po) => po.status === "ordered" || po.status === "in_transit").length;
     const pendingLeaveOrgWide = allLeave.filter((r) => r.status === "pending").length;
@@ -63,9 +69,11 @@ export default async function HomePage() {
       allAttendance.filter((a) => a.work_date === todayKey).map((a) => a.user_id)
     ).size;
 
-    // Currency here is free text (same convention as Procurement Planning
-    // and Accounting) — totals are kept per-currency, never blended, same
-    // as TransactionsListClient's totalsByCurrency.
+    // Per-currency totals stay the source of truth (currency is free text,
+    // same convention as Procurement Planning) — the blended tiles below are
+    // an *additional* figure on top, converted via Settings' manually-
+    // entered exchange rates. See docs/erp-v2-roadmap.md's "Currency
+    // blending" section.
     const inventoryByCurrency = new Map<string, number>();
     for (const item of inventoryItems) {
       const value = parseFloat(item.current_value ?? item.purchase_cost ?? "0");
@@ -75,10 +83,31 @@ export default async function HomePage() {
 
     const ledgerByCurrency = new Map<string, { income: number; expense: number }>();
     for (const t of transactions) {
+      if (t.status !== "approved") continue; // pending/rejected expenses don't count yet
       const entry = ledgerByCurrency.get(t.currency) ?? { income: 0, expense: 0 };
       entry[t.type] += parseFloat(t.amount);
       ledgerByCurrency.set(t.currency, entry);
     }
+
+    // Only worth a blended tile when there's actually more than one
+    // currency in play — with just one, it'd just repeat the per-currency
+    // tile's own number.
+    const blendedInventory =
+      inventoryByCurrency.size > 1
+        ? sumBlended(
+            Array.from(inventoryByCurrency, ([currency, amount]) => ({ currency, amount })),
+            baseCurrency,
+            exchangeRateMap
+          )
+        : null;
+    const blendedLedger =
+      ledgerByCurrency.size > 1
+        ? sumBlended(
+            Array.from(ledgerByCurrency, ([currency, { income, expense }]) => ({ currency, amount: income - expense })),
+            baseCurrency,
+            exchangeRateMap
+          )
+        : null;
 
     tiles.push(
       { icon: Package, value: openPOs, label: "Open purchase orders" },
@@ -89,11 +118,17 @@ export default async function HomePage() {
         value: formatMoney(value, currency),
         label: `Inventory value (${currency})`,
       })),
+      ...(blendedInventory
+        ? [{ icon: Boxes, value: formatMoney(blendedInventory.total, baseCurrency), label: `Inventory value (blended)` }]
+        : []),
       ...Array.from(ledgerByCurrency.entries()).map(([currency, { income, expense }]) => ({
         icon: Wallet,
         value: formatMoney(income - expense, currency),
         label: `Ledger net (${currency})`,
       })),
+      ...(blendedLedger
+        ? [{ icon: Wallet, value: formatMoney(blendedLedger.total, baseCurrency), label: `Ledger net (blended)` }]
+        : []),
       { icon: Lightbulb, value: ideas.length, label: "Ideas logged" }
     );
   }

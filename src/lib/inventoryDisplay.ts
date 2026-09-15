@@ -19,3 +19,31 @@ export const ASSET_TYPE_BADGE_CLASS: Record<AssetType, string> = {
 export function isAssetType(value: unknown): value is AssetType {
   return ASSET_TYPES.includes(value as AssetType);
 }
+
+// Straight-line depreciation, computed live — never persisted (same
+// "compute on read" pattern as procurementDisplay.ts's computeCapitalNeeded).
+// Only meaningful for asset_type = "depreciating"; callers decide when to
+// use this vs. a manually-edited current_value for fixed/consumable items.
+// Returns null when there isn't enough data to compute (no purchase cost/
+// date/useful life set yet) — callers should fall back to the stored
+// current_value in that case, not assume 0.
+export function computeDepreciatedValue(
+  purchaseCost: number,
+  purchaseDateISO: string,
+  usefulLifeMonths: number
+): number | null {
+  if (!Number.isFinite(purchaseCost) || usefulLifeMonths <= 0) return null;
+  const purchaseDate = new Date(purchaseDateISO);
+  if (Number.isNaN(purchaseDate.getTime())) return null;
+
+  const now = new Date();
+  const monthsElapsed =
+    (now.getFullYear() - purchaseDate.getFullYear()) * 12 +
+    (now.getMonth() - purchaseDate.getMonth()) +
+    (now.getDate() >= purchaseDate.getDate() ? 0 : -1);
+  const clampedMonths = Math.min(Math.max(monthsElapsed, 0), usefulLifeMonths);
+
+  const depreciationPerMonth = purchaseCost / usefulLifeMonths;
+  const value = purchaseCost - depreciationPerMonth * clampedMonths;
+  return Math.max(0, Math.round(value * 100) / 100);
+}

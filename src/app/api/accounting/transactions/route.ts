@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { isAdminLevel } from "@/lib/users";
 import { createTransaction, isTransactionType, listTransactions } from "@/lib/accounting";
+import { getSuperAdminRecipientEmails, sendMailInBackground } from "@/lib/mailer";
+import { expenseApprovalNeededEmail } from "@/lib/accountingEmailTemplates";
 
 export const runtime = "nodejs";
 
@@ -46,7 +48,14 @@ export async function POST(req: NextRequest) {
     type,
     category,
     createdBy: session.uid,
+    actorRole: session.role,
   });
+
+  if (transaction.status === "pending") {
+    const recipients = await getSuperAdminRecipientEmails();
+    const { subject, html } = expenseApprovalNeededEmail(transaction, session.username);
+    sendMailInBackground({ to: recipients, subject, html });
+  }
 
   return NextResponse.json({ transaction }, { status: 201 });
 }

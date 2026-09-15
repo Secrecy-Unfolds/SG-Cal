@@ -47,6 +47,14 @@ export async function getAdminLevelRecipientEmails(): Promise<string[]> {
   return res.rows.map((r) => r.email);
 }
 
+// The expense-approval workflow's "needs approval" notice goes to Super
+// Admins only (they're the only ones who can decide it) — same
+// EMAIL_TEST_MODE behavior as the helpers above.
+export async function getSuperAdminRecipientEmails(): Promise<string[]> {
+  const res = await query<{ email: string }>(`SELECT email FROM users WHERE role = 'super_admin' ORDER BY id ASC`);
+  return res.rows.map((r) => r.email);
+}
+
 async function sendOne(to: string, subject: string, html: string) {
   const url = process.env.EMAIL_ENDPOINT_URL || DEFAULT_EMAIL_ENDPOINT_URL;
   const token = process.env.EMAIL_TOKEN;
