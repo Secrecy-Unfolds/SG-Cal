@@ -484,3 +484,77 @@ ALTER TABLE accounting_transactions ADD COLUMN IF NOT EXISTS decided_by INTEGER 
 ALTER TABLE accounting_transactions ADD COLUMN IF NOT EXISTS decided_at TIMESTAMPTZ;
 ALTER TABLE accounting_transactions ADD COLUMN IF NOT EXISTS recurring_expense_id INTEGER REFERENCES recurring_expenses(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS accounting_transactions_status_idx ON accounting_transactions (status);
+
+-- Deeper accounting structure (scoped 2026-09-16, via `AskUserQuestion`) —
+-- bank/cash accounts, recurring income, receipt attachments, VAT, and
+-- period closing. See docs/erp-v2-roadmap.md.
+
+-- Bank/cash accounts — confirmed optional: financial_account_id is
+-- nullable, so existing and new unassigned transactions just show as
+-- "Unassigned" rather than forcing every entry to pick one.
+CREATE TABLE IF NOT EXISTS financial_accounts (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  account_type TEXT NOT NULL DEFAULT 'bank', -- bank | cash | other
+  currency TEXT NOT NULL DEFAULT 'OMR',
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE accounting_transactions ADD COLUMN IF NOT EXISTS financial_account_id INTEGER REFERENCES financial_accounts(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS accounting_transactions_account_idx ON accounting_transactions (financial_account_id);
+
+-- Recurring income mirrors recurring_expenses above, but always posts
+-- 'approved' immediately (income never goes through the expense-approval
+-- threshold) — see lib/recurringIncome.ts.
+CREATE TABLE IF NOT EXISTS recurring_income (
+  id SERIAL PRIMARY KEY,
+  description TEXT NOT NULL DEFAULT '',
+  category TEXT NOT NULL DEFAULT '',
+  amount NUMERIC(12, 2) NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'OMR',
+  frequency TEXT NOT NULL DEFAULT 'monthly', -- weekly | monthly | quarterly | yearly
+  next_run_date DATE NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT true,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS recurring_income_next_run_idx ON recurring_income (next_run_date);
+ALTER TABLE accounting_transactions ADD COLUMN IF NOT EXISTS recurring_income_id INTEGER REFERENCES recurring_income(id) ON DELETE SET NULL;
+
+-- Receipts/invoices as attachments — reuses the existing Vercel Blob upload
+-- infrastructure (see /api/accounting/upload, mirroring
+-- /api/procurement/upload). Nullable — most transactions still won't have
+-- one, this is opt-in backup, not a requirement.
+ALTER TABLE accounting_transactions ADD COLUMN IF NOT EXISTS attachment_url TEXT;
+
+-- VAT/tax categorization — confirmed: a manual per-transaction toggle, rate
+-- stored as a snapshot (not computed live from one configurable global
+-- rate), pre-filled at 5% (Oman's rate) but editable/overridable.
+-- vat_amount is computed at write time and stored alongside amount/vat_rate
+-- rather than recomputed on every read, same "snapshot, not live" intent.
+ALTER TABLE accounting_transactions ADD COLUMN IF NOT EXISTS taxable BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE accounting_transactions ADD COLUMN IF NOT EXISTS vat_rate NUMERIC(5, 2);
+ALTER TABLE accounting_transactions ADD COLUMN IF NOT EXISTS vat_amount NUMERIC(12, 2);
+
+-- Period closing — confirmed: an arbitrary period_start/period_end (not a
+-- fixed calendar-month/quarter concept), same period-as-date-range shape
+-- already used by capital_budgets/expense_budgets. A period counts as
+-- currently closed while a row here covers its date and reopened_at is
+-- still null; reopening keeps the row (reopened_by/reopened_at set) for
+-- audit instead of deleting it. Confirmed: reopening is Super-Admin-only.
+CREATE TABLE IF NOT EXISTS closed_periods (
+  id SERIAL PRIMARY KEY,
+  period_start DATE NOT NULL,
+  period_end DATE NOT NULL,
+  label TEXT NOT NULL DEFAULT '',
+  closed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  closed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  reopened_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  reopened_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS closed_periods_range_idx ON closed_periods (period_start, period_end);
+
+-- "Basic financial statements" (P&L + balance-style summary) needs no new
+-- table — it's a live-computed reporting view over data that already
+-- exists across Accounting/Inventory/Capital. See lib/financialStatements.ts.

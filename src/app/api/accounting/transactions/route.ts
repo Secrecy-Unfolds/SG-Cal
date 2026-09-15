@@ -32,6 +32,10 @@ export async function POST(req: NextRequest) {
   const currency = typeof body?.currency === "string" && body.currency.trim() ? body.currency.trim() : "OMR";
   const type = isTransactionType(body?.type) ? body.type : null;
   const category = typeof body?.category === "string" ? body.category.trim() : "";
+  const financialAccountId = typeof body?.financialAccountId === "number" ? body.financialAccountId : null;
+  const attachmentUrl = typeof body?.attachmentUrl === "string" && body.attachmentUrl ? body.attachmentUrl : null;
+  const taxable = typeof body?.taxable === "boolean" ? body.taxable : false;
+  const vatRate = typeof body?.vatRate === "number" ? body.vatRate : null;
 
   if (!type) {
     return NextResponse.json({ error: "type must be 'income' or 'expense'" }, { status: 400 });
@@ -40,16 +44,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "A positive amount is required" }, { status: 400 });
   }
 
-  const transaction = await createTransaction({
-    date,
-    description,
-    amount,
-    currency,
-    type,
-    category,
-    createdBy: session.uid,
-    actorRole: session.role,
-  });
+  let transaction;
+  try {
+    transaction = await createTransaction({
+      date,
+      description,
+      amount,
+      currency,
+      type,
+      category,
+      createdBy: session.uid,
+      actorRole: session.role,
+      financialAccountId,
+      attachmentUrl,
+      taxable,
+      vatRate,
+    });
+  } catch (err: any) {
+    if (err?.message === "PERIOD_CLOSED") {
+      return NextResponse.json({ error: "This date falls inside a closed accounting period" }, { status: 400 });
+    }
+    throw err;
+  }
 
   if (transaction.status === "pending") {
     const recipients = await getSuperAdminRecipientEmails();

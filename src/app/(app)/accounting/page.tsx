@@ -4,6 +4,9 @@ import { isAdminLevel } from "@/lib/users";
 import { listPayrollRuns, listTransactions } from "@/lib/accounting";
 import { listExpenseBudgets } from "@/lib/expenseBudgets";
 import { listRecurringExpenses } from "@/lib/recurringExpenses";
+import { listRecurringIncome } from "@/lib/recurringIncome";
+import { listFinancialAccounts } from "@/lib/financialAccounts";
+import { listClosedPeriods } from "@/lib/periodClosing";
 import { listCapitalEntries } from "@/lib/capital";
 import { listCapitalBudgets } from "@/lib/capitalBudgets";
 import { listProducts } from "@/lib/procurement";
@@ -22,6 +25,9 @@ export default async function AccountingPage() {
     transactions,
     expenseBudgets,
     recurringExpenses,
+    recurringIncome,
+    financialAccounts,
+    closedPeriods,
     payrollRuns,
     capitalEntries,
     capitalBudgets,
@@ -37,6 +43,9 @@ export default async function AccountingPage() {
     listTransactions(),
     listExpenseBudgets(),
     listRecurringExpenses(),
+    listRecurringIncome(),
+    listFinancialAccounts(),
+    listClosedPeriods(),
     listPayrollRuns(),
     listCapitalEntries(),
     listCapitalBudgets(),
@@ -59,6 +68,9 @@ export default async function AccountingPage() {
       transactions={transactions}
       expenseBudgets={expenseBudgets}
       recurringExpenses={recurringExpenses}
+      recurringIncome={recurringIncome}
+      financialAccounts={financialAccounts}
+      closedPeriods={closedPeriods}
       payrollRuns={payrollRuns}
       capitalEntries={capitalEntries}
       capitalBudgets={capitalBudgets}

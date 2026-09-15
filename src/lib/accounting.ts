@@ -7,6 +7,7 @@ import { getBaseCurrency } from "@/lib/settings";
 import { getExchangeRateMap } from "@/lib/exchangeRates";
 import { convertToBase } from "@/lib/currencyDisplay";
 import { EXPENSE_APPROVAL_THRESHOLD } from "@/lib/accountingDisplay";
+import { isDateInClosedPeriod } from "@/lib/periodClosing";
 
 // Single source of truth lives in accountingDisplay.ts (client-safe — no
 // server-only imports), so client components can use it directly without
@@ -37,6 +38,13 @@ export type AccountingTransactionRow = {
   purchase_order_id: number | null;
   payroll_run_id: number | null;
   recurring_expense_id: number | null;
+  recurring_income_id: number | null;
+  financial_account_id: number | null;
+  financial_account_name: string | null;
+  attachment_url: string | null;
+  taxable: boolean;
+  vat_rate: string | null; // numeric comes back as a string from pg
+  vat_amount: string | null;
   status: TransactionStatus;
   decided_by: number | null;
   decided_by_username: string | null;
@@ -48,12 +56,15 @@ export type AccountingTransactionRow = {
 
 const TRANSACTION_SELECT = `
   SELECT t.id, t.date, t.description, t.amount, t.currency, t.type, t.category,
-         t.purchase_order_id, t.payroll_run_id, t.recurring_expense_id, t.status,
+         t.purchase_order_id, t.payroll_run_id, t.recurring_expense_id, t.recurring_income_id,
+         t.financial_account_id, fa.name AS financial_account_name,
+         t.attachment_url, t.taxable, t.vat_rate, t.vat_amount, t.status,
          t.decided_by, du.username AS decided_by_username, t.decided_at,
          t.created_by, u.username AS created_by_username, t.created_at
   FROM accounting_transactions t
   LEFT JOIN users u ON u.id = t.created_by
   LEFT JOIN users du ON du.id = t.decided_by
+  LEFT JOIN financial_accounts fa ON fa.id = t.financial_account_id
 `;
 
 export async function listTransactions(): Promise<AccountingTransactionRow[]> {
@@ -80,12 +91,38 @@ export async function createTransaction(input: {
   category: string;
   createdBy: number;
   actorRole: UserRole;
+  financialAccountId?: number | null;
+  attachmentUrl?: string | null;
+  taxable?: boolean;
+  vatRate?: number | null;
 }): Promise<AccountingTransactionRow> {
+  if (await isDateInClosedPeriod(input.date)) throw new Error("PERIOD_CLOSED");
+
   const status = await decideTransactionStatus(input.type, input.amount, input.currency, input.actorRole);
+  const taxable = input.taxable ?? false;
+  const vatRate = taxable ? input.vatRate ?? null : null;
+  const vatAmount = taxable && vatRate !== null ? input.amount * (vatRate / 100) : null;
+
   const res = await query<{ id: number }>(
-    `INSERT INTO accounting_transactions (date, description, amount, currency, type, category, created_by, status)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-    [input.date, input.description, input.amount, input.currency, input.type, input.category, input.createdBy, status]
+    `INSERT INTO accounting_transactions
+       (date, description, amount, currency, type, category, created_by, status,
+        financial_account_id, attachment_url, taxable, vat_rate, vat_amount)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id`,
+    [
+      input.date,
+      input.description,
+      input.amount,
+      input.currency,
+      input.type,
+      input.category,
+      input.createdBy,
+      status,
+      input.financialAccountId ?? null,
+      input.attachmentUrl ?? null,
+      taxable,
+      vatRate,
+      vatAmount,
+    ]
   );
   const created = await getTransactionById(res.rows[0].id);
   if (!created) throw new Error("Failed to load created transaction");
@@ -125,7 +162,11 @@ export async function decideTransaction(
   return getTransactionById(id);
 }
 
+// Blocks deleting a transaction dated inside a still-closed period — same
+// lock createTransaction() enforces on the way in.
 export async function deleteTransaction(id: number): Promise<void> {
+  const existing = await getTransactionById(id);
+  if (existing && (await isDateInClosedPeriod(existing.date))) throw new Error("PERIOD_CLOSED");
   await query(`DELETE FROM accounting_transactions WHERE id = $1`, [id]);
 }
 

@@ -11,6 +11,7 @@ import { meetingStartingSoonEmail, taskDueSoonEmail } from "@/lib/emailTemplates
 import { isAuthorizedCronRequest } from "@/lib/cronAuth";
 import { maybeSendDailyDigest, maybeSendWeeklyDigest } from "@/lib/digests";
 import { processRecurringExpenses } from "@/lib/recurringExpenses";
+import { processRecurringIncome } from "@/lib/recurringIncome";
 
 export const runtime = "nodejs";
 
@@ -53,8 +54,11 @@ export async function GET(req: NextRequest) {
   const dailyDigest = await maybeSendDailyDigest();
   const weeklyDigest = await maybeSendWeeklyDigest();
 
-  // Expense management's recurring expenses — see lib/recurringExpenses.ts.
+  // Expense management's recurring expenses, and Deeper accounting
+  // structure's recurring income — see lib/recurringExpenses.ts /
+  // lib/recurringIncome.ts.
   const recurringExpenses = await processRecurringExpenses();
+  const recurringIncome = await processRecurringIncome();
 
   return NextResponse.json({
     ok: true,
@@ -63,5 +67,6 @@ export async function GET(req: NextRequest) {
     dailyDigest,
     weeklyDigest,
     recurringExpensesPosted: recurringExpenses.posted,
+    recurringIncomePosted: recurringIncome.posted,
   });
 }

@@ -24,6 +24,8 @@ export const TRANSACTION_STATUS_BADGE_CLASS: Record<TransactionStatus, string> =
 // See lib/accounting.ts's createTransaction().
 export const EXPENSE_APPROVAL_THRESHOLD = 200;
 
+// Shared by both recurring_expenses and recurring_income — same frequency
+// vocabulary either direction.
 export type RecurringExpenseFrequency = "weekly" | "monthly" | "quarterly" | "yearly";
 
 export const RECURRING_EXPENSE_FREQUENCIES: RecurringExpenseFrequency[] = ["weekly", "monthly", "quarterly", "yearly"];
@@ -38,3 +40,23 @@ export const RECURRING_EXPENSE_FREQUENCY_LABELS: Record<RecurringExpenseFrequenc
 export function isRecurringExpenseFrequency(value: unknown): value is RecurringExpenseFrequency {
   return RECURRING_EXPENSE_FREQUENCIES.includes(value as RecurringExpenseFrequency);
 }
+
+export type FinancialAccountType = "bank" | "cash" | "other";
+
+export const FINANCIAL_ACCOUNT_TYPES: FinancialAccountType[] = ["bank", "cash", "other"];
+
+export const FINANCIAL_ACCOUNT_TYPE_LABELS: Record<FinancialAccountType, string> = {
+  bank: "Bank",
+  cash: "Cash",
+  other: "Other",
+};
+
+export function isFinancialAccountType(value: unknown): value is FinancialAccountType {
+  return FINANCIAL_ACCOUNT_TYPES.includes(value as FinancialAccountType);
+}
+
+// Oman's standard VAT rate — pre-fills the editable per-transaction rate
+// field when "Taxable" is toggled on. Not used for any live computation;
+// the rate that actually applies to a transaction is whatever was stored on
+// it at the time (see accounting_transactions.vat_rate).
+export const DEFAULT_VAT_RATE = 5;

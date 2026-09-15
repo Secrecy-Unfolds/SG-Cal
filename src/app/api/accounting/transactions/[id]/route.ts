@@ -60,6 +60,13 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   const id = parseId(params.id);
   if (!id) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
 
-  await deleteTransaction(id);
+  try {
+    await deleteTransaction(id);
+  } catch (err: any) {
+    if (err?.message === "PERIOD_CLOSED") {
+      return NextResponse.json({ error: "This transaction is in a closed accounting period" }, { status: 400 });
+    }
+    throw err;
+  }
   return NextResponse.json({ ok: true });
 }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import ConfirmModal from "@/components/ConfirmModal";
 import TransactionFormModal from "@/components/accounting/TransactionFormModal";
 import type { AccountingTransactionRow } from "@/lib/accounting";
+import type { FinancialAccountRow } from "@/lib/financialAccounts";
 import type { UserRole } from "@/lib/users";
 import { TRANSACTION_STATUS_BADGE_CLASS, TRANSACTION_STATUS_LABELS } from "@/lib/accountingDisplay";
 import { formatMoney } from "@/lib/procurementDisplay";
@@ -13,11 +14,13 @@ import { HudFrame } from "@/components/hud/HudFrame";
 
 export default function TransactionsListClient({
   transactions,
+  financialAccounts,
   baseCurrency,
   exchangeRates,
   actorRole,
 }: {
   transactions: AccountingTransactionRow[];
+  financialAccounts: FinancialAccountRow[];
   baseCurrency: string;
   exchangeRates: Record<string, number>;
   actorRole: UserRole;
@@ -63,12 +66,16 @@ export default function TransactionsListClient({
   async function handleDelete() {
     if (deletingId === null) return;
     setWorking(true);
+    setError(null);
     try {
       const res = await fetch(`/api/accounting/transactions/${deletingId}`, { method: "DELETE" });
-      if (res.ok) {
-        setDeletingId(null);
-        router.refresh();
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? "Failed to delete transaction");
+        return;
       }
+      setDeletingId(null);
+      router.refresh();
     } finally {
       setWorking(false);
     }
@@ -189,9 +196,20 @@ export default function TransactionsListClient({
                 </div>
                 <div className="text-xs text-black/50 dark:text-white/50 truncate">
                   {t.date} {t.category ? `· ${t.category}` : ""}
+                  {t.financial_account_name ? ` · ${t.financial_account_name}` : ""}
                   {t.purchase_order_id ? ` · from PO #${t.purchase_order_id}` : ""}
                   {t.payroll_run_id ? " · from a payroll run" : ""}
                   {t.recurring_expense_id ? " · from a recurring expense" : ""}
+                  {t.recurring_income_id ? " · from recurring income" : ""}
+                  {t.taxable && t.vat_amount ? ` · VAT ${formatMoney(t.vat_amount, t.currency)} (${t.vat_rate}%)` : ""}
+                  {t.attachment_url && (
+                    <>
+                      {" · "}
+                      <a href={t.attachment_url} target="_blank" rel="noreferrer" className="text-accent hover:underline">
+                        Attachment
+                      </a>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-3 shrink-0">
@@ -218,6 +236,7 @@ export default function TransactionsListClient({
 
       {showCreate && (
         <TransactionFormModal
+          financialAccounts={financialAccounts}
           onClose={() => setShowCreate(false)}
           onSaved={() => {
             setShowCreate(false);
