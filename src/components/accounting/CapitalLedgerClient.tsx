@@ -9,6 +9,7 @@ import { CAPITAL_SOURCE_BADGE_CLASS, CAPITAL_SOURCE_LABELS } from "@/lib/capital
 import { formatMoney } from "@/lib/procurementDisplay";
 import { sumBlendedByDate, type ExchangeRateSnapshot } from "@/lib/currencyDisplay";
 import { HudFrame } from "@/components/hud/HudFrame";
+import { PaginationControls, usePagination } from "@/components/Pagination";
 
 export default function CapitalLedgerClient({
   entries,
@@ -57,6 +58,7 @@ export default function CapitalLedgerClient({
   }
 
   const deletingEntry = entries.find((e) => e.id === deletingId) ?? null;
+  const { pageItems, page, setPage, totalPages } = usePagination(entries);
 
   return (
     <div>
@@ -98,7 +100,7 @@ export default function CapitalLedgerClient({
         <p className="text-sm text-black/50 dark:text-white/50">No capital entries yet.</p>
       ) : (
         <div className="space-y-2">
-          {entries.map((e) => (
+          {pageItems.map((e) => (
             <HudFrame
               key={e.id}
               corners="tl-br"
@@ -125,6 +127,7 @@ export default function CapitalLedgerClient({
           ))}
         </div>
       )}
+      <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
       {showCreate && (
         <CapitalEntryFormModal

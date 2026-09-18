@@ -8,6 +8,7 @@ import { PO_STATUSES, PO_STATUS_BADGE_CLASS, PO_STATUS_LABELS, type POStatus } f
 import { computeCapitalNeeded, formatDateOnly, formatMoney } from "@/lib/procurementDisplay";
 import { HudFrame } from "@/components/hud/HudFrame";
 import DeliveryDetailsModal from "@/components/procurement/DeliveryDetailsModal";
+import { PaginationControls, usePagination } from "@/components/Pagination";
 
 function firstOfMonth(): string {
   const now = new Date();
@@ -21,6 +22,7 @@ export default function PurchaseOrdersListClient({ orders }: { orders: PurchaseO
   const [editingDelivery, setEditingDelivery] = useState<PurchaseOrderRow | null>(null);
   const [reportStart, setReportStart] = useState(firstOfMonth());
   const [reportEnd, setReportEnd] = useState(new Date().toISOString().slice(0, 10));
+  const { pageItems, page, setPage, totalPages } = usePagination(orders);
 
   async function changeStatus(id: number, status: POStatus) {
     setUpdatingId(id);
@@ -84,7 +86,7 @@ export default function PurchaseOrdersListClient({ orders }: { orders: PurchaseO
         </p>
       ) : (
       <div className="space-y-2">
-        {orders.map((po) => (
+        {pageItems.map((po) => (
           <HudFrame
             key={po.id}
             corners="tl-br"
@@ -166,6 +168,7 @@ export default function PurchaseOrdersListClient({ orders }: { orders: PurchaseO
         ))}
       </div>
       )}
+      <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
       {editingDelivery && (
         <DeliveryDetailsModal

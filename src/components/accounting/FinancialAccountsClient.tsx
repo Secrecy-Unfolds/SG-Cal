@@ -8,6 +8,7 @@ import type { FinancialAccountRow } from "@/lib/financialAccounts";
 import { FINANCIAL_ACCOUNT_TYPE_LABELS } from "@/lib/accountingDisplay";
 import { formatMoney } from "@/lib/procurementDisplay";
 import { HudFrame } from "@/components/hud/HudFrame";
+import { PaginationControls, usePagination } from "@/components/Pagination";
 
 export default function FinancialAccountsClient({ accounts }: { accounts: FinancialAccountRow[] }) {
   const router = useRouter();
@@ -15,6 +16,7 @@ export default function FinancialAccountsClient({ accounts }: { accounts: Financ
   const [editing, setEditing] = useState<FinancialAccountRow | null>(null);
   const [deleting, setDeleting] = useState<FinancialAccountRow | null>(null);
   const [working, setWorking] = useState(false);
+  const { pageItems, page, setPage, totalPages } = usePagination(accounts);
 
   async function handleDelete() {
     if (!deleting) return;
@@ -44,7 +46,7 @@ export default function FinancialAccountsClient({ accounts }: { accounts: Financ
         <p className="text-sm text-black/50 dark:text-white/50">No bank/cash accounts yet — transactions show as &quot;Unassigned&quot;.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {accounts.map((a) => (
+          {pageItems.map((a) => (
             <HudFrame
               key={a.id}
               corners="tl-br"
@@ -73,6 +75,7 @@ export default function FinancialAccountsClient({ accounts }: { accounts: Financ
           ))}
         </div>
       )}
+      <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
       {showCreate && (
         <FinancialAccountFormModal

@@ -9,6 +9,7 @@ import type { GovernmentSupportRow, GovernmentSupporterRow } from "@/lib/governm
 import { SUPPORTER_TYPE_LABELS } from "@/lib/governmentSupportDisplay";
 import { formatMoney } from "@/lib/procurementDisplay";
 import { HudFrame } from "@/components/hud/HudFrame";
+import { PaginationControls, usePagination } from "@/components/Pagination";
 
 export default function GovernmentSupportClient({
   supporters,
@@ -62,6 +63,8 @@ export default function GovernmentSupportClient({
     }
   }
 
+  const { pageItems, page, setPage, totalPages } = usePagination(supporters);
+
   return (
     <div>
       {error && <p className="text-sm text-red-600 dark:text-red-400 mb-4">{error}</p>}
@@ -78,7 +81,7 @@ export default function GovernmentSupportClient({
         <p className="text-sm text-black/50 dark:text-white/50">No government/Royal supporters yet.</p>
       ) : (
         <div className="space-y-3">
-          {supporters.map((supporter) => {
+          {pageItems.map((supporter) => {
             const supporterRecords = records.filter((r) => r.supporter_id === supporter.id);
             const totalByCurrency = new Map<string, number>();
             for (const r of supporterRecords) {
@@ -169,6 +172,7 @@ export default function GovernmentSupportClient({
           })}
         </div>
       )}
+      <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
       {showCreateSupporter && (
         <GovernmentSupporterFormModal

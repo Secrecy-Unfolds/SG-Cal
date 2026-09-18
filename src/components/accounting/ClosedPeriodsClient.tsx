@@ -6,6 +6,7 @@ import ClosePeriodFormModal from "@/components/accounting/ClosePeriodFormModal";
 import type { ClosedPeriodRow } from "@/lib/periodClosing";
 import type { UserRole } from "@/lib/users";
 import { HudFrame } from "@/components/hud/HudFrame";
+import { PaginationControls, usePagination } from "@/components/Pagination";
 
 export default function ClosedPeriodsClient({ periods, actorRole }: { periods: ClosedPeriodRow[]; actorRole: UserRole }) {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function ClosedPeriodsClient({ periods, actorRole }: { periods: C
   const [reopeningId, setReopeningId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const isSuperAdmin = actorRole === "super_admin";
+  const { pageItems, page, setPage, totalPages } = usePagination(periods);
 
   async function handleReopen(id: number) {
     setReopeningId(id);
@@ -52,7 +54,7 @@ export default function ClosedPeriodsClient({ periods, actorRole }: { periods: C
         <p className="text-sm text-black/50 dark:text-white/50">No periods closed yet.</p>
       ) : (
         <div className="space-y-2">
-          {periods.map((p) => {
+          {pageItems.map((p) => {
             const open = !p.reopened_at;
             return (
               <HudFrame
@@ -92,6 +94,7 @@ export default function ClosedPeriodsClient({ periods, actorRole }: { periods: C
           })}
         </div>
       )}
+      <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
       {showCreate && (
         <ClosePeriodFormModal

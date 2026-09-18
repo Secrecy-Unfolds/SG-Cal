@@ -7,6 +7,7 @@ import type { LeaveRequestRow } from "@/lib/hr";
 import { LEAVE_STATUS_BADGE_CLASS, LEAVE_STATUS_LABELS } from "@/lib/hrDisplay";
 import { formatDateOnly } from "@/lib/procurementDisplay";
 import { HudFrame } from "@/components/hud/HudFrame";
+import { PaginationControls, usePagination } from "@/components/Pagination";
 
 type PendingDecision = { request: LeaveRequestRow; status: "approved" | "rejected" };
 
@@ -15,6 +16,7 @@ export default function LeaveRequestsAdminClient({ requests }: { requests: Leave
   const [pending, setPending] = useState<PendingDecision | null>(null);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { pageItems, page, setPage, totalPages } = usePagination(requests);
 
   async function decide() {
     if (!pending) return;
@@ -46,7 +48,7 @@ export default function LeaveRequestsAdminClient({ requests }: { requests: Leave
         <p className="text-sm text-black/50 dark:text-white/50">No leave requests yet.</p>
       ) : (
         <div className="space-y-2">
-          {requests.map((r) => (
+          {pageItems.map((r) => (
             <HudFrame
               key={r.id}
               corners="tl-br"
@@ -98,6 +100,7 @@ export default function LeaveRequestsAdminClient({ requests }: { requests: Leave
           ))}
         </div>
       )}
+      <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
       {pending && (
         <ConfirmModal

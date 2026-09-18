@@ -7,6 +7,7 @@ import RequisitionFormModal from "@/components/procurement/RequisitionFormModal"
 import type { PurchaseRequisitionRow } from "@/lib/purchaseRequisitions";
 import { REQUISITION_STATUS_BADGE_CLASS, REQUISITION_STATUS_LABELS } from "@/lib/purchaseRequisitionsDisplay";
 import { HudFrame } from "@/components/hud/HudFrame";
+import { PaginationControls, usePagination } from "@/components/Pagination";
 
 export default function RequisitionsListClient({
   requisitions,
@@ -19,6 +20,7 @@ export default function RequisitionsListClient({
   const [showCreate, setShowCreate] = useState(false);
   const [workingId, setWorkingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { pageItems, page, setPage, totalPages } = usePagination(requisitions);
 
   async function decide(id: number, status: "approved" | "rejected") {
     setWorkingId(id);
@@ -70,7 +72,7 @@ export default function RequisitionsListClient({
         <p className="text-sm text-black/50 dark:text-white/50">No requisitions yet.</p>
       ) : (
         <div className="space-y-2">
-          {requisitions.map((r) => (
+          {pageItems.map((r) => (
             <HudFrame
               key={r.id}
               corners="tl-br"
@@ -140,6 +142,7 @@ export default function RequisitionsListClient({
           ))}
         </div>
       )}
+      <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
       {showCreate && (
         <RequisitionFormModal

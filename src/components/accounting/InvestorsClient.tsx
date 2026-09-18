@@ -15,6 +15,7 @@ import {
 } from "@/lib/investorsDisplay";
 import { formatMoney } from "@/lib/procurementDisplay";
 import { HudFrame } from "@/components/hud/HudFrame";
+import { PaginationControls, usePagination } from "@/components/Pagination";
 
 export default function InvestorsClient({
   investors,
@@ -86,6 +87,8 @@ export default function InvestorsClient({
     router.refresh();
   }
 
+  const { pageItems, page, setPage, totalPages } = usePagination(investors);
+
   return (
     <div>
       {error && <p className="text-sm text-red-600 dark:text-red-400 mb-4">{error}</p>}
@@ -102,7 +105,7 @@ export default function InvestorsClient({
         <p className="text-sm text-black/50 dark:text-white/50">No investors yet.</p>
       ) : (
         <div className="space-y-3">
-          {investors.map((investor) => {
+          {pageItems.map((investor) => {
             const investorInvestments = investments.filter((i) => i.investor_id === investor.id);
             const investorPayouts = payouts.filter((p) => investorInvestments.some((i) => i.id === p.investment_id));
 
@@ -239,6 +242,7 @@ export default function InvestorsClient({
           })}
         </div>
       )}
+      <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
       {showCreateInvestor && (
         <InvestorFormModal

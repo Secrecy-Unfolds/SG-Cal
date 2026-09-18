@@ -11,10 +11,12 @@ import {
   PROCUREMENT_STATUS_BADGE_CLASS,
   PROCUREMENT_STATUS_LABELS,
 } from "@/lib/procurementDisplay";
+import { PaginationControls, usePagination } from "@/components/Pagination";
 
 export default function ProcurementListClient({ products }: { products: ProductData[] }) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
+  const { pageItems, page, setPage, totalPages } = usePagination(products);
 
   return (
     <div>
@@ -33,7 +35,7 @@ export default function ProcurementListClient({ products }: { products: ProductD
         <p className="text-sm text-black/50 dark:text-white/50">No products yet — add the first one.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {products.map((p) => (
+          {pageItems.map((p) => (
             <Link
               key={p.id}
               href={`/procurement/${p.id}`}
@@ -83,6 +85,7 @@ export default function ProcurementListClient({ products }: { products: ProductD
           ))}
         </div>
       )}
+      <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
       {showCreate && (
         <ProductFormModal

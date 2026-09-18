@@ -7,6 +7,7 @@ import ConfirmModal from "@/components/ConfirmModal";
 import EditVendorModal from "@/components/procurement/EditVendorModal";
 import type { VendorWithProductsRow } from "@/lib/procurement";
 import { HudFrame } from "@/components/hud/HudFrame";
+import { PaginationControls, usePagination } from "@/components/Pagination";
 
 export default function VendorsListClient({ vendors }: { vendors: VendorWithProductsRow[] }) {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function VendorsListClient({ vendors }: { vendors: VendorWithProd
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState<VendorWithProductsRow | null>(null);
+  const { pageItems, page, setPage, totalPages } = usePagination(vendors);
 
   async function handleDelete(vendor: VendorWithProductsRow) {
     setConfirmingDelete(null);
@@ -46,7 +48,7 @@ export default function VendorsListClient({ vendors }: { vendors: VendorWithProd
     <div>
       {error && <p className="text-sm text-red-600 dark:text-red-400 mb-4">{error}</p>}
       <div className="space-y-3">
-        {vendors.map((v) => (
+        {pageItems.map((v) => (
           <HudFrame
             key={v.id}
             corners="tl-br"
@@ -106,6 +108,7 @@ export default function VendorsListClient({ vendors }: { vendors: VendorWithProd
           </HudFrame>
         ))}
       </div>
+      <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
       {editing && (
         <EditVendorModal

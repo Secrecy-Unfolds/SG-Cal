@@ -8,6 +8,7 @@ import ConfirmModal from "@/components/ConfirmModal";
 import EditUserDetailsModal from "@/components/EditUserDetailsModal";
 import EmployeeDetailsModal from "@/components/hr/EmployeeDetailsModal";
 import { HudFrame } from "@/components/hud/HudFrame";
+import { DEFAULT_PAGE_SIZE, PaginationControls, usePagination } from "@/components/Pagination";
 import { formatMuscat } from "@/lib/time";
 import type { UserRole, UserSummary } from "@/lib/users";
 import type { EmployeeDetails } from "@/lib/hr";
@@ -268,6 +269,8 @@ export default function UsersListClient({
     });
   }, [users, employeeByUserId, query]);
 
+  const { pageItems, page, setPage, totalPages } = usePagination(filtered, DEFAULT_PAGE_SIZE, query);
+
   return (
     <div>
       <div className="flex items-center justify-between gap-4 mb-4">
@@ -312,7 +315,7 @@ export default function UsersListClient({
         {filtered.length === 0 ? (
           <p className="text-sm text-black/50 dark:text-white/50 px-4 py-6 text-center">No users match your search.</p>
         ) : (
-          filtered.map((u) => {
+          pageItems.map((u) => {
             const isSelf = u.id === actorUid;
             const canUpdateRole = !isSelf && u.role !== "super_admin";
             const canEditDetails = !isSelf && canEditUserDetails(actorRole, u.role);
@@ -405,6 +408,7 @@ export default function UsersListClient({
         )}
         </div>
       </HudFrame>
+      <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
       {adding && <AddUserForm actorRole={actorRole} onClose={() => setAdding(false)} />}
       {viewing && <ViewUserModal user={viewing} onClose={() => setViewing(null)} />}

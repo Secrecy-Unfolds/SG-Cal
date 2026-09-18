@@ -8,11 +8,13 @@ import { ASSET_TYPE_BADGE_CLASS, ASSET_TYPE_LABELS } from "@/lib/inventoryDispla
 import { formatDateOnly, formatMoney } from "@/lib/procurementDisplay";
 import PageHeader from "@/components/hud/PageHeader";
 import { HudFrameButton } from "@/components/hud/HudFrame";
+import { PaginationControls, usePagination } from "@/components/Pagination";
 
 export default function InventoryListClient({ items }: { items: InventoryItemRow[] }) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<InventoryItemRow | null>(null);
+  const { pageItems, page, setPage, totalPages } = usePagination(items);
 
   function afterChange() {
     setShowCreate(false);
@@ -39,7 +41,7 @@ export default function InventoryListClient({ items }: { items: InventoryItemRow
         </p>
       ) : (
         <div className="space-y-2">
-          {items.map((item) => (
+          {pageItems.map((item) => (
             <HudFrameButton
               key={item.id}
               corners="tl-br"
@@ -68,6 +70,7 @@ export default function InventoryListClient({ items }: { items: InventoryItemRow
           ))}
         </div>
       )}
+      <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
       {showCreate && <InventoryItemModal onClose={() => setShowCreate(false)} onSaved={afterChange} onDeleted={afterChange} />}
       {editing && (

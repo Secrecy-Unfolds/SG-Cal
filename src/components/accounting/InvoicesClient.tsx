@@ -10,6 +10,7 @@ import { INVOICE_STATUS_BADGE_CLASS, INVOICE_STATUS_LABELS, isInvoiceOverdue } f
 import { formatMoney } from "@/lib/procurementDisplay";
 import { toMuscatDateInput } from "@/lib/time";
 import { HudFrame } from "@/components/hud/HudFrame";
+import { PaginationControls, usePagination } from "@/components/Pagination";
 
 export default function InvoicesClient({ invoices, customers }: { invoices: IssuedInvoiceRow[]; customers: CustomerRow[] }) {
   const router = useRouter();
@@ -19,6 +20,7 @@ export default function InvoicesClient({ invoices, customers }: { invoices: Issu
   const [working, setWorking] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const todayKey = toMuscatDateInput(new Date());
+  const { pageItems, page, setPage, totalPages } = usePagination(invoices);
 
   async function loadForEdit(invoice: IssuedInvoiceRow) {
     setError(null);
@@ -89,7 +91,7 @@ export default function InvoicesClient({ invoices, customers }: { invoices: Issu
         <p className="text-sm text-black/50 dark:text-white/50">No invoices yet.</p>
       ) : (
         <div className="space-y-2">
-          {invoices.map((inv) => {
+          {pageItems.map((inv) => {
             const overdue = isInvoiceOverdue(inv.status, inv.due_date, todayKey);
             const canEdit = inv.status !== "paid";
             return (
@@ -172,6 +174,7 @@ export default function InvoicesClient({ invoices, customers }: { invoices: Issu
           })}
         </div>
       )}
+      <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
       {showCreate && (
         <InvoiceFormModal

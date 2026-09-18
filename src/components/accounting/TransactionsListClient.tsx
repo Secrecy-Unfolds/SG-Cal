@@ -11,6 +11,7 @@ import { TRANSACTION_STATUS_BADGE_CLASS, TRANSACTION_STATUS_LABELS } from "@/lib
 import { formatMoney } from "@/lib/procurementDisplay";
 import { sumBlendedByDate, type ExchangeRateSnapshot } from "@/lib/currencyDisplay";
 import { HudFrame } from "@/components/hud/HudFrame";
+import { PaginationControls, usePagination } from "@/components/Pagination";
 
 export default function TransactionsListClient({
   transactions,
@@ -111,6 +112,11 @@ export default function TransactionsListClient({
 
   const deletingTransaction = transactions.find((t) => t.id === deletingId) ?? null;
 
+  // Pagination is over the raw row list only — every total/aggregate above
+  // (totalsByCurrency, blendedNet, pendingCount) stays computed from the
+  // full `transactions` array, not just what's currently on-page.
+  const { pageItems, page, setPage, totalPages } = usePagination(transactions);
+
   return (
     <div>
       {error && <p className="text-sm text-red-600 dark:text-red-400 mb-4">{error}</p>}
@@ -174,7 +180,7 @@ export default function TransactionsListClient({
         <p className="text-sm text-black/50 dark:text-white/50">No transactions yet.</p>
       ) : (
         <div className="space-y-2">
-          {transactions.map((t) => (
+          {pageItems.map((t) => (
             <HudFrame
               key={t.id}
               corners="tl-br"
@@ -239,6 +245,7 @@ export default function TransactionsListClient({
           ))}
         </div>
       )}
+      <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
       {showCreate && (
         <TransactionFormModal

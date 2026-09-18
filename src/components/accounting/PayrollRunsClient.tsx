@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PayrollRunRow } from "@/lib/accounting";
 import { HudFrame } from "@/components/hud/HudFrame";
+import { PaginationControls, usePagination } from "@/components/Pagination";
 
 function currentMonthInput(): string {
   const now = new Date();
@@ -21,6 +22,7 @@ export default function PayrollRunsClient({ runs }: { runs: PayrollRunRow[] }) {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const { pageItems, page, setPage, totalPages } = usePagination(runs);
 
   async function handleRunPayroll() {
     setRunning(true);
@@ -81,7 +83,7 @@ export default function PayrollRunsClient({ runs }: { runs: PayrollRunRow[] }) {
         <p className="text-sm text-black/50 dark:text-white/50">No payroll runs yet.</p>
       ) : (
         <div className="space-y-2">
-          {runs.map((r) => (
+          {pageItems.map((r) => (
             <HudFrame
               key={r.id}
               corners="tl-br"
@@ -95,6 +97,7 @@ export default function PayrollRunsClient({ runs }: { runs: PayrollRunRow[] }) {
           ))}
         </div>
       )}
+      <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import ConfirmModal from "@/components/ConfirmModal";
 import CustomerFormModal from "@/components/accounting/CustomerFormModal";
 import type { CustomerRow } from "@/lib/customers";
 import { HudFrame } from "@/components/hud/HudFrame";
+import { PaginationControls, usePagination } from "@/components/Pagination";
 
 export default function CustomersClient({ customers }: { customers: CustomerRow[] }) {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function CustomersClient({ customers }: { customers: CustomerRow[
   const [deleting, setDeleting] = useState<CustomerRow | null>(null);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { pageItems, page, setPage, totalPages } = usePagination(customers);
 
   async function handleDelete() {
     if (!deleting) return;
@@ -49,7 +51,7 @@ export default function CustomersClient({ customers }: { customers: CustomerRow[
         <p className="text-sm text-black/50 dark:text-white/50">No customers yet.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {customers.map((c) => (
+          {pageItems.map((c) => (
             <HudFrame
               key={c.id}
               corners="tl-br"
@@ -76,6 +78,7 @@ export default function CustomersClient({ customers }: { customers: CustomerRow[
           ))}
         </div>
       )}
+      <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
       {showCreate && (
         <CustomerFormModal

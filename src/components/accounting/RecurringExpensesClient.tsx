@@ -8,6 +8,7 @@ import type { RecurringExpenseRow } from "@/lib/recurringExpenses";
 import { RECURRING_EXPENSE_FREQUENCY_LABELS } from "@/lib/accountingDisplay";
 import { formatMoney } from "@/lib/procurementDisplay";
 import { HudFrame } from "@/components/hud/HudFrame";
+import { PaginationControls, usePagination } from "@/components/Pagination";
 
 export default function RecurringExpensesClient({ recurring }: { recurring: RecurringExpenseRow[] }) {
   const router = useRouter();
@@ -15,6 +16,7 @@ export default function RecurringExpensesClient({ recurring }: { recurring: Recu
   const [editing, setEditing] = useState<RecurringExpenseRow | null>(null);
   const [deleting, setDeleting] = useState<RecurringExpenseRow | null>(null);
   const [working, setWorking] = useState(false);
+  const { pageItems, page, setPage, totalPages } = usePagination(recurring);
 
   async function handleDelete() {
     if (!deleting) return;
@@ -44,7 +46,7 @@ export default function RecurringExpensesClient({ recurring }: { recurring: Recu
         <p className="text-sm text-black/50 dark:text-white/50">No recurring expenses yet.</p>
       ) : (
         <div className="space-y-2">
-          {recurring.map((r) => (
+          {pageItems.map((r) => (
             <HudFrame
               key={r.id}
               corners="tl-br"
@@ -79,6 +81,7 @@ export default function RecurringExpensesClient({ recurring }: { recurring: Recu
           ))}
         </div>
       )}
+      <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
       {showCreate && (
         <RecurringExpenseFormModal

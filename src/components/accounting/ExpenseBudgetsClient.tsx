@@ -8,6 +8,7 @@ import type { ExpenseBudgetRow } from "@/lib/expenseBudgets";
 import { formatMoney } from "@/lib/procurementDisplay";
 import { sumBlendedByDate, type ExchangeRateSnapshot } from "@/lib/currencyDisplay";
 import { HudFrame } from "@/components/hud/HudFrame";
+import { PaginationControls, usePagination } from "@/components/Pagination";
 
 export default function ExpenseBudgetsClient({
   budgets,
@@ -52,6 +53,8 @@ export default function ExpenseBudgetsClient({
     );
     return { budgeted, actual };
   }, [totalsByCurrency, budgets, baseCurrency, exchangeRateSnapshot]);
+
+  const { pageItems, page, setPage, totalPages } = usePagination(budgets);
 
   async function handleDelete() {
     if (!deleting) return;
@@ -121,7 +124,7 @@ export default function ExpenseBudgetsClient({
         <p className="text-sm text-black/50 dark:text-white/50">No expense budgets yet.</p>
       ) : (
         <div className="space-y-2">
-          {budgets.map((b) => {
+          {pageItems.map((b) => {
             const amount = parseFloat(b.amount);
             const actual = parseFloat(b.actual);
             const pct = amount > 0 ? Math.min(100, (actual / amount) * 100) : 0;
@@ -159,6 +162,7 @@ export default function ExpenseBudgetsClient({
           })}
         </div>
       )}
+      <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
       {showCreate && (
         <ExpenseBudgetFormModal

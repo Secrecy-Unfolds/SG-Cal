@@ -7,11 +7,13 @@ import type { IdeaRow } from "@/lib/ideas";
 import { formatDateOnly } from "@/lib/procurementDisplay";
 import PageHeader from "@/components/hud/PageHeader";
 import { HudFrameButton } from "@/components/hud/HudFrame";
+import { PaginationControls, usePagination } from "@/components/Pagination";
 
 export default function IdeasListClient({ ideas }: { ideas: IdeaRow[] }) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<IdeaRow | null>(null);
+  const { pageItems, page, setPage, totalPages } = usePagination(ideas);
 
   function afterChange() {
     setShowCreate(false);
@@ -36,7 +38,7 @@ export default function IdeasListClient({ ideas }: { ideas: IdeaRow[] }) {
         <p className="text-sm text-black/50 dark:text-white/50">No ideas yet — add the first one.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {ideas.map((idea) => (
+          {pageItems.map((idea) => (
             <HudFrameButton
               key={idea.id}
               corners="tl-br"
@@ -61,6 +63,7 @@ export default function IdeasListClient({ ideas }: { ideas: IdeaRow[] }) {
           ))}
         </div>
       )}
+      <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
       {showCreate && <IdeaFormModal onClose={() => setShowCreate(false)} onSaved={afterChange} onDeleted={afterChange} />}
       {editing && (
