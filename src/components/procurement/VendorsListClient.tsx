@@ -58,6 +58,11 @@ export default function VendorsListClient({ vendors }: { vendors: VendorWithProd
                 <div className="text-xs text-black/50 dark:text-white/50 truncate">
                   {[v.country, v.niche].filter(Boolean).join(" · ") || "No further details"}
                 </div>
+                {(v.email || v.phone) && (
+                  <div className="text-xs text-black/50 dark:text-white/50 truncate">
+                    {[v.email, v.phone].filter(Boolean).join(" · ")}
+                  </div>
+                )}
               </div>
               <div className="shrink-0 flex gap-2">
                 <span className="btn-glow inline-block">

@@ -48,11 +48,21 @@ export default function ProcurementListClient({ products }: { products: ProductD
                 )}
               </div>
               <div className="p-3 space-y-1">
-                <span
-                  className={`inline-block text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 ${PROCUREMENT_STATUS_BADGE_CLASS[p.status]}`}
-                >
-                  {PROCUREMENT_STATUS_LABELS[p.status]}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className={`inline-block text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 ${PROCUREMENT_STATUS_BADGE_CLASS[p.status]}`}
+                  >
+                    {PROCUREMENT_STATUS_LABELS[p.status]}
+                  </span>
+                  {p.notifications_muted && (
+                    <span
+                      title="Notifications muted for this product"
+                      className="inline-block text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 bg-black/5 dark:bg-white/10 text-black/40 dark:text-white/40"
+                    >
+                      Muted
+                    </span>
+                  )}
+                </div>
                 <div className="text-sm font-medium truncate">{p.name}</div>
                 <div className="text-xs text-black/50 dark:text-white/50">
                   Needed by {formatDateOnly(p.required_by)}

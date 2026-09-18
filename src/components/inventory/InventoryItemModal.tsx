@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import ConfirmModal from "@/components/ConfirmModal";
+import CurrencySelect from "@/components/CurrencySelect";
 import type { InventoryItemRow } from "@/lib/inventory";
 import { ASSET_TYPES, ASSET_TYPE_LABELS, computeDepreciatedValue, type AssetType } from "@/lib/inventoryDisplay";
 
@@ -180,7 +181,7 @@ export default function InventoryItemModal({
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium">Currency</label>
-            <input className={inputClass} value={currency} onChange={(e) => setCurrency(e.target.value)} />
+            <CurrencySelect className={inputClass} value={currency} onChange={setCurrency} />
           </div>
         </div>
 

@@ -6,17 +6,17 @@ import ConfirmModal from "@/components/ConfirmModal";
 import ExpenseBudgetFormModal from "@/components/accounting/ExpenseBudgetFormModal";
 import type { ExpenseBudgetRow } from "@/lib/expenseBudgets";
 import { formatMoney } from "@/lib/procurementDisplay";
-import { sumBlended } from "@/lib/currencyDisplay";
+import { sumBlendedByDate, type ExchangeRateSnapshot } from "@/lib/currencyDisplay";
 import { HudFrame } from "@/components/hud/HudFrame";
 
 export default function ExpenseBudgetsClient({
   budgets,
   baseCurrency,
-  exchangeRates,
+  exchangeRateSnapshot,
 }: {
   budgets: ExpenseBudgetRow[];
   baseCurrency: string;
-  exchangeRates: Record<string, number>;
+  exchangeRateSnapshot: ExchangeRateSnapshot;
 }) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
@@ -35,21 +35,23 @@ export default function ExpenseBudgetsClient({
     return Array.from(map.entries());
   }, [budgets]);
 
+  // Each budget row blends using the rate in effect for its own period
+  // (period_start), not today's rate — so a past period's blended figures
+  // don't shift after the current rate changes again.
   const blended = useMemo(() => {
     if (totalsByCurrency.length < 2) return null;
-    const rates = new Map(Object.entries(exchangeRates));
-    const budgeted = sumBlended(
-      totalsByCurrency.map(([currency, { budgeted }]) => ({ currency, amount: budgeted })),
+    const budgeted = sumBlendedByDate(
+      budgets.map((b) => ({ currency: b.currency, amount: parseFloat(b.amount), date: b.period_start })),
       baseCurrency,
-      rates
+      exchangeRateSnapshot
     );
-    const actual = sumBlended(
-      totalsByCurrency.map(([currency, { actual }]) => ({ currency, amount: actual })),
+    const actual = sumBlendedByDate(
+      budgets.map((b) => ({ currency: b.currency, amount: parseFloat(b.actual), date: b.period_start })),
       baseCurrency,
-      rates
+      exchangeRateSnapshot
     );
     return { budgeted, actual };
-  }, [totalsByCurrency, baseCurrency, exchangeRates]);
+  }, [totalsByCurrency, budgets, baseCurrency, exchangeRateSnapshot]);
 
   async function handleDelete() {
     if (!deleting) return;

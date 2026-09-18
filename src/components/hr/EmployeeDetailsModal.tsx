@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import CurrencySelect from "@/components/CurrencySelect";
 import type { EmployeeDetails } from "@/lib/hr";
 
 const inputClass =
@@ -107,7 +108,7 @@ export default function EmployeeDetailsModal({
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium">Currency</label>
-            <input className={inputClass} value={salaryCurrency} onChange={(e) => setSalaryCurrency(e.target.value)} />
+            <CurrencySelect className={inputClass} value={salaryCurrency} onChange={setSalaryCurrency} />
           </div>
         </div>
 

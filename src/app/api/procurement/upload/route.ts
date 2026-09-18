@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { put } from "@vercel/blob";
+import { del, put } from "@vercel/blob";
 import { getSession } from "@/lib/auth";
 import { isAdminLevel } from "@/lib/users";
 
@@ -40,4 +40,27 @@ export async function POST(req: NextRequest) {
   });
 
   return NextResponse.json({ url: blob.url }, { status: 201 });
+}
+
+// Lets a product form clean up a picture it uploaded but never attached to
+// a saved product (modal closed, or replaced by a second upload, before
+// Save) — otherwise that blob sits in storage forever with nothing pointing
+// at it. Scoped to this route's own "procurement/" prefix so a bad/forged
+// url can't be used to delete something unrelated.
+export async function DELETE(req: NextRequest) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isAdminLevel(session.role)) {
+    return NextResponse.json({ error: "Only Admin-level accounts can delete pictures" }, { status: 403 });
+  }
+
+  const body = await req.json().catch(() => null);
+  const url = typeof body?.url === "string" ? body.url : "";
+  const pathname = url ? (() => { try { return new URL(url).pathname; } catch { return ""; } })() : "";
+  if (!pathname.startsWith("/procurement/")) {
+    return NextResponse.json({ error: "Invalid url" }, { status: 400 });
+  }
+
+  await del(url).catch(() => {}); // best-effort — an already-gone blob isn't an error worth surfacing
+  return NextResponse.json({ ok: true });
 }

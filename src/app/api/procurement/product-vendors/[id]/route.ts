@@ -17,17 +17,34 @@ function parseId(idParam: string): number | null {
   return Number.isInteger(id) && id > 0 ? id : null;
 }
 
+function parseRating(value: unknown): number | null {
+  return Number.isFinite(value) && (value as number) >= 1 && (value as number) <= 5 ? Math.round(value as number) : null;
+}
+
 function parseOfferingBody(body: any) {
   const pricing = typeof body?.pricing === "string" ? body.pricing.trim() : "";
   const paymentTerms = typeof body?.paymentTerms === "string" ? body.paymentTerms.trim() : "";
-  const qualityRating =
-    Number.isFinite(body?.qualityRating) && body.qualityRating >= 1 && body.qualityRating <= 5
-      ? Math.round(body.qualityRating)
-      : null;
+  const qualityRating = parseRating(body?.qualityRating);
   const deliveryPeriod = typeof body?.deliveryPeriod === "string" ? body.deliveryPeriod.trim() : "";
   const warranty = typeof body?.warranty === "string" ? body.warranty.trim() : "";
+  const priceRating = parseRating(body?.priceRating);
+  const deliveryRating = parseRating(body?.deliveryRating);
+  const warrantyRating = parseRating(body?.warrantyRating);
+  const quoteReceivedOn = typeof body?.quoteReceivedOn === "string" && body.quoteReceivedOn ? body.quoteReceivedOn : null;
+  const quoteValidUntil = typeof body?.quoteValidUntil === "string" && body.quoteValidUntil ? body.quoteValidUntil : null;
 
-  return { pricing, paymentTerms, qualityRating, deliveryPeriod, warranty };
+  return {
+    pricing,
+    paymentTerms,
+    qualityRating,
+    deliveryPeriod,
+    warranty,
+    priceRating,
+    deliveryRating,
+    warrantyRating,
+    quoteReceivedOn,
+    quoteValidUntil,
+  };
 }
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
@@ -49,8 +66,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const productVendor = await updateProductVendorOffering(id, offering);
 
   const product = await getProductById(existing.product_id);
-  if (product && productVendor) {
-    const recipients = await getAdminLevelRecipientEmails();
+  if (product && productVendor && !product.notifications_muted) {
+    const recipients = await getAdminLevelRecipientEmails("procurement");
     const { subject, html } = vendorUpdatedEmail(product, productVendor, session.username);
     sendMailInBackground({ to: recipients, subject, html });
   }
@@ -75,8 +92,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
 
   await unlinkVendorFromProduct(id);
 
-  if (product) {
-    const recipients = await getAdminLevelRecipientEmails();
+  if (product && !product.notifications_muted) {
+    const recipients = await getAdminLevelRecipientEmails("procurement");
     const { subject, html } = vendorDeletedEmail(product, existing, session.username);
     sendMailInBackground({ to: recipients, subject, html });
   }

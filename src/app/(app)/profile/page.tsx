@@ -4,6 +4,7 @@ import { getUserById } from "@/lib/users";
 import ProfileDetailsForm from "@/components/ProfileDetailsForm";
 import ProfileForm from "@/components/ProfileForm";
 import MyHRCard from "@/components/MyHRCard";
+import NotificationPreferencesForm from "@/components/NotificationPreferencesForm";
 import PageHeader from "@/components/hud/PageHeader";
 
 export default async function ProfilePage() {
@@ -19,6 +20,7 @@ export default async function ProfilePage() {
       <ProfileDetailsForm user={user} />
       <MyHRCard userId={user.id} />
       <ProfileForm />
+      <NotificationPreferencesForm role={session.role} />
     </div>
   );
 }

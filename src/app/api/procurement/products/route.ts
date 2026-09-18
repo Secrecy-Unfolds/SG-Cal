@@ -26,6 +26,7 @@ function parseProductBody(body: any) {
     typeof body?.expectedArrival === "string" && body.expectedArrival ? body.expectedArrival : null;
   const status = isProcurementStatus(body?.status) ? body.status : "planning";
   const preferenceRemarks = typeof body?.preferenceRemarks === "string" ? body.preferenceRemarks.trim() : "";
+  const notificationsMuted = typeof body?.notificationsMuted === "boolean" ? body.notificationsMuted : false;
 
   return {
     name,
@@ -44,6 +45,7 @@ function parseProductBody(body: any) {
     expectedArrival,
     status,
     preferenceRemarks,
+    notificationsMuted,
   };
 }
 
@@ -73,9 +75,11 @@ export async function POST(req: NextRequest) {
 
   const product = await createProduct({ ...input, createdBy: session.uid });
 
-  const recipients = await getAdminLevelRecipientEmails();
-  const { subject, html } = productCreatedEmail(product, session.username);
-  sendMailInBackground({ to: recipients, subject, html });
+  if (!product.notifications_muted) {
+    const recipients = await getAdminLevelRecipientEmails("procurement");
+    const { subject, html } = productCreatedEmail(product, session.username);
+    sendMailInBackground({ to: recipients, subject, html });
+  }
 
   return NextResponse.json({ product }, { status: 201 });
 }

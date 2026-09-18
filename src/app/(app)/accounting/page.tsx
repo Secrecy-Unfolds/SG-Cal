@@ -15,7 +15,7 @@ import { listGovernmentSupport, listGovernmentSupporters } from "@/lib/governmen
 import { listCustomers } from "@/lib/customers";
 import { listInvoices } from "@/lib/invoices";
 import { getBaseCurrency } from "@/lib/settings";
-import { getExchangeRateMap } from "@/lib/exchangeRates";
+import { getExchangeRateSnapshot } from "@/lib/exchangeRates";
 import AccountingTabs from "@/components/accounting/AccountingTabs";
 
 export default async function AccountingPage() {
@@ -42,7 +42,7 @@ export default async function AccountingPage() {
     invoices,
     customers,
     baseCurrency,
-    exchangeRateMap,
+    exchangeRateSnapshot,
   ] = await Promise.all([
     listTransactions(),
     listExpenseBudgets(),
@@ -62,12 +62,8 @@ export default async function AccountingPage() {
     listInvoices(),
     listCustomers(),
     getBaseCurrency(),
-    getExchangeRateMap(),
+    getExchangeRateSnapshot(),
   ]);
-
-  // Map isn't serializable across the server/client boundary — pass as a
-  // plain object, reconstructed into a Map client-side where needed.
-  const exchangeRates = Object.fromEntries(exchangeRateMap);
 
   return (
     <AccountingTabs
@@ -89,7 +85,7 @@ export default async function AccountingPage() {
       invoices={invoices}
       customers={customers}
       baseCurrency={baseCurrency}
-      exchangeRates={exchangeRates}
+      exchangeRateSnapshot={exchangeRateSnapshot}
       actorRole={session.role}
     />
   );

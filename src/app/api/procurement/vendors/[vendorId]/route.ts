@@ -27,12 +27,15 @@ export async function PUT(req: NextRequest, { params }: { params: { vendorId: st
   const name = typeof body?.name === "string" ? body.name.trim() : "";
   const country = typeof body?.country === "string" ? body.country.trim() : "";
   const niche = typeof body?.niche === "string" ? body.niche.trim() : "";
+  const email = typeof body?.email === "string" ? body.email.trim() : "";
+  const phone = typeof body?.phone === "string" ? body.phone.trim() : "";
+  const alternateEmail = typeof body?.alternateEmail === "string" ? body.alternateEmail.trim() : "";
 
   if (!name) {
     return NextResponse.json({ error: "Vendor name is required" }, { status: 400 });
   }
 
-  const vendor = await updateVendorIdentity(id, { name, country, niche });
+  const vendor = await updateVendorIdentity(id, { name, country, niche, email, phone, alternateEmail });
   return NextResponse.json({ vendor });
 }
 

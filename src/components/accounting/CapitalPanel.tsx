@@ -10,6 +10,7 @@ import type { CapitalBudgetRow } from "@/lib/capitalBudgets";
 import type { InvestmentPayoutRow, InvestmentRow, InvestorRow } from "@/lib/investors";
 import type { GovernmentSupportRow, GovernmentSupporterRow } from "@/lib/governmentSupport";
 import type { ProductRow } from "@/lib/procurement";
+import type { ExchangeRateSnapshot } from "@/lib/currencyDisplay";
 import FolderTabs from "@/components/hud/FolderTabs";
 
 type SubTab = "entries" | "budgets" | "investors" | "government";
@@ -24,7 +25,7 @@ export default function CapitalPanel({
   governmentSupporters,
   governmentSupport,
   baseCurrency,
-  exchangeRates,
+  exchangeRateSnapshot,
 }: {
   capitalEntries: CapitalEntryRow[];
   capitalBudgets: CapitalBudgetRow[];
@@ -35,7 +36,7 @@ export default function CapitalPanel({
   governmentSupporters: GovernmentSupporterRow[];
   governmentSupport: GovernmentSupportRow[];
   baseCurrency: string;
-  exchangeRates: Record<string, number>;
+  exchangeRateSnapshot: ExchangeRateSnapshot;
 }) {
   const [subTab, setSubTab] = useState<SubTab>("entries");
 
@@ -53,10 +54,19 @@ export default function CapitalPanel({
       />
 
       {subTab === "entries" && (
-        <CapitalLedgerClient entries={capitalEntries} baseCurrency={baseCurrency} exchangeRates={exchangeRates} />
+        <CapitalLedgerClient
+          entries={capitalEntries}
+          baseCurrency={baseCurrency}
+          exchangeRateSnapshot={exchangeRateSnapshot}
+        />
       )}
       {subTab === "budgets" && (
-        <CapitalBudgetsClient budgets={capitalBudgets} products={products} baseCurrency={baseCurrency} exchangeRates={exchangeRates} />
+        <CapitalBudgetsClient
+          budgets={capitalBudgets}
+          products={products}
+          baseCurrency={baseCurrency}
+          exchangeRateSnapshot={exchangeRateSnapshot}
+        />
       )}
       {subTab === "investors" && <InvestorsClient investors={investors} investments={investments} payouts={payouts} />}
       {subTab === "government" && (

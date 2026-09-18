@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { HudFrameForm } from "@/components/hud/HudFrame";
 import SectionLabel from "@/components/hud/SectionLabel";
+import CurrencySelect from "@/components/CurrencySelect";
 
 type DigestSettings = {
   midnightDigestTime: string;
@@ -182,12 +183,7 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Dig
         </p>
         <div className="max-w-[200px] space-y-1">
           <label className="text-sm font-medium">Base currency</label>
-          <input
-            className={inputClass}
-            value={baseCurrency}
-            onChange={(e) => setBaseCurrency(e.target.value)}
-            required
-          />
+          <CurrencySelect className={inputClass} value={baseCurrency} onChange={setBaseCurrency} />
         </div>
       </div>
 

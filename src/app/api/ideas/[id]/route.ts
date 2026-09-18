@@ -35,7 +35,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const idea = await updateIdea(id, { name, description, prerequisites, expectedStartDate });
   if (!idea) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const recipients = await getAdminLevelRecipientEmails();
+  const recipients = await getAdminLevelRecipientEmails("ideas");
   const { subject, html } = ideaUpdatedEmail(idea, session.username);
   sendMailInBackground({ to: recipients, subject, html });
 
@@ -57,7 +57,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
 
   await deleteIdea(id);
 
-  const recipients = await getAdminLevelRecipientEmails();
+  const recipients = await getAdminLevelRecipientEmails("ideas");
   const { subject, html } = ideaDeletedEmail(existing, session.username);
   sendMailInBackground({ to: recipients, subject, html });
 

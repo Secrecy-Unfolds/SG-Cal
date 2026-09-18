@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import CurrencySelect from "@/components/CurrencySelect";
 import type { RecurringExpenseRow } from "@/lib/recurringExpenses";
 import type { RecurringExpenseFrequency } from "@/lib/accountingDisplay";
 import { RECURRING_EXPENSE_FREQUENCIES, RECURRING_EXPENSE_FREQUENCY_LABELS } from "@/lib/accountingDisplay";
@@ -119,7 +120,7 @@ export default function RecurringExpenseFormModal({
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium">Currency</label>
-            <input className={inputClass} value={currency} onChange={(e) => setCurrency(e.target.value)} />
+            <CurrencySelect className={inputClass} value={currency} onChange={setCurrency} />
           </div>
         </div>
 

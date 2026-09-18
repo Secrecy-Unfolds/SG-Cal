@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import ConfirmModal from "@/components/ConfirmModal";
 import ProductFormModal, { ProductData } from "@/components/procurement/ProductFormModal";
 import VendorFormModal, { ProductVendorData } from "@/components/procurement/VendorFormModal";
+import VendorEvaluationModal from "@/components/procurement/VendorEvaluationModal";
 import { HudFrame } from "@/components/hud/HudFrame";
 import SectionLabel from "@/components/hud/SectionLabel";
 import {
@@ -13,6 +14,9 @@ import {
   formatMoney,
   PROCUREMENT_STATUS_BADGE_CLASS,
   PROCUREMENT_STATUS_LABELS,
+  RFQ_STATUS_BADGE_CLASS,
+  RFQ_STATUS_LABELS,
+  type RfqStatus,
 } from "@/lib/procurementDisplay";
 
 function Field({ label, value }: { label: string; value: string }) {
@@ -51,6 +55,7 @@ export default function ProductDetailClient({
   const [deleting, setDeleting] = useState(false);
   const [busyVendorId, setBusyVendorId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showEvaluation, setShowEvaluation] = useState(false);
   const [confirmingDeleteProduct, setConfirmingDeleteProduct] = useState(false);
   const [confirmingRemoveVendor, setConfirmingRemoveVendor] = useState<ProductVendorData | null>(null);
   const [sendingToProcurement, setSendingToProcurement] = useState(false);
@@ -116,12 +121,53 @@ export default function ProductDetailClient({
           expectedArrival: product.expected_arrival,
           status: product.status,
           preferenceRemarks: product.preference_remarks,
+          notificationsMuted: product.notifications_muted,
           preferredVendorId: vendorId,
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data.error ?? "Failed to update preferred vendor");
+        return;
+      }
+      router.refresh();
+    } catch {
+      setError("Network error — check your connection and try again.");
+    } finally {
+      setBusyVendorId(null);
+    }
+  }
+
+  async function handleSendRfq(joinId: number) {
+    setBusyVendorId(joinId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/procurement/product-vendors/${joinId}/rfq`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error ?? "Failed to send RFQ");
+        return;
+      }
+      router.refresh();
+    } catch {
+      setError("Network error — check your connection and try again.");
+    } finally {
+      setBusyVendorId(null);
+    }
+  }
+
+  async function handleRfqOutcome(joinId: number, status: RfqStatus) {
+    setBusyVendorId(joinId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/procurement/product-vendors/${joinId}/rfq`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error ?? "Failed to update RFQ status");
         return;
       }
       router.refresh();
@@ -255,14 +301,26 @@ export default function ProductDetailClient({
         <SectionLabel>VENDORS</SectionLabel>
         <div className="flex items-center justify-between">
           <h2 className="font-heading font-semibold text-base uppercase tracking-wide">Possible vendors</h2>
-          <span className="btn-glow-amber inline-block">
-            <button
-              onClick={() => setVendorModal({ mode: "add" })}
-              className="btn-skew bg-amber-600 text-white px-4 py-2 text-sm font-medium"
-            >
-              + Add Vendor
-            </button>
-          </span>
+          <div className="flex gap-2">
+            {vendors.length > 0 && (
+              <span className="btn-glow inline-block">
+                <button
+                  onClick={() => setShowEvaluation(true)}
+                  className="btn-skew border border-black/10 dark:border-white/10 px-4 py-2 text-sm font-medium hover:bg-black/[0.03] dark:hover:bg-white/5"
+                >
+                  Compare Vendors
+                </button>
+              </span>
+            )}
+            <span className="btn-glow-amber inline-block">
+              <button
+                onClick={() => setVendorModal({ mode: "add" })}
+                className="btn-skew bg-amber-600 text-white px-4 py-2 text-sm font-medium"
+              >
+                + Add Vendor
+              </button>
+            </span>
+          </div>
         </div>
       </div>
 
@@ -292,8 +350,56 @@ export default function ProductDetailClient({
                       )}
                     </div>
                     <Stars rating={v.quality_rating} />
+                    {v.rfq_status && (
+                      <div className="mt-1 flex items-center gap-2">
+                        <span
+                          className={`text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 ${RFQ_STATUS_BADGE_CLASS[v.rfq_status]}`}
+                        >
+                          {RFQ_STATUS_LABELS[v.rfq_status]}
+                        </span>
+                        {v.rfq_sent_at && (
+                          <span className="text-[10px] text-black/40 dark:text-white/40">
+                            {new Date(v.rfq_sent_at).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    {v.rfq_status !== "quoted" && v.rfq_status !== "declined" && (
+                      <span className="btn-glow inline-block">
+                        <button
+                          onClick={() => handleSendRfq(v.id)}
+                          disabled={busy || !v.email}
+                          title={!v.email ? "This vendor has no email on file" : undefined}
+                          className="text-xs btn-skew border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5 disabled:opacity-50"
+                        >
+                          {v.rfq_status === "requested" ? "Resend RFQ" : "Send RFQ"}
+                        </button>
+                      </span>
+                    )}
+                    {v.rfq_status === "requested" && (
+                      <>
+                        <span className="btn-glow inline-block">
+                          <button
+                            onClick={() => handleRfqOutcome(v.id, "quoted")}
+                            disabled={busy}
+                            className="text-xs btn-skew border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5 disabled:opacity-50"
+                          >
+                            Mark quoted
+                          </button>
+                        </span>
+                        <span className="btn-glow-red inline-block">
+                          <button
+                            onClick={() => handleRfqOutcome(v.id, "declined")}
+                            disabled={busy}
+                            className="text-xs btn-skew border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 px-3 py-1.5 disabled:opacity-50"
+                          >
+                            Mark declined
+                          </button>
+                        </span>
+                      </>
+                    )}
                     <span className="btn-glow inline-block">
                       <button
                         onClick={() => handleSetPreferred(v.id, isPreferred ? null : v.vendor_id)}
@@ -329,11 +435,35 @@ export default function ProductDetailClient({
                   <Field label="Payment terms" value={v.payment_terms} />
                   <Field label="Delivery period" value={v.delivery_period} />
                   <Field label="Warranty" value={v.warranty} />
+                  <Field label="Quote received" value={formatDateOnly(v.quote_received_on)} />
+                  <div>
+                    <div className="text-xs text-black/40 dark:text-white/40 uppercase tracking-wide">Quote valid until</div>
+                    <div className="text-sm">
+                      {formatDateOnly(v.quote_valid_until)}
+                      {v.quote_valid_until && new Date(v.quote_valid_until) < new Date() && (
+                        <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 bg-red-500/10 text-red-600 dark:text-red-400">
+                          Expired
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </HudFrame>
             );
           })}
         </div>
+      )}
+
+      {showEvaluation && (
+        <VendorEvaluationModal
+          vendors={vendors}
+          preferredVendorId={product.preferred_vendor_id}
+          onClose={() => setShowEvaluation(false)}
+          onMarkPreferred={(vendor) => {
+            setShowEvaluation(false);
+            handleSetPreferred(vendor.id, vendor.vendor_id);
+          }}
+        />
       )}
 
       {editingProduct && (
@@ -373,7 +503,13 @@ export default function ProductDetailClient({
       {confirmingDeleteProduct && (
         <ConfirmModal
           title="Delete product"
-          message={`Delete "${product.name}"? This also removes its vendor comparisons.`}
+          message={
+            vendors.length > 0
+              ? `Delete "${product.name}"? This also drops its ${vendors.length} linked vendor comparison${
+                  vendors.length === 1 ? "" : "s"
+                }${product.preferred_vendor_id ? " — including its preferred vendor" : ""}. This can't be undone.`
+              : `Delete "${product.name}"? This can't be undone.`
+          }
           confirmLabel="Delete"
           loading={deleting}
           onConfirm={handleDeleteProduct}
@@ -382,8 +518,12 @@ export default function ProductDetailClient({
       )}
       {confirmingRemoveVendor && (
         <ConfirmModal
-          title="Remove vendor"
-          message={`Remove "${confirmingRemoveVendor.name}" from this product? The vendor itself isn't deleted, just its link to this product.`}
+          title={confirmingRemoveVendor.vendor_id === product.preferred_vendor_id ? "Remove preferred vendor" : "Remove vendor"}
+          message={
+            confirmingRemoveVendor.vendor_id === product.preferred_vendor_id
+              ? `"${confirmingRemoveVendor.name}" is this product's preferred vendor. Removing it will clear that preference — the vendor itself isn't deleted, just its link to this product.`
+              : `Remove "${confirmingRemoveVendor.name}" from this product? The vendor itself isn't deleted, just its link to this product.`
+          }
           confirmLabel="Remove"
           loading={busyVendorId === confirmingRemoveVendor.id}
           onConfirm={() => handleDeleteVendor(confirmingRemoveVendor)}

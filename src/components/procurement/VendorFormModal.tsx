@@ -16,12 +16,49 @@ export type ProductVendorData = {
   quality_rating: number | null;
   delivery_period: string;
   warranty: string;
+  price_rating: number | null;
+  delivery_rating: number | null;
+  warranty_rating: number | null;
+  quote_received_on: string | null;
+  quote_valid_until: string | null;
+  email: string;
+  rfq_status: "requested" | "quoted" | "declined" | null;
+  rfq_sent_at: Date | null;
 };
 
 type VendorSearchResult = { id: number; name: string; country: string; niche: string };
 
 const inputClass =
   "w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent";
+
+function StarPicker({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number | null;
+  onChange: (value: number | null) => void;
+}) {
+  return (
+    <div className="space-y-1">
+      <label className="text-sm font-medium">{label}</label>
+      <div className="flex gap-1">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => onChange(value === n ? null : n)}
+            className={`text-2xl leading-none ${value !== null && n <= value ? "text-amber-500" : "text-black/20 dark:text-white/20"}`}
+            aria-label={`${n} star${n === 1 ? "" : "s"}`}
+          >
+            ★
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function VendorFormModal({
   productId,
@@ -50,12 +87,20 @@ export default function VendorFormModal({
   const [newName, setNewName] = useState("");
   const [newCountry, setNewCountry] = useState("");
   const [newNiche, setNewNiche] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+  const [newAlternateEmail, setNewAlternateEmail] = useState("");
 
   const [pricing, setPricing] = useState(vendorLink?.pricing ?? "");
   const [paymentTerms, setPaymentTerms] = useState(vendorLink?.payment_terms ?? "");
   const [qualityRating, setQualityRating] = useState<number | null>(vendorLink?.quality_rating ?? null);
   const [deliveryPeriod, setDeliveryPeriod] = useState(vendorLink?.delivery_period ?? "");
   const [warranty, setWarranty] = useState(vendorLink?.warranty ?? "");
+  const [quoteReceivedOn, setQuoteReceivedOn] = useState(vendorLink?.quote_received_on ?? "");
+  const [quoteValidUntil, setQuoteValidUntil] = useState(vendorLink?.quote_valid_until ?? "");
+  const [priceRating, setPriceRating] = useState<number | null>(vendorLink?.price_rating ?? null);
+  const [deliveryRating, setDeliveryRating] = useState<number | null>(vendorLink?.delivery_rating ?? null);
+  const [warrantyRating, setWarrantyRating] = useState<number | null>(vendorLink?.warranty_rating ?? null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -111,7 +156,18 @@ export default function VendorFormModal({
       setError("Vendor name is required");
       return;
     }
-    const offering = { pricing, paymentTerms, qualityRating, deliveryPeriod, warranty };
+    const offering = {
+      pricing,
+      paymentTerms,
+      qualityRating,
+      deliveryPeriod,
+      warranty,
+      priceRating,
+      deliveryRating,
+      warrantyRating,
+      quoteReceivedOn: quoteReceivedOn || null,
+      quoteValidUntil: quoteValidUntil || null,
+    };
     setSaving(true);
     try {
       const res = isEdit
@@ -126,7 +182,15 @@ export default function VendorFormModal({
             body: JSON.stringify(
               selectedVendor
                 ? { vendorId: selectedVendor.id, ...offering }
-                : { name: newName.trim(), country: newCountry, niche: newNiche, ...offering }
+                : {
+                    name: newName.trim(),
+                    country: newCountry,
+                    niche: newNiche,
+                    email: newEmail,
+                    phone: newPhone,
+                    alternateEmail: newAlternateEmail,
+                    ...offering,
+                  }
             ),
           });
       const data = await res.json().catch(() => ({}));
@@ -236,6 +300,31 @@ export default function VendorFormModal({
                   <label className="text-sm font-medium">Niche / products / services</label>
                   <input className={inputClass} value={newNiche} onChange={(e) => setNewNiche(e.target.value)} />
                 </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Email</label>
+                    <input
+                      type="email"
+                      className={inputClass}
+                      value={newEmail}
+                      onChange={(e) => setNewEmail(e.target.value)}
+                      placeholder="vendor@example.com"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Phone</label>
+                    <input className={inputClass} value={newPhone} onChange={(e) => setNewPhone(e.target.value)} />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Alternate email</label>
+                  <input
+                    type="email"
+                    className={inputClass}
+                    value={newAlternateEmail}
+                    onChange={(e) => setNewAlternateEmail(e.target.value)}
+                  />
+                </div>
               </>
             )}
 
@@ -281,23 +370,36 @@ export default function VendorFormModal({
               </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Quality rating</label>
-              <div className="flex gap-1">
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => setQualityRating(qualityRating === n ? null : n)}
-                    className={`text-2xl leading-none ${
-                      qualityRating !== null && n <= qualityRating ? "text-amber-500" : "text-black/20 dark:text-white/20"
-                    }`}
-                    aria-label={`${n} star${n === 1 ? "" : "s"}`}
-                  >
-                    ★
-                  </button>
-                ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Quote received on</label>
+                <input
+                  type="date"
+                  className={`${inputClass} dark:[color-scheme:dark]`}
+                  value={quoteReceivedOn}
+                  onChange={(e) => setQuoteReceivedOn(e.target.value)}
+                />
               </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Quote valid until</label>
+                <input
+                  type="date"
+                  className={`${inputClass} dark:[color-scheme:dark]`}
+                  value={quoteValidUntil}
+                  onChange={(e) => setQuoteValidUntil(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <p className="text-xs text-black/40 dark:text-white/40">
+              These four ratings feed the weighted vendor comparison — price/delivery/warranty
+              above are free text for reference, these are your judgment call.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <StarPicker label="Price rating" value={priceRating} onChange={setPriceRating} />
+              <StarPicker label="Quality rating" value={qualityRating} onChange={setQualityRating} />
+              <StarPicker label="Delivery rating" value={deliveryRating} onChange={setDeliveryRating} />
+              <StarPicker label="Warranty rating" value={warrantyRating} onChange={setWarrantyRating} />
             </div>
 
             {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}

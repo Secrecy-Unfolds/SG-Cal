@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
   // Meeting reminders go only to that meeting's attendees; task reminders go
   // to the assignee plus admin-level users (who can already see/manage every
   // task). Neither broadcasts to every user anymore.
-  const adminEmails = await getAdminLevelRecipientEmails();
+  const adminEmails = await getAdminLevelRecipientEmails("calendar");
 
   // Fire each email in the background and mark it sent right away — a slow
   // or failing send from the relay shouldn't block marking the reminder

@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
     event = (await getEventById(event.id)) ?? event;
     recipients = await getEmailsByIds(event.attendees.map((a) => a.id));
   } else {
-    recipients = await getAllRecipientEmails();
+    recipients = await getAllRecipientEmails("calendar");
   }
 
   const { subject, html } = eventCreatedEmail(event);

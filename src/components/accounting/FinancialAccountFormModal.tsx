@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import CurrencySelect from "@/components/CurrencySelect";
 import type { FinancialAccountRow } from "@/lib/financialAccounts";
 import type { FinancialAccountType } from "@/lib/accountingDisplay";
 import { FINANCIAL_ACCOUNT_TYPES, FINANCIAL_ACCOUNT_TYPE_LABELS } from "@/lib/accountingDisplay";
@@ -85,7 +86,7 @@ export default function FinancialAccountFormModal({
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium">Currency</label>
-            <input className={inputClass} value={currency} onChange={(e) => setCurrency(e.target.value)} />
+            <CurrencySelect className={inputClass} value={currency} onChange={setCurrency} />
           </div>
         </div>
 

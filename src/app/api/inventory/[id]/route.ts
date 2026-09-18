@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { isAdminLevel } from "@/lib/users";
-import { deleteInventoryItem, isAssetType, updateInventoryItem } from "@/lib/inventory";
+import { deleteInventoryItem, getInventoryItemById, isAssetType, updateInventoryItem } from "@/lib/inventory";
+import { getAdminLevelRecipientEmails, sendMailInBackground } from "@/lib/mailer";
+import { inventoryItemDeletedEmail, inventoryItemUpdatedEmail } from "@/lib/inventoryEmailTemplates";
 
 export const runtime = "nodejs";
 
@@ -51,6 +53,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     notes,
   });
   if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const recipients = await getAdminLevelRecipientEmails("inventory");
+  const { subject, html } = inventoryItemUpdatedEmail(item, session.username);
+  sendMailInBackground({ to: recipients, subject, html });
+
   return NextResponse.json({ item });
 }
 
@@ -64,6 +71,14 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   const id = parseId(params.id);
   if (!id) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
 
+  const existing = await getInventoryItemById(id);
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
   await deleteInventoryItem(id);
+
+  const recipients = await getAdminLevelRecipientEmails("inventory");
+  const { subject, html } = inventoryItemDeletedEmail(existing, session.username);
+  sendMailInBackground({ to: recipients, subject, html });
+
   return NextResponse.json({ ok: true });
 }

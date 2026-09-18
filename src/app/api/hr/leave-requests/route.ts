@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
 
   const request = await createLeaveRequest({ userId: session.uid, startDate, endDate, reason });
 
-  const recipients = await getAdminLevelRecipientEmails();
+  const recipients = await getAdminLevelRecipientEmails("hr");
   const { subject, html } = leaveRequestSubmittedEmail(request);
   sendMailInBackground({ to: recipients, subject, html });
 

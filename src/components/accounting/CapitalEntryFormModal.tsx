@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import CurrencySelect from "@/components/CurrencySelect";
 import type { CapitalSource } from "@/lib/capitalDisplay";
 import { CAPITAL_SOURCE_LABELS } from "@/lib/capitalDisplay";
 import { toMuscatDateInput } from "@/lib/time";
@@ -95,7 +96,7 @@ export default function CapitalEntryFormModal({ onClose, onSaved }: { onClose: (
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium">Currency</label>
-            <input className={inputClass} value={currency} onChange={(e) => setCurrency(e.target.value)} />
+            <CurrencySelect className={inputClass} value={currency} onChange={setCurrency} />
           </div>
         </div>
 

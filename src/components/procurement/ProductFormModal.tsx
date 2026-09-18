@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import CurrencySelect from "@/components/CurrencySelect";
 import {
   computeCapitalNeeded,
   formatMoney,
@@ -27,6 +28,7 @@ export type ProductData = {
   expected_arrival: string | null;
   status: ProcurementStatus;
   preference_remarks: string;
+  notifications_muted: boolean;
 };
 
 export default function ProductFormModal({
@@ -40,9 +42,11 @@ export default function ProductFormModal({
 }) {
   const isEdit = !!product;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const originalPictureUrl = product?.picture_url ?? null;
+  const savedRef = useRef(false);
 
   const [name, setName] = useState(product?.name ?? "");
-  const [pictureUrl, setPictureUrl] = useState<string | null>(product?.picture_url ?? null);
+  const [pictureUrl, setPictureUrl] = useState<string | null>(originalPictureUrl);
   const [uploading, setUploading] = useState(false);
   const [description, setDescription] = useState(product?.description ?? "");
   const [requiredFor, setRequiredFor] = useState(product?.required_for ?? "");
@@ -58,6 +62,7 @@ export default function ProductFormModal({
   const [expectedArrival, setExpectedArrival] = useState(product?.expected_arrival ?? "");
   const [status, setStatus] = useState<ProcurementStatus>(product?.status ?? "planning");
   const [preferenceRemarks, setPreferenceRemarks] = useState(product?.preference_remarks ?? "");
+  const [notificationsMuted, setNotificationsMuted] = useState(product?.notifications_muted ?? false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,6 +72,17 @@ export default function ProductFormModal({
     shippingCost: shippingCost === "" ? null : shippingCost,
     customsCost: customsCost === "" ? null : customsCost,
   });
+
+  // Deletes a picture this modal itself uploaded but never ended up saved
+  // on a product — never the product's own already-saved picture.
+  function deleteOrphanedUpload(url: string | null) {
+    if (!url || url === originalPictureUrl) return;
+    fetch("/api/procurement/upload", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    }).catch(() => {});
+  }
 
   async function handlePictureChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -82,11 +98,17 @@ export default function ProductFormModal({
         setError(data.error ?? "Failed to upload picture");
         return;
       }
+      deleteOrphanedUpload(pictureUrl); // this upload replaces one that was never saved
       setPictureUrl(data.url);
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
+  }
+
+  function handleClose() {
+    if (!savedRef.current) deleteOrphanedUpload(pictureUrl);
+    onClose();
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -118,6 +140,7 @@ export default function ProductFormModal({
           expectedArrival: expectedArrival || null,
           status,
           preferenceRemarks,
+          notificationsMuted,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -125,6 +148,7 @@ export default function ProductFormModal({
         setError(data.error ?? "Failed to save product");
         return;
       }
+      savedRef.current = true;
       onSaved();
     } catch {
       setError("Network error — check your connection and try again.");
@@ -143,7 +167,7 @@ export default function ProductFormModal({
           <h2 className="font-heading font-semibold text-lg uppercase tracking-wide">{isEdit ? "Edit product" : "New product"}</h2>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="text-black/40 dark:text-white/40 hover:text-black/70 dark:hover:text-white/70"
           >
             ✕
@@ -289,11 +313,10 @@ export default function ProductFormModal({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
           <div className="space-y-1">
             <label className="text-sm font-medium">Currency</label>
-            <input
+            <CurrencySelect
               className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
               value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
-              placeholder="OMR"
+              onChange={setCurrency}
             />
           </div>
           <div className="bg-black/[0.02] dark:bg-white/5 rounded-lg px-3 py-2">
@@ -346,13 +369,23 @@ export default function ProductFormModal({
           />
         </div>
 
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={notificationsMuted}
+            onChange={(e) => setNotificationsMuted(e.target.checked)}
+            className="rounded border-black/20 dark:border-white/20"
+          />
+          Mute notifications for this product (no emails on create/update/delete or vendor changes)
+        </label>
+
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
           <span className="btn-glow inline-block">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="btn-skew px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
             >
               Cancel

@@ -14,8 +14,8 @@ import { listIdeas } from "@/lib/ideas";
 import { toMuscatDateInput } from "@/lib/time";
 import { formatMoney } from "@/lib/procurementDisplay";
 import { getBaseCurrency } from "@/lib/settings";
-import { getExchangeRateMap } from "@/lib/exchangeRates";
-import { sumBlended } from "@/lib/currencyDisplay";
+import { getExchangeRateSnapshot } from "@/lib/exchangeRates";
+import { sumBlendedByDate } from "@/lib/currencyDisplay";
 import PageHeader from "@/components/hud/PageHeader";
 import SectionLabel from "@/components/hud/SectionLabel";
 import { HudFrame } from "@/components/hud/HudFrame";
@@ -46,7 +46,7 @@ export default async function HomePage() {
           listTransactions(),
           listIdeas(),
           getBaseCurrency(),
-          getExchangeRateMap(),
+          getExchangeRateSnapshot(),
         ])
       : Promise.resolve(null),
   ]);
@@ -60,7 +60,7 @@ export default async function HomePage() {
   ];
 
   if (admin && adminData) {
-    const [allUsers, allLeave, allAttendance, purchaseOrders, inventoryItems, transactions, ideas, baseCurrency, exchangeRateMap] =
+    const [allUsers, allLeave, allAttendance, purchaseOrders, inventoryItems, transactions, ideas, baseCurrency, exchangeRateSnapshot] =
       adminData;
 
     const openPOs = purchaseOrders.filter((po) => po.status === "ordered" || po.status === "in_transit").length;
@@ -91,21 +91,30 @@ export default async function HomePage() {
 
     // Only worth a blended tile when there's actually more than one
     // currency in play — with just one, it'd just repeat the per-currency
-    // tile's own number.
+    // tile's own number. Inventory is a live valuation ("what is this worth
+    // right now"), so it blends at today's rate; the ledger is historical
+    // transactions, so each one blends at the rate in effect for its own
+    // date — same historical resolver as TransactionsListClient.
     const blendedInventory =
       inventoryByCurrency.size > 1
-        ? sumBlended(
-            Array.from(inventoryByCurrency, ([currency, amount]) => ({ currency, amount })),
+        ? sumBlendedByDate(
+            Array.from(inventoryByCurrency, ([currency, amount]) => ({ currency, amount, date: todayKey })),
             baseCurrency,
-            exchangeRateMap
+            exchangeRateSnapshot
           )
         : null;
     const blendedLedger =
       ledgerByCurrency.size > 1
-        ? sumBlended(
-            Array.from(ledgerByCurrency, ([currency, { income, expense }]) => ({ currency, amount: income - expense })),
+        ? sumBlendedByDate(
+            transactions
+              .filter((t) => t.status === "approved")
+              .map((t) => ({
+                currency: t.currency,
+                amount: t.type === "income" ? parseFloat(t.amount) : -parseFloat(t.amount),
+                date: t.date,
+              })),
             baseCurrency,
-            exchangeRateMap
+            exchangeRateSnapshot
           )
         : null;
 

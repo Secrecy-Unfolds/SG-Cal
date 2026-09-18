@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import CurrencySelect from "@/components/CurrencySelect";
 import type { InvestmentRow } from "@/lib/investors";
 import { toMuscatDateInput } from "@/lib/time";
 
@@ -80,7 +81,7 @@ export default function PayoutFormModal({
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium">Currency</label>
-            <input className={inputClass} value={currency} onChange={(e) => setCurrency(e.target.value)} />
+            <CurrencySelect className={inputClass} value={currency} onChange={setCurrency} />
           </div>
         </div>
 

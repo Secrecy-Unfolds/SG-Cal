@@ -1,7 +1,5 @@
 import { query } from "@/lib/db";
 import { getProductById, listVendorsForProduct } from "@/lib/procurement";
-import { createInventoryItemFromPurchaseOrder } from "@/lib/inventory";
-import { postExpenseForPurchaseOrder } from "@/lib/accounting";
 import type { POStatus } from "@/lib/purchaseOrdersDisplay";
 
 export type { POStatus } from "@/lib/purchaseOrdersDisplay";
@@ -27,6 +25,10 @@ export type PurchaseOrderRow = {
   order_date: string; // "YYYY-MM-DD"
   expected_arrival: string | null;
   received_at: Date | null;
+  carrier: string;
+  tracking_reference: string;
+  quantity_received: number | null;
+  close_reason: string | null;
   created_by: number | null;
   created_by_username: string | null;
   created_at: Date;
@@ -38,6 +40,7 @@ const PO_SELECT = `
          po.quantity, po.quantity_unit, po.unit_price, po.shipping_cost, po.customs_cost, po.currency,
          po.pricing, po.payment_terms, po.delivery_period, po.warranty, po.status,
          po.order_date, po.expected_arrival, po.received_at,
+         po.carrier, po.tracking_reference, po.quantity_received, po.close_reason,
          po.created_by, u.username AS created_by_username, po.created_at, po.updated_at
   FROM purchase_orders po
   LEFT JOIN users u ON u.id = po.created_by
@@ -106,13 +109,16 @@ export async function createPurchaseOrderFromProduct(
   return { ok: true, po: created };
 }
 
-// Transitioning into "received" (from anything else) is what triggers the
-// Inventory item + Accounting expense — both created in this same call so
-// they can never happen without a status change causing them.
+// v2 Procurement workflow Phase 2 (confirmed 2026-09-17): a status change
+// to "received" used to directly create the linked Inventory item and post
+// the Accounting expense. That's now decoupled — "received" just means the
+// shipment physically arrived; a GRN (lib/goodsReceipts.ts) is what
+// actually creates the Inventory item ("verified into stock"), and a
+// Vendor Invoice (lib/vendorInvoices.ts) is what posts the expense. This
+// function only ever touches status/received_at now.
 export async function updatePurchaseOrderStatus(id: number, status: POStatus): Promise<PurchaseOrderRow | null> {
   const existing = await getPurchaseOrderById(id);
   if (!existing) return null;
-  const becomingReceived = status === "received" && existing.status !== "received";
 
   await query(
     `UPDATE purchase_orders
@@ -122,13 +128,63 @@ export async function updatePurchaseOrderStatus(id: number, status: POStatus): P
     [status, id]
   );
 
-  const updated = await getPurchaseOrderById(id);
-  if (!updated) return null;
+  return getPurchaseOrderById(id);
+}
 
-  if (becomingReceived) {
-    await createInventoryItemFromPurchaseOrder(updated);
-    await postExpenseForPurchaseOrder(updated);
-  }
+// v2 Procurement workflow Phase 2 — Closure. Normally reachable once a GRN
+// exists, an invoice exists, and that invoice is fully paid; otherwise
+// only reachable via the explicit force-close path below (confirmed:
+// force-close is for write-offs / disputed or abandoned orders that will
+// never fully reconcile, not a way to skip the checks routinely).
+export type CloseEligibility =
+  | { eligible: true }
+  | { eligible: false; reason: string };
 
-  return updated;
+export async function checkCloseEligibility(id: number): Promise<CloseEligibility> {
+  // Imported lazily to avoid a module-load cycle (goodsReceipts.ts and
+  // vendorInvoices.ts both import from this file).
+  const { listGoodsReceiptsForPO } = await import("@/lib/goodsReceipts");
+  const { listVendorInvoicesForPO } = await import("@/lib/vendorInvoices");
+
+  const [receipts, invoices] = await Promise.all([listGoodsReceiptsForPO(id), listVendorInvoicesForPO(id)]);
+  if (receipts.length === 0) return { eligible: false, reason: "No GRN logged yet" };
+  if (invoices.length === 0) return { eligible: false, reason: "No invoice logged yet" };
+  const unpaid = invoices.filter((inv) => inv.outstanding_balance > 0);
+  if (unpaid.length > 0) return { eligible: false, reason: "One or more invoices aren't fully paid yet" };
+  return { eligible: true };
+}
+
+export async function closePurchaseOrder(id: number): Promise<PurchaseOrderRow | null> {
+  const eligibility = await checkCloseEligibility(id);
+  if (!eligibility.eligible) throw new Error(eligibility.reason);
+  await query(`UPDATE purchase_orders SET status = 'closed', close_reason = NULL, updated_at = now() WHERE id = $1`, [id]);
+  return getPurchaseOrderById(id);
+}
+
+// The explicit override — always allowed regardless of eligibility, but
+// always requires a reason (surfaced in the UI, kept for audit).
+export async function forceClosePurchaseOrder(id: number, reason: string): Promise<PurchaseOrderRow | null> {
+  await query(`UPDATE purchase_orders SET status = 'closed', close_reason = $1, updated_at = now() WHERE id = $2`, [
+    reason,
+    id,
+  ]);
+  return getPurchaseOrderById(id);
+}
+
+// Delivery-tracking fields, independent of status transitions — a carrier/
+// tracking reference and how much actually arrived vs. was ordered.
+// Deliberately doesn't touch status, expected_arrival, or received_at
+// (those are updatePurchaseOrderStatus()'s concern) or re-trigger the
+// Inventory/Accounting auto-postings.
+export async function updatePurchaseOrderDelivery(
+  id: number,
+  input: { carrier: string; trackingReference: string; quantityReceived: number | null; expectedArrival: string | null }
+): Promise<PurchaseOrderRow | null> {
+  await query(
+    `UPDATE purchase_orders
+     SET carrier = $1, tracking_reference = $2, quantity_received = $3, expected_arrival = $4, updated_at = now()
+     WHERE id = $5`,
+    [input.carrier, input.trackingReference, input.quantityReceived, input.expectedArrival, id]
+  );
+  return getPurchaseOrderById(id);
 }

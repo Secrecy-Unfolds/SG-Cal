@@ -4,13 +4,14 @@ import { isAdminLevel } from "@/lib/users";
 import {
   deleteProduct,
   getProductById,
+  getVendorById,
   isProcurementStatus,
   listVendorsForProduct,
   productHasVendor,
   updateProduct,
 } from "@/lib/procurement";
 import { getAdminLevelRecipientEmails, sendMailInBackground } from "@/lib/mailer";
-import { productDeletedEmail, productUpdatedEmail } from "@/lib/procurementEmailTemplates";
+import { preferredVendorChangedEmail, productDeletedEmail, productUpdatedEmail } from "@/lib/procurementEmailTemplates";
 
 export const runtime = "nodejs";
 
@@ -39,6 +40,7 @@ function parseProductBody(body: any) {
   const status = isProcurementStatus(body?.status) ? body.status : "planning";
   const preferenceRemarks = typeof body?.preferenceRemarks === "string" ? body.preferenceRemarks.trim() : "";
   const preferredVendorId = typeof body?.preferredVendorId === "number" ? body.preferredVendorId : null;
+  const notificationsMuted = typeof body?.notificationsMuted === "boolean" ? body.notificationsMuted : false;
 
   return {
     name,
@@ -58,6 +60,7 @@ function parseProductBody(body: any) {
     status,
     preferenceRemarks,
     preferredVendorId,
+    notificationsMuted,
   };
 }
 
@@ -107,9 +110,18 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const product = await updateProduct(id, input);
   if (!product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
 
-  const recipients = await getAdminLevelRecipientEmails();
-  const { subject, html } = productUpdatedEmail(product, session.username);
-  sendMailInBackground({ to: recipients, subject, html });
+  if (!product.notifications_muted) {
+    const recipients = await getAdminLevelRecipientEmails("procurement");
+    const preferredVendorChanged = existing.preferred_vendor_id !== product.preferred_vendor_id;
+    const { subject, html } = preferredVendorChanged
+      ? preferredVendorChangedEmail(
+          product,
+          product.preferred_vendor_id ? await getVendorById(product.preferred_vendor_id) : null,
+          session.username
+        )
+      : productUpdatedEmail(product, session.username);
+    sendMailInBackground({ to: recipients, subject, html });
+  }
 
   return NextResponse.json({ product });
 }
@@ -129,9 +141,11 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
 
   await deleteProduct(id);
 
-  const recipients = await getAdminLevelRecipientEmails();
-  const { subject, html } = productDeletedEmail(existing, session.username);
-  sendMailInBackground({ to: recipients, subject, html });
+  if (!existing.notifications_muted) {
+    const recipients = await getAdminLevelRecipientEmails("procurement");
+    const { subject, html } = productDeletedEmail(existing, session.username);
+    sendMailInBackground({ to: recipients, subject, html });
+  }
 
   return NextResponse.json({ ok: true });
 }

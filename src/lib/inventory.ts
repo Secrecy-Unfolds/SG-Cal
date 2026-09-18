@@ -1,8 +1,6 @@
 import { query } from "@/lib/db";
 import type { AssetType } from "@/lib/inventoryDisplay";
 import { computeDepreciatedValue } from "@/lib/inventoryDisplay";
-import { computeCapitalNeeded } from "@/lib/procurementDisplay";
-import type { PurchaseOrderRow } from "@/lib/purchaseOrders";
 
 export type { AssetType } from "@/lib/inventoryDisplay";
 export { ASSET_TYPES, ASSET_TYPE_LABELS, isAssetType } from "@/lib/inventoryDisplay";
@@ -125,33 +123,4 @@ export async function updateInventoryItem(id: number, input: InventoryItemInput)
 
 export async function deleteInventoryItem(id: number): Promise<void> {
   await query(`DELETE FROM inventory_items WHERE id = $1`, [id]);
-}
-
-// Called when a Purchase Order transitions to "received" — creates the
-// corresponding inventory row, defaulting to "consumable" (an Admin can
-// retag it fixed/depreciating and adjust current_value afterward).
-export async function createInventoryItemFromPurchaseOrder(po: PurchaseOrderRow): Promise<InventoryItemRow> {
-  const cost = computeCapitalNeeded({
-    unitPrice: po.unit_price,
-    quantityNeeded: po.quantity,
-    shippingCost: po.shipping_cost,
-    customsCost: po.customs_cost,
-  });
-  const item = await createInventoryItem({
-    name: po.product_name,
-    assetType: "consumable",
-    quantity: po.quantity,
-    quantityUnit: po.quantity_unit,
-    purchaseCost: cost,
-    currency: po.currency,
-    purchaseDate: po.received_at ? po.received_at.toISOString().slice(0, 10) : null,
-    currentValue: cost,
-    usefulLifeMonths: null,
-    location: "",
-    notes: `Received from Purchase Order #${po.id}`,
-  });
-  await query(`UPDATE inventory_items SET purchase_order_id = $1 WHERE id = $2`, [po.id, item.id]);
-  const linked = await getInventoryItemById(item.id);
-  if (!linked) throw new Error("Failed to load inventory item after linking");
-  return linked;
 }

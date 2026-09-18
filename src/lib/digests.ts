@@ -17,7 +17,7 @@ async function sendDailyDigestNow(windowHours: number): Promise<number> {
   // what's included, not just when you're told about the same fixed day.
   const start = new Date();
   const end = new Date(start.getTime() + windowHours * 60 * 60 * 1000);
-  const recipients = await getAllRecipients();
+  const recipients = await getAllRecipients("digests");
   let recipientsNotified = 0;
   for (const recipient of recipients) {
     const events = await listEventsForRecipient(start, end, recipient.id, recipient.role);
@@ -32,7 +32,7 @@ async function sendDailyDigestNow(windowHours: number): Promise<number> {
 async function sendWeeklyDigestNow(windowDays: number): Promise<number> {
   const start = new Date();
   const end = new Date(start.getTime() + windowDays * 24 * 60 * 60 * 1000);
-  const recipients = await getAllRecipients();
+  const recipients = await getAllRecipients("digests");
   let recipientsNotified = 0;
   for (const recipient of recipients) {
     const events = await listEventsForRecipient(start, end, recipient.id, recipient.role);

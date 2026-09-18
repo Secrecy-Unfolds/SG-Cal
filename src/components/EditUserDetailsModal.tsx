@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { User as UserIcon } from "lucide-react";
 import type { UserSummary } from "@/lib/users";
 
 export default function EditUserDetailsModal({
@@ -12,12 +14,57 @@ export default function EditUserDetailsModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const router = useRouter();
   const [name, setName] = useState(user.name);
   const [username, setUsername] = useState(user.username);
   const [email, setEmail] = useState(user.email);
   const [phone, setPhone] = useState(user.phone);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [pictureUrl, setPictureUrl] = useState(user.picture_url);
+  const [uploadingPicture, setUploadingPicture] = useState(false);
+  const [pictureError, setPictureError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handlePictureChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPictureError(null);
+    setUploadingPicture(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`/api/users/${user.id}/picture`, { method: "POST", body: formData });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setPictureError(data.error ?? "Failed to upload picture");
+        return;
+      }
+      setPictureUrl(data.url);
+      router.refresh();
+    } finally {
+      setUploadingPicture(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function handleRemovePicture() {
+    setPictureError(null);
+    setUploadingPicture(true);
+    try {
+      const res = await fetch(`/api/users/${user.id}/picture`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setPictureError(data.error ?? "Failed to remove picture");
+        return;
+      }
+      setPictureUrl(null);
+      router.refresh();
+    } finally {
+      setUploadingPicture(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -66,6 +113,41 @@ export default function EditUserDetailsModal({
           >
             ✕
           </button>
+        </div>
+
+        <div className="flex items-center gap-4 pb-4 border-b border-black/5 dark:border-white/10">
+          <div className="w-16 h-16 rounded-full overflow-hidden bg-black/5 dark:bg-white/10 flex items-center justify-center shrink-0">
+            {pictureUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={pictureUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <UserIcon size={28} className="text-black/30 dark:text-white/30" />
+            )}
+          </div>
+          <div className="min-w-0">
+            <div className="text-xs text-black/40 dark:text-white/40 uppercase tracking-wide mb-1">Profile picture</div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handlePictureChange}
+                disabled={uploadingPicture}
+                className="text-xs"
+              />
+              {pictureUrl && !uploadingPicture && (
+                <button
+                  type="button"
+                  onClick={handleRemovePicture}
+                  className="text-xs text-red-600 dark:text-red-400 hover:underline"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+            {uploadingPicture && <p className="text-xs text-black/40 dark:text-white/40 mt-1">Uploading…</p>}
+            {pictureError && <p className="text-xs text-red-600 dark:text-red-400 mt-1">{pictureError}</p>}
+          </div>
         </div>
 
         <div className="space-y-1">

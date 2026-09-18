@@ -55,13 +55,31 @@ function isActive(pathname: string, href: string): boolean {
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function SidebarAvatar({ url, size }: { url: string | null; size: number }) {
+  return (
+    <div
+      className="rounded-full overflow-hidden bg-black/5 dark:bg-white/10 flex items-center justify-center shrink-0"
+      style={{ width: size, height: size }}
+    >
+      {url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt="" className="w-full h-full object-cover" />
+      ) : (
+        <User size={Math.round(size * 0.6)} className="text-black/30 dark:text-white/30" />
+      )}
+    </div>
+  );
+}
+
 export default function AppShell({
   session,
+  pictureUrl = null,
   presentCount = 0,
   appVersion,
   children,
 }: {
   session: { uid: number; username: string; role: UserRole };
+  pictureUrl?: string | null;
   presentCount?: number;
   appVersion?: string;
   children: React.ReactNode;
@@ -165,27 +183,35 @@ export default function AppShell({
 
         <div className="px-3 py-4 border-t border-black/5 dark:border-white/10 space-y-3">
           {collapsedView ? (
-            <button
-              type="button"
-              onClick={toggleTheme}
-              aria-label="Toggle dark mode"
-              title="Toggle dark mode"
-              className="w-full flex items-center justify-center rounded-lg border border-black/10 dark:border-white/10 p-2 hover:bg-black/[0.03] dark:hover:bg-white/5"
-            >
-              {isDark ? <Sun size={16} /> : <Moon size={16} />}
-            </button>
+            <>
+              <div className="flex justify-center" title={session.username}>
+                <SidebarAvatar url={pictureUrl} size={32} />
+              </div>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                aria-label="Toggle dark mode"
+                title="Toggle dark mode"
+                className="w-full flex items-center justify-center rounded-lg border border-black/10 dark:border-white/10 p-2 hover:bg-black/[0.03] dark:hover:bg-white/5"
+              >
+                {isDark ? <Sun size={16} /> : <Moon size={16} />}
+              </button>
+            </>
           ) : (
             <div className="flex items-center justify-between px-3">
-              <div className="min-w-0">
-                <div className="text-sm font-medium truncate">{session.username}</div>
-                {appVersion && (
-                  <div className="text-[10px] font-mono text-black/40 dark:text-white/40">v{appVersion}</div>
-                )}
-                <span
-                  className={`inline-block mt-0.5 text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 ${ROLE_BADGE_CLASS[session.role]}`}
-                >
-                  {ROLE_LABELS[session.role]}
-                </span>
+              <div className="min-w-0 flex items-center gap-2">
+                <SidebarAvatar url={pictureUrl} size={36} />
+                <div className="min-w-0">
+                  <div className="text-sm font-medium truncate">{session.username}</div>
+                  {appVersion && (
+                    <div className="text-[10px] font-mono text-black/40 dark:text-white/40">v{appVersion}</div>
+                  )}
+                  <span
+                    className={`inline-block mt-0.5 text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 ${ROLE_BADGE_CLASS[session.role]}`}
+                  >
+                    {ROLE_LABELS[session.role]}
+                  </span>
+                </div>
               </div>
               <button
                 type="button"

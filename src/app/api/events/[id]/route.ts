@@ -106,7 +106,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
     recipients = await getEmailsByIds(event.attendees.map((a) => a.id));
   } else {
-    recipients = await getAllRecipientEmails();
+    recipients = await getAllRecipientEmails("calendar");
   }
 
   const { subject, html } = eventUpdatedEmail(event, session.username);
@@ -135,7 +135,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   const recipients =
     existing.type === "meeting"
       ? await getEmailsByIds(existing.attendees.map((a) => a.id))
-      : await getAllRecipientEmails();
+      : await getAllRecipientEmails("calendar");
 
   await deleteEvent(id);
 

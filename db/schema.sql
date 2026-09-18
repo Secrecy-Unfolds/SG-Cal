@@ -97,6 +97,12 @@ ALTER TABLE procurement_products ADD COLUMN IF NOT EXISTS customs_notes TEXT NOT
 ALTER TABLE procurement_products ADD COLUMN IF NOT EXISTS unit_price NUMERIC(12, 2);
 ALTER TABLE procurement_products ADD COLUMN IF NOT EXISTS shipping_cost NUMERIC(12, 2);
 ALTER TABLE procurement_products ADD COLUMN IF NOT EXISTS customs_cost NUMERIC(12, 2);
+-- v2.1: per-product opt-out from the product/vendor-change emails every
+-- Admin-level account otherwise gets on every create/update/delete —
+-- narrowly scoped to Procurement Planning's own CRUD notifications, not
+-- the downstream PO-received Inventory/Accounting auto-postings (a
+-- separate module's notification path).
+ALTER TABLE procurement_products ADD COLUMN IF NOT EXISTS notifications_muted BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE procurement_products DROP COLUMN IF EXISTS capital_needed;
 
 -- Vendors are many-to-many with products: the same vendor can now supply
@@ -121,6 +127,13 @@ CREATE TABLE IF NOT EXISTS procurement_vendors (
   niche TEXT NOT NULL DEFAULT '',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+-- v2 Procurement workflow Phase 1: contact fields — confirmed 2026-09-15,
+-- `email` primary, `phone`/`alternate_email` optional. A prerequisite for
+-- Phase 2's RFQ email step, and a real gap on its own (no way to actually
+-- contact a vendor from inside the app before this).
+ALTER TABLE procurement_vendors ADD COLUMN IF NOT EXISTS email TEXT NOT NULL DEFAULT '';
+ALTER TABLE procurement_vendors ADD COLUMN IF NOT EXISTS phone TEXT NOT NULL DEFAULT '';
+ALTER TABLE procurement_vendors ADD COLUMN IF NOT EXISTS alternate_email TEXT NOT NULL DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS procurement_product_vendors (
   id SERIAL PRIMARY KEY,
@@ -138,6 +151,21 @@ CREATE TABLE IF NOT EXISTS procurement_product_vendors (
 CREATE INDEX IF NOT EXISTS procurement_product_vendors_product_id_idx ON procurement_product_vendors (product_id);
 CREATE INDEX IF NOT EXISTS procurement_product_vendors_vendor_id_idx ON procurement_product_vendors (vendor_id);
 CREATE INDEX IF NOT EXISTS procurement_vendors_name_idx ON procurement_vendors (name);
+
+-- v2 Procurement workflow Phase 1: quotation dates — distinct from
+-- created_at (whenever the record was typed in). Both nullable/optional,
+-- same light-touch-validation convention as the rest of this offering row.
+ALTER TABLE procurement_product_vendors ADD COLUMN IF NOT EXISTS quote_received_on DATE;
+ALTER TABLE procurement_product_vendors ADD COLUMN IF NOT EXISTS quote_valid_until DATE;
+-- v2 Procurement workflow Phase 1: evaluation scoring — confirmed via
+-- `AskUserQuestion`: price/delivery/warranty are free text and can't be
+-- scored algorithmically, so each gets its own 1-5 star rating (same shape
+-- as the pre-existing quality_rating) rather than trying to parse a number
+-- out of free text. The free-text fields themselves are untouched —
+-- these are a parallel manual judgment, not a replacement.
+ALTER TABLE procurement_product_vendors ADD COLUMN IF NOT EXISTS price_rating SMALLINT;
+ALTER TABLE procurement_product_vendors ADD COLUMN IF NOT EXISTS delivery_rating SMALLINT;
+ALTER TABLE procurement_product_vendors ADD COLUMN IF NOT EXISTS warranty_rating SMALLINT;
 
 -- HR: employee details are a 1:1 extension of users (kept separate so
 -- auth/account fields on `users` stay untouched). No row is required to
@@ -227,6 +255,109 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
 
 CREATE INDEX IF NOT EXISTS purchase_orders_status_idx ON purchase_orders (status);
 CREATE INDEX IF NOT EXISTS purchase_orders_product_id_idx ON purchase_orders (product_id);
+
+-- v2 Procurement workflow Phase 1: delivery tracking. expected_arrival and
+-- received_at above already cover expected-vs-actual dates; this adds the
+-- rest — a carrier/tracking reference, and how much actually arrived vs.
+-- was ordered (a partial shipment). quantity_received is nullable/optional
+-- and purely informational for now — it does not change what
+-- createInventoryItemFromPurchaseOrder() posts, which still uses the full
+-- ordered quantity.
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS carrier TEXT NOT NULL DEFAULT '';
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS tracking_reference TEXT NOT NULL DEFAULT '';
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS quantity_received INTEGER;
+
+-- v2 Procurement workflow Phase 2 — confirmed 2026-09-17, via `AskUserQuestion`:
+-- GRN and Invoice genuinely decouple "goods arrived" (PO status) from
+-- "verified into stock" (GRN) and "expense actually owed" (Invoice) —
+-- replacing the old direct Received-status-triggers-Inventory+Accounting
+-- link, not just adding parallel audit records alongside it. Existing
+-- already-received POs and their already-created Inventory items/
+-- transactions are untouched; this only changes behavior going forward.
+
+-- Purchase Requisition: a stage *before* a Planning product exists.
+-- Approving one creates the actual `procurement_products` row (product_id
+-- set then, for traceability) — confirmed any Admin-level can approve,
+-- not Super-Admin-only, matching the rest of Procurement's Admin/Super
+-- Admin-equal treatment.
+CREATE TABLE IF NOT EXISTS purchase_requisitions (
+  id SERIAL PRIMARY KEY,
+  product_name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  quantity_needed INTEGER NOT NULL DEFAULT 1,
+  quantity_unit TEXT NOT NULL DEFAULT 'pcs',
+  justification TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'pending', -- pending | approved | rejected
+  requested_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  decided_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  decided_at TIMESTAMPTZ,
+  product_id INTEGER REFERENCES procurement_products(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS purchase_requisitions_status_idx ON purchase_requisitions (status);
+
+-- RFQ: a status per product-vendor link, distinct from the offering data
+-- itself. Null = no RFQ sent yet (today's default for every existing row).
+ALTER TABLE procurement_product_vendors ADD COLUMN IF NOT EXISTS rfq_status TEXT; -- requested | quoted | declined
+ALTER TABLE procurement_product_vendors ADD COLUMN IF NOT EXISTS rfq_sent_at TIMESTAMPTZ;
+
+-- GRN (Goods Receipt Note) — now the actual trigger for creating the
+-- linked Inventory item (lib/goodsReceipts.ts's createGoodsReceipt()),
+-- replacing updatePurchaseOrderStatus()'s old direct call on a status
+-- change to "received".
+CREATE TABLE IF NOT EXISTS goods_receipts (
+  id SERIAL PRIMARY KEY,
+  purchase_order_id INTEGER NOT NULL REFERENCES purchase_orders(id) ON DELETE CASCADE,
+  date_received DATE NOT NULL DEFAULT CURRENT_DATE,
+  quantity_received INTEGER NOT NULL,
+  condition_notes TEXT NOT NULL DEFAULT '',
+  received_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  inventory_item_id INTEGER REFERENCES inventory_items(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS goods_receipts_po_idx ON goods_receipts (purchase_order_id);
+
+-- Vendor Invoice — now the real source of the Accounting expense
+-- transaction a PO posts (lib/vendorInvoices.ts's createVendorInvoice()),
+-- replacing updatePurchaseOrderStatus()'s old direct call to
+-- postExpenseForPurchaseOrder() on a status change to "received". Status
+-- is derived live from vendor_payments (outstanding balance), not stored.
+CREATE TABLE IF NOT EXISTS vendor_invoices (
+  id SERIAL PRIMARY KEY,
+  purchase_order_id INTEGER NOT NULL REFERENCES purchase_orders(id) ON DELETE CASCADE,
+  invoice_number TEXT NOT NULL DEFAULT '',
+  invoice_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  amount NUMERIC(12, 2) NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'OMR',
+  due_date DATE,
+  transaction_id INTEGER REFERENCES accounting_transactions(id) ON DELETE SET NULL,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS vendor_invoices_po_idx ON vendor_invoices (purchase_order_id);
+
+-- Payment — lets one invoice be paid across multiple payments, instead of
+-- the old single auto-posted transaction implicitly meaning "fully paid,
+-- immediately, in one shot." Outstanding balance is computed live
+-- (invoice.amount - sum of its payments), never stored.
+CREATE TABLE IF NOT EXISTS vendor_payments (
+  id SERIAL PRIMARY KEY,
+  vendor_invoice_id INTEGER NOT NULL REFERENCES vendor_invoices(id) ON DELETE CASCADE,
+  amount NUMERIC(12, 2) NOT NULL,
+  date DATE NOT NULL DEFAULT CURRENT_DATE,
+  method TEXT NOT NULL DEFAULT '',
+  reference TEXT NOT NULL DEFAULT '',
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS vendor_payments_invoice_idx ON vendor_payments (vendor_invoice_id);
+
+-- Closure: a `closed` status value on purchase_orders.status (still just
+-- TEXT, no enum/CHECK — matches this table's existing convention).
+-- close_reason is only ever set on a force-close (the normal path leaves
+-- it null); confirmed reachable normally once GRN + invoice + full payment
+-- all exist, otherwise only via the explicit force-close path.
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS close_reason TEXT;
 
 -- Inventory: v1 tagged an asset type and tracked cost/value manually.
 -- purchase_order_id links back to the PO that created it, when applicable
@@ -615,3 +746,77 @@ CREATE TABLE IF NOT EXISTS invoice_line_items (
   sort_order INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS invoice_line_items_invoice_idx ON invoice_line_items (invoice_id);
+
+-- v2.1: extensible fixed currency list (docs/erp-v2-roadmap.md's
+-- "Currency as a fixed list" item) — every currency field app-wide becomes
+-- a dropdown over this table instead of free text, with an "Other" escape
+-- valve that inserts a new row here so it becomes a real option for every
+-- future entry too, not just a one-off string.
+CREATE TABLE IF NOT EXISTS currencies (
+  code TEXT PRIMARY KEY,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+INSERT INTO currencies (code) VALUES ('OMR'), ('USD'), ('EUR'), ('GBP'), ('AED'), ('SAR')
+ON CONFLICT (code) DO NOTHING;
+-- Backfill: any currency value already sitting in real data (typed as free
+-- text before this table existed) becomes a selectable option too, so
+-- switching to a dropdown never makes an existing record's currency
+-- unrepresentable.
+INSERT INTO currencies (code)
+SELECT DISTINCT currency FROM (
+  SELECT currency FROM procurement_products
+  UNION SELECT salary_currency AS currency FROM employee_details
+  UNION SELECT currency FROM purchase_orders
+  UNION SELECT currency FROM inventory_items
+  UNION SELECT currency FROM accounting_transactions
+  UNION SELECT currency FROM exchange_rates
+  UNION SELECT currency FROM capital_entries
+  UNION SELECT currency FROM investments
+  UNION SELECT currency FROM investment_payouts
+  UNION SELECT currency FROM government_support
+  UNION SELECT currency FROM capital_budgets
+  UNION SELECT currency FROM expense_budgets
+  UNION SELECT currency FROM recurring_expenses
+  UNION SELECT currency FROM financial_accounts
+  UNION SELECT currency FROM recurring_income
+  UNION SELECT currency FROM issued_invoices
+) x
+WHERE currency IS NOT NULL AND currency <> ''
+ON CONFLICT (code) DO NOTHING;
+
+-- v2.1: monthly-frozen exchange rate snapshots, so a past month's blended
+-- total never shifts just because today's rate moved — same "snapshot at
+-- write time, not live" precedent VAT already established. `exchange_rates`
+-- itself stays the Super-Admin-edited "current" row (shown/edited on
+-- Settings); every edit also freezes a copy here for the calendar month the
+-- edit happened in, and a later edit in the same month overwrites that same
+-- month's row rather than creating a second one. Resolving the rate for a
+-- given transaction's own month (lib/currencyDisplay.ts's resolver) walks
+-- back to the latest snapshot at or before that month, so a month with no
+-- explicit edit simply keeps the last-set rate rather than going
+-- unconfigured.
+CREATE TABLE IF NOT EXISTS exchange_rate_history (
+  currency TEXT NOT NULL,
+  effective_month DATE NOT NULL,
+  rate_to_base NUMERIC(18, 6) NOT NULL,
+  recorded_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (currency, effective_month)
+);
+-- Backfill: freeze this calendar month's snapshot for every currency that
+-- already had a current rate configured before this table existed, so
+-- nothing goes "unconfigured for this month" the first time this runs.
+INSERT INTO exchange_rate_history (currency, effective_month, rate_to_base)
+SELECT currency, date_trunc('month', now())::date, rate_to_base FROM exchange_rates
+ON CONFLICT (currency, effective_month) DO NOTHING;
+
+-- Cross-cutting: per-user notification preferences — confirmed 2026-09-18
+-- via `AskUserQuestion`: per-module opt-out (not a single global switch),
+-- self-service only (no Super-Admin override). A category with no row for
+-- a user is enabled by default (matches today's "everyone gets it"
+-- behavior exactly) — only an explicit opt-out gets a row.
+CREATE TABLE IF NOT EXISTS notification_preferences (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  category TEXT NOT NULL, -- procurement | accounting | inventory | hr | ideas | calendar | digests
+  enabled BOOLEAN NOT NULL DEFAULT true,
+  PRIMARY KEY (user_id, category)
+);

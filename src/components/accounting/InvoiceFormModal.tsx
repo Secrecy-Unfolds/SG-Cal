@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import CurrencySelect from "@/components/CurrencySelect";
 import type { CustomerRow } from "@/lib/customers";
 import type { InvoiceLineItemRow, IssuedInvoiceRow } from "@/lib/invoices";
 import { formatMoney } from "@/lib/procurementDisplay";
@@ -132,7 +133,7 @@ export default function InvoiceFormModal({
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium">Currency</label>
-            <input className={inputClass} value={currency} onChange={(e) => setCurrency(e.target.value)} />
+            <CurrencySelect className={inputClass} value={currency} onChange={setCurrency} />
           </div>
         </div>
 

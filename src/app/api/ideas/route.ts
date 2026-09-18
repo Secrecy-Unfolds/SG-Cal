@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     createdBy: session.uid,
   });
 
-  const recipients = await getAdminLevelRecipientEmails();
+  const recipients = await getAdminLevelRecipientEmails("ideas");
   const { subject, html } = ideaCreatedEmail(idea);
   sendMailInBackground({ to: recipients, subject, html });
 

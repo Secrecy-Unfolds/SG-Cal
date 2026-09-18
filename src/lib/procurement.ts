@@ -1,14 +1,15 @@
 import { query } from "@/lib/db";
-import type { ProcurementStatus } from "@/lib/procurementDisplay";
+import type { ProcurementStatus, RfqStatus } from "@/lib/procurementDisplay";
 
 // Single source of truth lives in procurementDisplay.ts (client-safe — no
 // server-only imports), so client components can use it directly without
 // pulling in `pg`.
-export type { ProcurementStatus } from "@/lib/procurementDisplay";
+export type { ProcurementStatus, RfqStatus } from "@/lib/procurementDisplay";
 export {
   PROCUREMENT_STATUSES,
   PROCUREMENT_STATUS_LABELS,
   isProcurementStatus,
+  isRfqStatus,
 } from "@/lib/procurementDisplay";
 
 // Vendor identity (name/country/niche) is global — the same vendor can be
@@ -20,6 +21,9 @@ export type VendorRow = {
   name: string;
   country: string;
   niche: string;
+  email: string;
+  phone: string;
+  alternate_email: string;
   created_at: Date;
 };
 
@@ -37,6 +41,14 @@ export type ProductVendorRow = {
   quality_rating: number | null;
   delivery_period: string;
   warranty: string;
+  price_rating: number | null;
+  delivery_rating: number | null;
+  warranty_rating: number | null;
+  quote_received_on: string | null; // "YYYY-MM-DD"
+  quote_valid_until: string | null; // "YYYY-MM-DD"
+  email: string;
+  rfq_status: RfqStatus | null;
+  rfq_sent_at: Date | null;
   created_at: Date;
 };
 
@@ -59,6 +71,7 @@ export type ProductRow = {
   status: ProcurementStatus;
   preferred_vendor_id: number | null;
   preference_remarks: string;
+  notifications_muted: boolean;
   created_by: number | null;
   created_by_username: string | null;
   created_at: Date;
@@ -70,7 +83,7 @@ const PRODUCT_SELECT = `
          p.quantity_needed, p.quantity_unit, p.customs_notes,
          p.unit_price, p.shipping_cost, p.customs_cost, p.currency,
          p.purchase_date_expected, p.expected_arrival, p.status,
-         p.preferred_vendor_id, p.preference_remarks,
+         p.preferred_vendor_id, p.preference_remarks, p.notifications_muted,
          p.created_by, u.username AS created_by_username, p.created_at, p.updated_at
   FROM procurement_products p
   LEFT JOIN users u ON u.id = p.created_by
@@ -87,9 +100,10 @@ export async function getProductById(id: number): Promise<ProductRow | null> {
 }
 
 const PRODUCT_VENDOR_SELECT = `
-  SELECT pv.id, pv.product_id, pv.vendor_id, v.name, v.country, v.niche,
+  SELECT pv.id, pv.product_id, pv.vendor_id, v.name, v.country, v.niche, v.email,
          pv.pricing, pv.payment_terms, pv.quality_rating, pv.delivery_period,
-         pv.warranty, pv.created_at
+         pv.warranty, pv.price_rating, pv.delivery_rating, pv.warranty_rating,
+         pv.quote_received_on, pv.quote_valid_until, pv.rfq_status, pv.rfq_sent_at, pv.created_at
   FROM procurement_product_vendors pv
   JOIN procurement_vendors v ON v.id = pv.vendor_id
 `;
@@ -119,7 +133,7 @@ export async function productHasVendor(productId: number, vendorId: number): Pro
 
 export async function searchVendors(q: string): Promise<VendorRow[]> {
   const res = await query<VendorRow>(
-    `SELECT id, name, country, niche, created_at FROM procurement_vendors
+    `SELECT id, name, country, niche, email, phone, alternate_email, created_at FROM procurement_vendors
      WHERE name ILIKE '%' || $1 || '%' ORDER BY name ASC LIMIT 10`,
     [q]
   );
@@ -130,7 +144,7 @@ export type VendorWithProductsRow = VendorRow & { products: { id: number; name: 
 
 export async function listVendors(): Promise<VendorWithProductsRow[]> {
   const res = await query<VendorWithProductsRow>(
-    `SELECT v.id, v.name, v.country, v.niche, v.created_at,
+    `SELECT v.id, v.name, v.country, v.niche, v.email, v.phone, v.alternate_email, v.created_at,
             COALESCE(
               json_agg(json_build_object('id', p.id, 'name', p.name) ORDER BY p.name)
                 FILTER (WHERE p.id IS NOT NULL),
@@ -147,7 +161,8 @@ export async function listVendors(): Promise<VendorWithProductsRow[]> {
 
 export async function getVendorById(id: number): Promise<VendorRow | null> {
   const res = await query<VendorRow>(
-    `SELECT id, name, country, niche, created_at FROM procurement_vendors WHERE id = $1`,
+    `SELECT id, name, country, niche, email, phone, alternate_email, created_at
+     FROM procurement_vendors WHERE id = $1`,
     [id]
   );
   return res.rows[0] ?? null;
@@ -155,10 +170,10 @@ export async function getVendorById(id: number): Promise<VendorRow | null> {
 
 export async function updateVendorIdentity(id: number, input: VendorIdentityInput): Promise<VendorRow | null> {
   const res = await query<VendorRow>(
-    `UPDATE procurement_vendors SET name = $1, country = $2, niche = $3
-     WHERE id = $4
-     RETURNING id, name, country, niche, created_at`,
-    [input.name, input.country, input.niche, id]
+    `UPDATE procurement_vendors SET name = $1, country = $2, niche = $3, email = $4, phone = $5, alternate_email = $6
+     WHERE id = $7
+     RETURNING id, name, country, niche, email, phone, alternate_email, created_at`,
+    [input.name, input.country, input.niche, input.email, input.phone, input.alternateEmail, id]
   );
   return res.rows[0] ?? null;
 }
@@ -188,6 +203,7 @@ export type ProductInput = {
   expectedArrival: string | null; // "YYYY-MM-DD"
   status: ProcurementStatus;
   preferenceRemarks: string;
+  notificationsMuted: boolean;
 };
 
 export async function createProduct(
@@ -197,8 +213,8 @@ export async function createProduct(
     `INSERT INTO procurement_products
        (name, picture_url, description, required_for, required_by, quantity_needed, quantity_unit,
         customs_notes, unit_price, shipping_cost, customs_cost, currency, purchase_date_expected,
-        expected_arrival, status, preference_remarks, created_by)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+        expected_arrival, status, preference_remarks, notifications_muted, created_by)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
      RETURNING id`,
     [
       input.name,
@@ -217,6 +233,7 @@ export async function createProduct(
       input.expectedArrival,
       input.status,
       input.preferenceRemarks,
+      input.notificationsMuted,
       input.createdBy,
     ]
   );
@@ -235,8 +252,8 @@ export async function updateProduct(
          quantity_needed = $6, quantity_unit = $7, customs_notes = $8, unit_price = $9,
          shipping_cost = $10, customs_cost = $11, currency = $12, purchase_date_expected = $13,
          expected_arrival = $14, status = $15, preference_remarks = $16, preferred_vendor_id = $17,
-         updated_at = now()
-     WHERE id = $18`,
+         notifications_muted = $18, updated_at = now()
+     WHERE id = $19`,
     [
       input.name,
       input.pictureUrl,
@@ -255,6 +272,7 @@ export async function updateProduct(
       input.status,
       input.preferenceRemarks,
       input.preferredVendorId,
+      input.notificationsMuted,
       id,
     ]
   );
@@ -269,6 +287,9 @@ export type VendorIdentityInput = {
   name: string;
   country: string;
   niche: string;
+  email: string;
+  phone: string;
+  alternateEmail: string;
 };
 
 export type VendorOfferingInput = {
@@ -277,14 +298,19 @@ export type VendorOfferingInput = {
   qualityRating: number | null;
   deliveryPeriod: string;
   warranty: string;
+  priceRating: number | null;
+  deliveryRating: number | null;
+  warrantyRating: number | null;
+  quoteReceivedOn: string | null; // "YYYY-MM-DD"
+  quoteValidUntil: string | null; // "YYYY-MM-DD"
 };
 
 export async function createVendor(input: VendorIdentityInput): Promise<VendorRow> {
   const res = await query<VendorRow>(
-    `INSERT INTO procurement_vendors (name, country, niche)
-     VALUES ($1,$2,$3)
-     RETURNING id, name, country, niche, created_at`,
-    [input.name, input.country, input.niche]
+    `INSERT INTO procurement_vendors (name, country, niche, email, phone, alternate_email)
+     VALUES ($1,$2,$3,$4,$5,$6)
+     RETURNING id, name, country, niche, email, phone, alternate_email, created_at`,
+    [input.name, input.country, input.niche, input.email, input.phone, input.alternateEmail]
   );
   return res.rows[0];
 }
@@ -302,8 +328,9 @@ export async function linkVendorToProduct(
   try {
     const res = await query<{ id: number }>(
       `INSERT INTO procurement_product_vendors
-         (product_id, vendor_id, pricing, payment_terms, quality_rating, delivery_period, warranty)
-       VALUES ($1,$2,$3,$4,$5,$6,$7)
+         (product_id, vendor_id, pricing, payment_terms, quality_rating, delivery_period, warranty,
+          price_rating, delivery_rating, warranty_rating, quote_received_on, quote_valid_until)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
        RETURNING id`,
       [
         productId,
@@ -313,6 +340,11 @@ export async function linkVendorToProduct(
         offering.qualityRating,
         offering.deliveryPeriod,
         offering.warranty,
+        offering.priceRating,
+        offering.deliveryRating,
+        offering.warrantyRating,
+        offering.quoteReceivedOn,
+        offering.quoteValidUntil,
       ]
     );
     joinId = res.rows[0].id;
@@ -331,17 +363,40 @@ export async function updateProductVendorOffering(
 ): Promise<ProductVendorRow | null> {
   await query(
     `UPDATE procurement_product_vendors
-     SET pricing = $1, payment_terms = $2, quality_rating = $3, delivery_period = $4, warranty = $5
-     WHERE id = $6`,
+     SET pricing = $1, payment_terms = $2, quality_rating = $3, delivery_period = $4, warranty = $5,
+         price_rating = $6, delivery_rating = $7, warranty_rating = $8,
+         quote_received_on = $9, quote_valid_until = $10
+     WHERE id = $11`,
     [
       offering.pricing,
       offering.paymentTerms,
       offering.qualityRating,
       offering.deliveryPeriod,
       offering.warranty,
+      offering.priceRating,
+      offering.deliveryRating,
+      offering.warrantyRating,
+      offering.quoteReceivedOn,
+      offering.quoteValidUntil,
       id,
     ]
   );
+  return getProductVendorById(id);
+}
+
+// Sending an RFQ sets status to "requested" and stamps when — the actual
+// email (to the vendor's own address, an external recipient) is sent by
+// the caller (route.ts), not here, matching this file's convention of
+// staying pure data logic.
+export async function markRfqSent(id: number): Promise<ProductVendorRow | null> {
+  await query(`UPDATE procurement_product_vendors SET rfq_status = 'requested', rfq_sent_at = now() WHERE id = $1`, [id]);
+  return getProductVendorById(id);
+}
+
+// Marks the outcome once the vendor responds (or doesn't) — no email, this
+// is Admin-level recording what happened, not triggering a notification.
+export async function updateRfqStatus(id: number, status: RfqStatus): Promise<ProductVendorRow | null> {
+  await query(`UPDATE procurement_product_vendors SET rfq_status = $1 WHERE id = $2`, [status, id]);
   return getProductVendorById(id);
 }
 

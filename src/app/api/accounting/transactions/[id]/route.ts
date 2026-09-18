@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getEmailsByIds, isAdminLevel } from "@/lib/users";
 import { decideTransaction, deleteTransaction, getTransactionById } from "@/lib/accounting";
-import { sendMailInBackground } from "@/lib/mailer";
-import { expenseDecidedEmail } from "@/lib/accountingEmailTemplates";
+import { getAdminLevelRecipientEmails, sendMailInBackground } from "@/lib/mailer";
+import { expenseDecidedEmail, transactionDeletedEmail } from "@/lib/accountingEmailTemplates";
 
 export const runtime = "nodejs";
 
@@ -60,6 +60,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   const id = parseId(params.id);
   if (!id) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
 
+  const existing = await getTransactionById(id);
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
   try {
     await deleteTransaction(id);
   } catch (err: any) {
@@ -68,5 +71,10 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     }
     throw err;
   }
+
+  const recipients = await getAdminLevelRecipientEmails("accounting");
+  const { subject, html } = transactionDeletedEmail(existing, session.username);
+  sendMailInBackground({ to: recipients, subject, html });
+
   return NextResponse.json({ ok: true });
 }

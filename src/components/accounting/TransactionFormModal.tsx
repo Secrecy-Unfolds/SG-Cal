@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import CurrencySelect from "@/components/CurrencySelect";
 import type { TransactionType } from "@/lib/accounting";
 import type { FinancialAccountRow } from "@/lib/financialAccounts";
 import { DEFAULT_VAT_RATE } from "@/lib/accountingDisplay";
@@ -176,7 +177,7 @@ export default function TransactionFormModal({
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium">Currency</label>
-            <input className={inputClass} value={currency} onChange={(e) => setCurrency(e.target.value)} />
+            <CurrencySelect className={inputClass} value={currency} onChange={setCurrency} />
           </div>
         </div>
 

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { isAdminLevel } from "@/lib/users";
 import { createInventoryItem, isAssetType, listInventoryItems } from "@/lib/inventory";
+import { getAdminLevelRecipientEmails, sendMailInBackground } from "@/lib/mailer";
+import { inventoryItemCreatedEmail } from "@/lib/inventoryEmailTemplates";
 
 export const runtime = "nodejs";
 
@@ -53,6 +55,10 @@ export async function POST(req: NextRequest) {
     location,
     notes,
   });
+
+  const recipients = await getAdminLevelRecipientEmails("inventory");
+  const { subject, html } = inventoryItemCreatedEmail(item, session.username);
+  sendMailInBackground({ to: recipients, subject, html });
 
   return NextResponse.json({ item }, { status: 201 });
 }

@@ -15,6 +15,9 @@ export default function EditVendorModal({
   const [name, setName] = useState(vendor.name);
   const [country, setCountry] = useState(vendor.country);
   const [niche, setNiche] = useState(vendor.niche);
+  const [email, setEmail] = useState(vendor.email);
+  const [phone, setPhone] = useState(vendor.phone);
+  const [alternateEmail, setAlternateEmail] = useState(vendor.alternate_email);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,7 +33,14 @@ export default function EditVendorModal({
       const res = await fetch(`/api/procurement/vendors/${vendor.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), country: country.trim(), niche: niche.trim() }),
+        body: JSON.stringify({
+          name: name.trim(),
+          country: country.trim(),
+          niche: niche.trim(),
+          email: email.trim(),
+          phone: phone.trim(),
+          alternateEmail: alternateEmail.trim(),
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -88,6 +98,37 @@ export default function EditVendorModal({
             className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
             value={niche}
             onChange={(e) => setNiche(e.target.value)}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Email</label>
+            <input
+              type="email"
+              className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="vendor@example.com"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Phone</label>
+            <input
+              className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-sm font-medium">Alternate email</label>
+          <input
+            type="email"
+            className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+            value={alternateEmail}
+            onChange={(e) => setAlternateEmail(e.target.value)}
           />
         </div>
 

@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
 
-  const recipients = await getAdminLevelRecipientEmails();
+  const recipients = await getAdminLevelRecipientEmails("procurement");
   const { subject, html } = purchaseOrderCreatedEmail(result.po);
   sendMailInBackground({ to: recipients, subject, html });
 

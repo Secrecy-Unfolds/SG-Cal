@@ -28,6 +28,29 @@ export const PROCUREMENT_STATUS_BADGE_CLASS: Record<ProcurementStatus, string> =
   cancelled: "bg-red-500/10 dark:bg-red-500/20 text-red-700 dark:text-red-300",
 };
 
+// v2 Procurement workflow Phase 2 — RFQ status per product-vendor link,
+// distinct from the offering data itself. null (not in this union) means
+// no RFQ has been sent yet.
+export type RfqStatus = "requested" | "quoted" | "declined";
+
+export const RFQ_STATUSES: RfqStatus[] = ["requested", "quoted", "declined"];
+
+export const RFQ_STATUS_LABELS: Record<RfqStatus, string> = {
+  requested: "RFQ sent",
+  quoted: "Quoted",
+  declined: "Declined",
+};
+
+export const RFQ_STATUS_BADGE_CLASS: Record<RfqStatus, string> = {
+  requested: "bg-blue-500/10 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300",
+  quoted: "bg-green-500/10 dark:bg-green-500/20 text-green-700 dark:text-green-300",
+  declined: "bg-red-500/10 dark:bg-red-500/20 text-red-700 dark:text-red-300",
+};
+
+export function isRfqStatus(value: unknown): value is RfqStatus {
+  return RFQ_STATUSES.includes(value as RfqStatus);
+}
+
 // Capital needed is derived, not typed in directly: unit price * quantity,
 // plus shipping and customs cost. Missing pieces count as 0 so a partial
 // estimate still shows something useful.

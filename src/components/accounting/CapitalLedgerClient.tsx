@@ -7,17 +7,17 @@ import CapitalEntryFormModal from "@/components/accounting/CapitalEntryFormModal
 import type { CapitalEntryRow } from "@/lib/capital";
 import { CAPITAL_SOURCE_BADGE_CLASS, CAPITAL_SOURCE_LABELS } from "@/lib/capitalDisplay";
 import { formatMoney } from "@/lib/procurementDisplay";
-import { sumBlended } from "@/lib/currencyDisplay";
+import { sumBlendedByDate, type ExchangeRateSnapshot } from "@/lib/currencyDisplay";
 import { HudFrame } from "@/components/hud/HudFrame";
 
 export default function CapitalLedgerClient({
   entries,
   baseCurrency,
-  exchangeRates,
+  exchangeRateSnapshot,
 }: {
   entries: CapitalEntryRow[];
   baseCurrency: string;
-  exchangeRates: Record<string, number>;
+  exchangeRateSnapshot: ExchangeRateSnapshot;
 }) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
@@ -32,15 +32,15 @@ export default function CapitalLedgerClient({
     return Array.from(map.entries());
   }, [entries]);
 
+  // Blends per-entry, each using the rate in effect for its own date.
   const blendedTotal = useMemo(() => {
     if (totalsByCurrency.length < 2) return null;
-    const rates = new Map(Object.entries(exchangeRates));
-    return sumBlended(
-      totalsByCurrency.map(([currency, amount]) => ({ currency, amount })),
+    return sumBlendedByDate(
+      entries.map((e) => ({ currency: e.currency, amount: parseFloat(e.amount), date: e.date })),
       baseCurrency,
-      rates
+      exchangeRateSnapshot
     );
-  }, [totalsByCurrency, baseCurrency, exchangeRates]);
+  }, [totalsByCurrency, entries, baseCurrency, exchangeRateSnapshot]);
 
   async function handleDelete() {
     if (deletingId === null) return;

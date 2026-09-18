@@ -9,20 +9,20 @@ import type { FinancialAccountRow } from "@/lib/financialAccounts";
 import type { UserRole } from "@/lib/users";
 import { TRANSACTION_STATUS_BADGE_CLASS, TRANSACTION_STATUS_LABELS } from "@/lib/accountingDisplay";
 import { formatMoney } from "@/lib/procurementDisplay";
-import { sumBlended } from "@/lib/currencyDisplay";
+import { sumBlendedByDate, type ExchangeRateSnapshot } from "@/lib/currencyDisplay";
 import { HudFrame } from "@/components/hud/HudFrame";
 
 export default function TransactionsListClient({
   transactions,
   financialAccounts,
   baseCurrency,
-  exchangeRates,
+  exchangeRateSnapshot,
   actorRole,
 }: {
   transactions: AccountingTransactionRow[];
   financialAccounts: FinancialAccountRow[];
   baseCurrency: string;
-  exchangeRates: Record<string, number>;
+  exchangeRateSnapshot: ExchangeRateSnapshot;
   actorRole: UserRole;
 }) {
   const router = useRouter();
@@ -53,15 +53,21 @@ export default function TransactionsListClient({
     return Array.from(map.entries());
   }, [transactions]);
 
+  // Blends per-transaction, each using the rate that was actually in effect
+  // for its own month, rather than converting the already-collapsed
+  // per-currency net at today's rate — so this total stays accurate across
+  // months even after the current rate changes again.
   const blendedNet = useMemo(() => {
     if (totalsByCurrency.length < 2) return null; // nothing to blend with only one currency
-    const rates = new Map(Object.entries(exchangeRates));
-    return sumBlended(
-      totalsByCurrency.map(([currency, { income, expense }]) => ({ currency, amount: income - expense })),
-      baseCurrency,
-      rates
-    );
-  }, [totalsByCurrency, baseCurrency, exchangeRates]);
+    const dated = transactions
+      .filter((t) => t.status === "approved")
+      .map((t) => ({
+        amount: t.type === "income" ? parseFloat(t.amount) : -parseFloat(t.amount),
+        currency: t.currency,
+        date: t.date,
+      }));
+    return sumBlendedByDate(dated, baseCurrency, exchangeRateSnapshot);
+  }, [totalsByCurrency, transactions, baseCurrency, exchangeRateSnapshot]);
 
   async function handleDelete() {
     if (deletingId === null) return;

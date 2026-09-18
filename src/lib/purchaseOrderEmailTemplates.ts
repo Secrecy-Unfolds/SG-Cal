@@ -55,3 +55,22 @@ export function purchaseOrderStatusChangedEmail(po: PurchaseOrderRow, who: strin
     ),
   };
 }
+
+// Sent TO the vendor's own email (Phase 1's contact fields) with the PO
+// PDF attached — a business document, not the internal "X did Y" notice
+// shape the two templates above use. Same external-recipient framing as
+// rfqEmail() in procurementEmailTemplates.ts.
+export function purchaseOrderVendorEmail(po: PurchaseOrderRow, fromWho: string): { subject: string; html: string } {
+  return {
+    subject: `Purchase Order #${po.id}: ${po.product_name}`,
+    html: wrap(
+      `Purchase Order #${po.id} for "${po.product_name}"`,
+      "Purchase Order",
+      introText(
+        `${escapeHtml(fromWho)} is sending Purchase Order #${po.id} for ${escapeHtml(
+          po.vendor_name
+        )} — see the attached PDF for full details.`
+      ) + poCard(po)
+    ),
+  };
+}

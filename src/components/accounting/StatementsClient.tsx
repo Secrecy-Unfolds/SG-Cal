@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { BalanceSummaryRow, ProfitAndLossRow } from "@/lib/financialStatements";
 import { formatMoney } from "@/lib/procurementDisplay";
-import { sumBlended } from "@/lib/currencyDisplay";
+import { sumBlendedByDate, type ExchangeRateSnapshot } from "@/lib/currencyDisplay";
 import { toMuscatDateInput } from "@/lib/time";
 import { HudFrame } from "@/components/hud/HudFrame";
 
@@ -17,10 +17,10 @@ function firstOfMonth(): string {
 
 export default function StatementsClient({
   baseCurrency,
-  exchangeRates,
+  exchangeRateSnapshot,
 }: {
   baseCurrency: string;
-  exchangeRates: Record<string, number>;
+  exchangeRateSnapshot: ExchangeRateSnapshot;
 }) {
   const [periodStart, setPeriodStart] = useState(firstOfMonth());
   const [periodEnd, setPeriodEnd] = useState(toMuscatDateInput(new Date()));
@@ -55,21 +55,25 @@ export default function StatementsClient({
     };
   }, [periodStart, periodEnd]);
 
-  const rates = new Map(Object.entries(exchangeRates));
+  // P&L blends at the period's own end date (its "as of" point); the
+  // balance summary is always "as of today" already, so it blends at
+  // today's rate — both via the same historical resolver, so a past
+  // period's PnL doesn't shift after the current rate changes again.
+  const today = toMuscatDateInput(new Date());
   const blendedPnl =
     profitAndLoss.length > 1
-      ? sumBlended(
-          profitAndLoss.map((r) => ({ currency: r.currency, amount: r.net })),
+      ? sumBlendedByDate(
+          profitAndLoss.map((r) => ({ currency: r.currency, amount: r.net, date: periodEnd })),
           baseCurrency,
-          rates
+          exchangeRateSnapshot
         )
       : null;
   const blendedBalance =
     balanceSummary.length > 1
-      ? sumBlended(
-          balanceSummary.map((r) => ({ currency: r.currency, amount: r.netPosition })),
+      ? sumBlendedByDate(
+          balanceSummary.map((r) => ({ currency: r.currency, amount: r.netPosition, date: today })),
           baseCurrency,
-          rates
+          exchangeRateSnapshot
         )
       : null;
 

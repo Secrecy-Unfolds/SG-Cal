@@ -14,6 +14,7 @@ import type { RecurringIncomeRow } from "@/lib/recurringIncome";
 import type { FinancialAccountRow } from "@/lib/financialAccounts";
 import type { ClosedPeriodRow } from "@/lib/periodClosing";
 import type { UserRole } from "@/lib/users";
+import type { ExchangeRateSnapshot } from "@/lib/currencyDisplay";
 import FolderTabs from "@/components/hud/FolderTabs";
 
 type SubTab = "transactions" | "budgets" | "recurringExpenses" | "recurringIncome" | "accounts" | "closedPeriods";
@@ -26,7 +27,7 @@ export default function LedgerPanel({
   financialAccounts,
   closedPeriods,
   baseCurrency,
-  exchangeRates,
+  exchangeRateSnapshot,
   actorRole,
 }: {
   transactions: AccountingTransactionRow[];
@@ -36,7 +37,7 @@ export default function LedgerPanel({
   financialAccounts: FinancialAccountRow[];
   closedPeriods: ClosedPeriodRow[];
   baseCurrency: string;
-  exchangeRates: Record<string, number>;
+  exchangeRateSnapshot: ExchangeRateSnapshot;
   actorRole: UserRole;
 }) {
   const [subTab, setSubTab] = useState<SubTab>("transactions");
@@ -61,12 +62,16 @@ export default function LedgerPanel({
           transactions={transactions}
           financialAccounts={financialAccounts}
           baseCurrency={baseCurrency}
-          exchangeRates={exchangeRates}
+          exchangeRateSnapshot={exchangeRateSnapshot}
           actorRole={actorRole}
         />
       )}
       {subTab === "budgets" && (
-        <ExpenseBudgetsClient budgets={expenseBudgets} baseCurrency={baseCurrency} exchangeRates={exchangeRates} />
+        <ExpenseBudgetsClient
+          budgets={expenseBudgets}
+          baseCurrency={baseCurrency}
+          exchangeRateSnapshot={exchangeRateSnapshot}
+        />
       )}
       {subTab === "recurringExpenses" && <RecurringExpensesClient recurring={recurringExpenses} />}
       {subTab === "recurringIncome" && <RecurringIncomeClient recurring={recurringIncome} />}

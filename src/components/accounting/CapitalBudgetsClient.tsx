@@ -7,19 +7,19 @@ import CapitalBudgetFormModal from "@/components/accounting/CapitalBudgetFormMod
 import type { CapitalBudgetRow } from "@/lib/capitalBudgets";
 import type { ProductRow } from "@/lib/procurement";
 import { formatMoney } from "@/lib/procurementDisplay";
-import { sumBlended } from "@/lib/currencyDisplay";
+import { sumBlendedByDate, type ExchangeRateSnapshot } from "@/lib/currencyDisplay";
 import { HudFrame } from "@/components/hud/HudFrame";
 
 export default function CapitalBudgetsClient({
   budgets,
   products,
   baseCurrency,
-  exchangeRates,
+  exchangeRateSnapshot,
 }: {
   budgets: CapitalBudgetRow[];
   products: ProductRow[];
   baseCurrency: string;
-  exchangeRates: Record<string, number>;
+  exchangeRateSnapshot: ExchangeRateSnapshot;
 }) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
@@ -38,21 +38,22 @@ export default function CapitalBudgetsClient({
     return Array.from(map.entries());
   }, [budgets]);
 
+  // Each budget row blends using the rate in effect for its own period
+  // (period_start), not today's rate — same approach as ExpenseBudgetsClient.
   const blended = useMemo(() => {
     if (totalsByCurrency.length < 2) return null;
-    const rates = new Map(Object.entries(exchangeRates));
-    const budgeted = sumBlended(
-      totalsByCurrency.map(([currency, { budgeted }]) => ({ currency, amount: budgeted })),
+    const budgeted = sumBlendedByDate(
+      budgets.map((b) => ({ currency: b.currency, amount: parseFloat(b.amount), date: b.period_start })),
       baseCurrency,
-      rates
+      exchangeRateSnapshot
     );
-    const actual = sumBlended(
-      totalsByCurrency.map(([currency, { actual }]) => ({ currency, amount: actual })),
+    const actual = sumBlendedByDate(
+      budgets.map((b) => ({ currency: b.currency, amount: parseFloat(b.actual), date: b.period_start })),
       baseCurrency,
-      rates
+      exchangeRateSnapshot
     );
     return { budgeted, actual };
-  }, [totalsByCurrency, baseCurrency, exchangeRates]);
+  }, [totalsByCurrency, budgets, baseCurrency, exchangeRateSnapshot]);
 
   async function handleDelete() {
     if (!deleting) return;

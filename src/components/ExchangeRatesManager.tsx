@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { HudFrame } from "@/components/hud/HudFrame";
 import SectionLabel from "@/components/hud/SectionLabel";
 import ConfirmModal from "@/components/ConfirmModal";
+import CurrencySelect from "@/components/CurrencySelect";
 import type { ExchangeRateRow } from "@/lib/exchangeRates";
 
 const inputClass =
@@ -86,9 +87,11 @@ export default function ExchangeRatesManager({
         <h2 className="font-heading font-semibold text-sm uppercase tracking-wide">Exchange rates</h2>
         <p className="text-xs text-black/40 dark:text-white/40 mt-1">
           How many {baseCurrency} one unit of another currency is worth.
-          Manually entered, not a live feed — update these whenever real
-          rates move meaningfully. A currency with no rate here is excluded
-          from blended totals, not guessed at 1:1.
+          Manually entered, not a live feed. Saving a rate freezes a snapshot
+          for the current calendar month — past months keep whatever rate was
+          in effect at the time, and a month with no edit simply keeps the
+          last rate you set. A currency with no rate here is excluded from
+          blended totals, not guessed at 1:1.
         </p>
       </div>
 
@@ -149,12 +152,7 @@ export default function ExchangeRatesManager({
       <div className="flex flex-wrap items-end gap-3 pt-2 border-t border-black/5 dark:border-white/10">
         <div className="space-y-1">
           <label className="text-xs font-medium">Currency</label>
-          <input
-            className={`${inputClass} w-24`}
-            placeholder="USD"
-            value={newCurrency}
-            onChange={(e) => setNewCurrency(e.target.value.toUpperCase())}
-          />
+          <CurrencySelect className={`${inputClass} w-24`} value={newCurrency} onChange={setNewCurrency} />
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium">Rate to {baseCurrency}</label>

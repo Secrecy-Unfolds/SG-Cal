@@ -1,11 +1,9 @@
 import { query } from "@/lib/db";
 import { listEmployeesWithDetails } from "@/lib/hr";
-import type { PurchaseOrderRow } from "@/lib/purchaseOrders";
-import { computeCapitalNeeded } from "@/lib/procurementDisplay";
 import type { UserRole } from "@/lib/users";
 import { getBaseCurrency } from "@/lib/settings";
-import { getExchangeRateMap } from "@/lib/exchangeRates";
-import { convertToBase } from "@/lib/currencyDisplay";
+import { getExchangeRateSnapshot } from "@/lib/exchangeRates";
+import { convertToBaseForDate } from "@/lib/currencyDisplay";
 import { EXPENSE_APPROVAL_THRESHOLD } from "@/lib/accountingDisplay";
 import { isDateInClosedPeriod } from "@/lib/periodClosing";
 
@@ -98,7 +96,7 @@ export async function createTransaction(input: {
 }): Promise<AccountingTransactionRow> {
   if (await isDateInClosedPeriod(input.date)) throw new Error("PERIOD_CLOSED");
 
-  const status = await decideTransactionStatus(input.type, input.amount, input.currency, input.actorRole);
+  const status = await decideTransactionStatus(input.type, input.amount, input.currency, input.date, input.actorRole);
   const taxable = input.taxable ?? false;
   const vatRate = taxable ? input.vatRate ?? null : null;
   const vatAmount = taxable && vatRate !== null ? input.amount * (vatRate / 100) : null;
@@ -134,16 +132,20 @@ export async function createTransaction(input: {
 // posts immediately too. A currency with no configured exchange rate can't
 // be checked against the threshold, so it falls back to requiring approval
 // — same no-silent-default precedent as the currency-blending layer.
+// Resolves the rate for this entry's own `date` (usually today, but a
+// backdated entry uses that month's own historical rate) rather than
+// whatever the rate happens to be right now.
 async function decideTransactionStatus(
   type: TransactionType,
   amount: number,
   currency: string,
+  date: string,
   actorRole: UserRole
 ): Promise<TransactionStatus> {
   if (type === "income" || actorRole === "super_admin") return "approved";
   const baseCurrency = await getBaseCurrency();
-  const rates = await getExchangeRateMap();
-  const converted = convertToBase(amount, currency, baseCurrency, rates);
+  const snapshot = await getExchangeRateSnapshot();
+  const converted = convertToBaseForDate(amount, currency, date, baseCurrency, snapshot);
   return converted === null || converted > EXPENSE_APPROVAL_THRESHOLD ? "pending" : "approved";
 }
 
@@ -168,24 +170,6 @@ export async function deleteTransaction(id: number): Promise<void> {
   const existing = await getTransactionById(id);
   if (existing && (await isDateInClosedPeriod(existing.date))) throw new Error("PERIOD_CLOSED");
   await query(`DELETE FROM accounting_transactions WHERE id = $1`, [id]);
-}
-
-// Called when a Purchase Order transitions to "received".
-export async function postExpenseForPurchaseOrder(po: PurchaseOrderRow): Promise<AccountingTransactionRow> {
-  const amount = computeCapitalNeeded({
-    unitPrice: po.unit_price,
-    quantityNeeded: po.quantity,
-    shippingCost: po.shipping_cost,
-    customsCost: po.customs_cost,
-  });
-  const res = await query<{ id: number }>(
-    `INSERT INTO accounting_transactions (date, description, amount, currency, type, category, purchase_order_id)
-     VALUES (CURRENT_DATE, $1, $2, $3, 'expense', 'Procurement', $4) RETURNING id`,
-    [`${po.product_name} (PO #${po.id}, ${po.vendor_name})`, amount, po.currency, po.id]
-  );
-  const created = await getTransactionById(res.rows[0].id);
-  if (!created) throw new Error("Failed to load created transaction");
-  return created;
 }
 
 export type PayrollRunRow = {

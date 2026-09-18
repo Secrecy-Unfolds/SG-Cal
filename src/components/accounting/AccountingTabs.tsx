@@ -20,6 +20,7 @@ import type { InvestmentPayoutRow, InvestmentRow, InvestorRow } from "@/lib/inve
 import type { GovernmentSupportRow, GovernmentSupporterRow } from "@/lib/governmentSupport";
 import type { ProductRow } from "@/lib/procurement";
 import type { UserRole } from "@/lib/users";
+import type { ExchangeRateSnapshot } from "@/lib/currencyDisplay";
 import PageHeader from "@/components/hud/PageHeader";
 import FolderTabs from "@/components/hud/FolderTabs";
 
@@ -44,7 +45,7 @@ export default function AccountingTabs({
   invoices,
   customers,
   baseCurrency,
-  exchangeRates,
+  exchangeRateSnapshot,
   actorRole,
 }: {
   transactions: AccountingTransactionRow[];
@@ -65,7 +66,7 @@ export default function AccountingTabs({
   invoices: IssuedInvoiceRow[];
   customers: CustomerRow[];
   baseCurrency: string;
-  exchangeRates: Record<string, number>;
+  exchangeRateSnapshot: ExchangeRateSnapshot;
   actorRole: UserRole;
 }) {
   const [tab, setTab] = useState<Tab>("ledger");
@@ -95,7 +96,7 @@ export default function AccountingTabs({
           financialAccounts={financialAccounts}
           closedPeriods={closedPeriods}
           baseCurrency={baseCurrency}
-          exchangeRates={exchangeRates}
+          exchangeRateSnapshot={exchangeRateSnapshot}
           actorRole={actorRole}
         />
       )}
@@ -111,10 +112,12 @@ export default function AccountingTabs({
           governmentSupporters={governmentSupporters}
           governmentSupport={governmentSupport}
           baseCurrency={baseCurrency}
-          exchangeRates={exchangeRates}
+          exchangeRateSnapshot={exchangeRateSnapshot}
         />
       )}
-      {tab === "statements" && <StatementsClient baseCurrency={baseCurrency} exchangeRates={exchangeRates} />}
+      {tab === "statements" && (
+        <StatementsClient baseCurrency={baseCurrency} exchangeRateSnapshot={exchangeRateSnapshot} />
+      )}
       {tab === "invoices" && <InvoicesPanel invoices={invoices} customers={customers} />}
     </div>
   );

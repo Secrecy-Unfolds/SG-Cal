@@ -1,58 +1,76 @@
 import { waitUntil } from "@vercel/functions";
 import { query } from "@/lib/db";
 import type { UserRole } from "@/lib/users";
+import { filterByPreference, type NotificationCategory } from "@/lib/notificationPreferences";
 
 // Default endpoint for the Google Apps Script mail relay; override with
 // EMAIL_ENDPOINT_URL in .env if you ever redeploy the script elsewhere.
 const DEFAULT_EMAIL_ENDPOINT_URL =
   "https://script.google.com/macros/s/AKfycbyWYYWj0urwkoFfXuAy3K2L_l_1xjy7WuKHUedlTpz8gIQbeyyS387TSD1uyw6unU1W/exec";
 
+// Every broadcast helper below now takes the notification `category` it's
+// being sent for (Cross-cutting/platform's "per-user notification
+// preferences", confirmed 2026-09-18) and filters out anyone who's opted
+// out of that category — see lib/notificationPreferences.ts. This is
+// deliberately required, not optional, so a new broadcast call site can't
+// forget to categorize itself. Targeted "this is about your own record"
+// emails (getEmailsByIds in lib/users.ts) are untouched — preferences only
+// apply to the "everyone"/"everyone admin-level" broadcasts this item was
+// actually about.
+
 // EMAIL_TEST_MODE is a local-only escape hatch: set it in your own .env
 // while testing so notification emails only go to the Super Admin instead
 // of every real user. Never set this in production.
-export async function getAllRecipientEmails(): Promise<string[]> {
+export async function getAllRecipientEmails(category: NotificationCategory): Promise<string[]> {
   const testMode = process.env.EMAIL_TEST_MODE === "true";
-  const res = await query<{ email: string }>(
+  const res = await query<{ id: number; email: string }>(
     testMode
-      ? "SELECT email FROM users WHERE role = 'super_admin' ORDER BY id ASC"
-      : "SELECT email FROM users ORDER BY id ASC"
+      ? "SELECT id, email FROM users WHERE role = 'super_admin' ORDER BY id ASC"
+      : "SELECT id, email FROM users ORDER BY id ASC"
   );
-  return res.rows.map((r) => r.email);
+  const allowed = await filterByPreference(res.rows, category);
+  return allowed.map((r) => r.email);
 }
 
 // Same shape as getAllRecipientEmails, but with id/role too — needed so the
 // digest cron routes can build a per-recipient (attendee/assignee-scoped)
 // event list for each user rather than one broadcast email to everyone.
-export async function getAllRecipients(): Promise<{ id: number; email: string; role: UserRole }[]> {
+export async function getAllRecipients(
+  category: NotificationCategory
+): Promise<{ id: number; email: string; role: UserRole }[]> {
   const testMode = process.env.EMAIL_TEST_MODE === "true";
   const res = await query<{ id: number; email: string; role: UserRole }>(
     testMode
       ? "SELECT id, email, role FROM users WHERE role = 'super_admin' ORDER BY id ASC"
       : "SELECT id, email, role FROM users ORDER BY id ASC"
   );
-  return res.rows;
+  return filterByPreference(res.rows, category);
 }
 
 // Procurement Planning is Admin-level only, so its notifications go to
 // Admins and Super Admins only — plain "user" accounts can't see that
 // section at all. Same EMAIL_TEST_MODE behavior as above: only Super Admin
 // while testing.
-export async function getAdminLevelRecipientEmails(): Promise<string[]> {
+export async function getAdminLevelRecipientEmails(category: NotificationCategory): Promise<string[]> {
   const testMode = process.env.EMAIL_TEST_MODE === "true";
-  const res = await query<{ email: string }>(
+  const res = await query<{ id: number; email: string }>(
     testMode
-      ? "SELECT email FROM users WHERE role = 'super_admin' ORDER BY id ASC"
-      : "SELECT email FROM users WHERE role IN ('admin', 'super_admin') ORDER BY id ASC"
+      ? "SELECT id, email FROM users WHERE role = 'super_admin' ORDER BY id ASC"
+      : "SELECT id, email FROM users WHERE role IN ('admin', 'super_admin') ORDER BY id ASC"
   );
-  return res.rows.map((r) => r.email);
+  const allowed = await filterByPreference(res.rows, category);
+  return allowed.map((r) => r.email);
 }
 
 // The expense-approval workflow's "needs approval" notice goes to Super
 // Admins only (they're the only ones who can decide it) — same
 // EMAIL_TEST_MODE behavior as the helpers above.
-export async function getSuperAdminRecipientEmails(): Promise<string[]> {
-  const res = await query<{ email: string }>(`SELECT email FROM users WHERE role = 'super_admin' ORDER BY id ASC`);
-  return res.rows.map((r) => r.email);
+export async function getSuperAdminRecipientEmails(category: NotificationCategory): Promise<string[]> {
+  const res = await query<{ id: number; email: string }>(
+    `SELECT id, email FROM users WHERE role = 'super_admin' ORDER BY id ASC`
+  );
+  const allowed = await filterByPreference(res.rows, category);
+  return allowed.map((r) => r.email);
 }
 
 // A generated PDF attached to an email — base64-encoded, since the relay
