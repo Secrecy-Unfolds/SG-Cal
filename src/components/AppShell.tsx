@@ -8,7 +8,7 @@ import {
   Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
-  Lightbulb,
+  GitBranch,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -46,7 +46,11 @@ const NAV_ITEMS = [
   { href: "/inventory", label: "Inventory", icon: Boxes, adminOnly: true, superAdminOnly: false },
   { href: "/accounting", label: "Accounting", icon: Wallet, adminOnly: true, superAdminOnly: false },
   { href: "/hr", label: "HR", icon: UserCog, adminOnly: true, superAdminOnly: false },
-  { href: "/ideas", label: "Ideas", icon: Lightbulb, adminOnly: true, superAdminOnly: false },
+  // v3 Phase 4: a plain "user" can now be shared on individual plans (see
+  // lib/planShares.ts), so this is no longer Admin-only — a plain user
+  // with nothing shared with them just sees an empty list, same as
+  // Calendar shows nothing for a user with no events.
+  { href: "/plans", label: "Plans & Strategy", icon: GitBranch, adminOnly: false, superAdminOnly: false },
   { href: "/settings", label: "Settings", icon: SettingsIcon, adminOnly: false, superAdminOnly: true },
   { href: "/profile", label: "Profile", icon: User, adminOnly: false, superAdminOnly: false },
 ];

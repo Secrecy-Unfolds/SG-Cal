@@ -1,4 +1,4 @@
-import { Pool, QueryResultRow, types } from "pg";
+import { Pool, PoolClient, QueryResultRow, types } from "pg";
 
 // DATE columns (oid 1082) come back as plain "YYYY-MM-DD" strings instead of
 // pg's default JS Date objects — those are ambiguous for a date-only value
@@ -45,4 +45,26 @@ function getPool(): Pool {
 export async function query<T extends QueryResultRow = any>(text: string, params?: any[]) {
   const res = await getPool().query<T>(text, params);
   return res;
+}
+
+// v3's Process/Strategy/Idea module is the first write path in this app
+// that genuinely needs multi-statement atomicity (creating a step is an
+// event-insert + step-insert + prerequisite-edge-inserts sequence that
+// must not half-complete) — every other write path so far has been a
+// single bare query() call. `fn` receives a client bound to one
+// transaction; use it (not the pooled `query()` above) for every
+// statement inside the callback so they share the same connection.
+export async function withTransaction<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    const result = await fn(client);
+    await client.query("COMMIT");
+    return result;
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
 }

@@ -28,7 +28,11 @@ export const NOTIFICATION_CATEGORY_LABELS: Record<NotificationCategory, string> 
   accounting: "Accounting",
   inventory: "Inventory",
   hr: "HR",
-  ideas: "Ideas",
+  // v3 Phase 1: the "ideas" module was rebuilt into Process/Strategy/Idea
+  // plans — the internal key/union member is kept unchanged (zero
+  // notification_preferences row migration needed, see
+  // docs/erp-v3-roadmap.md), only this user-facing label changed.
+  ideas: "Plans & Strategy",
   calendar: "Calendar (meetings/tasks with no specific attendees, task reminders)",
   digests: "Daily/weekly digest emails",
 };
@@ -38,7 +42,7 @@ export const NOTIFICATION_CATEGORY_DESCRIPTIONS: Record<NotificationCategory, st
   accounting: "Manual and auto-posted transaction notifications.",
   inventory: "Inventory item created/updated/deleted notifications.",
   hr: "Leave request submitted notifications (admin-level).",
-  ideas: "Idea created/updated/deleted notifications.",
+  ideas: "Plan (Process/Strategy/Idea) created/updated/deleted notifications.",
   calendar: "Meeting/task emails that broadcast to everyone (no specific attendee list), plus task-due-soon reminders sent to admin-level accounts.",
   digests: "The daily and weekly upcoming-events digest emails.",
 };

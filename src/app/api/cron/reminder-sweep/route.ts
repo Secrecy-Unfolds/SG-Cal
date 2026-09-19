@@ -12,6 +12,8 @@ import { isAuthorizedCronRequest } from "@/lib/cronAuth";
 import { maybeSendDailyDigest, maybeSendWeeklyDigest } from "@/lib/digests";
 import { processRecurringExpenses } from "@/lib/recurringExpenses";
 import { processRecurringIncome } from "@/lib/recurringIncome";
+import { listStepsNeedingOverdueReminder, markOverdueReminderSent } from "@/lib/planSteps";
+import { stepOverdueEmail } from "@/lib/planEmailTemplates";
 
 export const runtime = "nodejs";
 
@@ -48,6 +50,22 @@ export async function GET(req: NextRequest) {
     await markEndReminderSent(task.id);
   }
 
+  // Phase 5 of the Process/Strategy/Idea workflow builder — an overdue
+  // step's assignee plus admin-level "Plans & Strategy" (still the
+  // "ideas" category internally, see lib/notificationPreferencesDisplay.ts)
+  // subscribers get notified, same shape as the task-due-soon reminder
+  // above. Recipients are resolved per step, not hoisted out of the loop,
+  // since each step can have a different assignee.
+  const plansAdminEmails = await getAdminLevelRecipientEmails("ideas");
+  const overdueSteps = await listStepsNeedingOverdueReminder();
+  for (const step of overdueSteps) {
+    const assigneeEmails = await getEmailsByIds([step.assignee_id]);
+    const recipients = Array.from(new Set([...assigneeEmails, ...plansAdminEmails]));
+    const { subject, html } = stepOverdueEmail(step);
+    sendMailInBackground({ to: recipients, subject, html });
+    await markOverdueReminderSent(step.id);
+  }
+
   // The digests' actual configured send time (Super Admin Settings page) is
   // checked here, on every frequent external ping, rather than relying on
   // vercel.json's fixed once-a-day schedule — see src/lib/digests.ts.
@@ -64,6 +82,7 @@ export async function GET(req: NextRequest) {
     ok: true,
     meetingsNotified: meetings.length,
     tasksNotified: tasks.length,
+    overdueStepsNotified: overdueSteps.length,
     dailyDigest,
     weeklyDigest,
     recurringExpensesPosted: recurringExpenses.posted,

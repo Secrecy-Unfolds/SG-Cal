@@ -1,18 +1,20 @@
 {
   "name": "sg-erp",
-  "version": "0.2.0",
+  "version": "0.2.5",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "setup": "tsx scripts/setup.ts"
+    "setup": "tsx scripts/setup.ts",
+    "setup:dev": "tsx scripts/setup.ts dotenv_config_path=.env.development.local"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.9.0",
     "@vercel/blob": "^2.8.0",
     "@vercel/functions": "^3.9.7",
+    "@xyflow/react": "^12.11.6",
     "bcryptjs": "^2.4.3",
     "jose": "^5.9.6",
     "lucide-react": "^1.45.0",

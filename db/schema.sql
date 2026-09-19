@@ -820,3 +820,249 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
   enabled BOOLEAN NOT NULL DEFAULT true,
   PRIMARY KEY (user_id, category)
 );
+
+-- v3 Phase 1: Process / Strategy / Idea workflow builder — replaces the
+-- flat `ideas` table above. See docs/erp-v3-roadmap.md's "Process /
+-- Strategy / Idea" section (fully scoped 2026-09-18) and
+-- docs/handover.md for the confirmed modeling decisions. One polymorphic
+-- `plans` table, not four separate ones: a "Stage" is not a 4th
+-- plan_type, it IS a plan_type='process' row with parent_milestone_id
+-- set — this is what "a Stage is structurally a Process" means
+-- concretely; the Process tab (Phase 3) is literally
+-- `WHERE plan_type='process' AND parent_milestone_id IS NULL`.
+--
+-- Phase 1 (this block): plans (only 'process'/'idea' are actually
+-- creatable from the UI yet — 'strategy' is accepted by the CHECK
+-- constraint now so the column never needs widening later, but nothing
+-- creates one until Phase 3 builds Milestones/Stages), steps,
+-- step_prerequisites, plus the `ideas` -> `plans` migration. Deliverables/
+-- Minutes of Meeting (Phase 2), Milestones' own CRUD (Phase 3, though the
+-- `milestones` table is created now — see the FK note below), and
+-- plan_shares (Phase 4) are added in their own later schema blocks — same
+-- "add tables as the phase that needs them lands" convention this file
+-- already uses for Procurement's Phase 1/Phase 2 tables.
+--
+-- plans.parent_milestone_id -> milestones(id) and
+-- milestones.strategy_plan_id -> plans(id) is a genuine circular
+-- reference. Same fix this file already uses for
+-- procurement_products.preferred_vendor_id: the column is created plain
+-- (no inline FK) here, and the constraint is added once milestones exists.
+CREATE TABLE IF NOT EXISTS plans (
+  id SERIAL PRIMARY KEY,
+  plan_type TEXT NOT NULL CHECK (plan_type IN ('process', 'strategy', 'idea')),
+  parent_milestone_id INTEGER,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  start_date DATE,
+  -- Duplication ("clone-and-reset-dates") and Idea->Process/Strategy
+  -- promotion lineage — both Phase 4 features, columns created now so
+  -- Phase 4 needs no migration of its own.
+  promoted_from_plan_id INTEGER REFERENCES plans(id) ON DELETE SET NULL,
+  duplicated_from_plan_id INTEGER REFERENCES plans(id) ON DELETE SET NULL,
+  migrated_from_idea_id INTEGER,
+  -- project_id intentionally NOT added — Organization Structure/Projects
+  -- is 100% unbuilt (confirmed 2026-09-19, via `AskUserQuestion`). Add
+  -- later as a zero-backfill nullable ALTER TABLE once that module ships;
+  -- document the deferral in docs/erp-v3-roadmap.md / erp-v4-roadmap.md
+  -- when it does.
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS plans_plan_type_idx ON plans (plan_type);
+CREATE INDEX IF NOT EXISTS plans_parent_milestone_id_idx ON plans (parent_milestone_id);
+
+-- A Strategy's Milestones. Table created now (for the FK pair above to
+-- resolve); Milestone CRUD itself is a Phase 3 item. Milestone ordering
+-- reuses the exact same prerequisite mechanism as steps, one level up
+-- (confirmed 2026-09-18): zero-or-one prerequisite Milestone, enforced if
+-- set, unconstrained if not.
+CREATE TABLE IF NOT EXISTS milestones (
+  id SERIAL PRIMARY KEY,
+  strategy_plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  prerequisite_milestone_id INTEGER REFERENCES milestones(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS milestones_strategy_plan_id_idx ON milestones (strategy_plan_id);
+
+DO $$ BEGIN
+  ALTER TABLE plans
+    ADD CONSTRAINT plans_parent_milestone_id_fkey
+    FOREIGN KEY (parent_milestone_id) REFERENCES milestones(id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Steps: the workflow unit shared by every plan type (and by a Stage,
+-- which is just a plan_type='process' plan). Every step is backed by a
+-- real `events` row unconditionally (src/lib/events.ts's
+-- createEvent/updateEvent, not duplicated) — this is what makes "a linked
+-- step and its Calendar entry are the same underlying record"
+-- (docs/erp-v3-roadmap.md) literally true, and is required so an
+-- assignee who isn't shared on the plan still sees their own step as an
+-- ordinary Calendar entry.
+-- No separate `title` (or due date/assignee) column here on purpose — the
+-- backing `events` row is the single source of truth for those (its own
+-- title/end_at-or-start_at/assignee_id), so there's exactly one place to
+-- edit them and no risk of the step and its Calendar entry disagreeing.
+CREATE TABLE IF NOT EXISTS steps (
+  id SERIAL PRIMARY KEY,
+  plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+  event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  step_type TEXT NOT NULL CHECK (step_type IN ('task', 'meeting')),
+  notes TEXT NOT NULL DEFAULT '',
+  -- done/not-done plus Blocked/Skipped/N/A (confirmed 2026-09-18/19) —
+  -- 'pending' is the not-done default. Prerequisite/progress semantics
+  -- for skipped/na live in src/lib/planSteps.ts (computed live, not
+  -- stored): they satisfy downstream prerequisites but are excluded from
+  -- the progress percentage.
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'done', 'blocked', 'skipped', 'na')),
+  requires_deliverable BOOLEAN NOT NULL DEFAULT false,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  completed_at TIMESTAMPTZ,
+  completed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  overdue_reminder_sent_at TIMESTAMPTZ,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS steps_plan_id_idx ON steps (plan_id);
+CREATE INDEX IF NOT EXISTS steps_event_id_idx ON steps (event_id);
+CREATE INDEX IF NOT EXISTS steps_status_idx ON steps (status);
+
+-- Prerequisite graph — a step can wait on more than one prerequisite
+-- (confirmed 2026-09-18: "a real graph, not a strict chain"). A plain
+-- linear chain is just this table with one row per step.
+CREATE TABLE IF NOT EXISTS step_prerequisites (
+  step_id INTEGER NOT NULL REFERENCES steps(id) ON DELETE CASCADE,
+  prerequisite_step_id INTEGER NOT NULL REFERENCES steps(id) ON DELETE CASCADE,
+  PRIMARY KEY (step_id, prerequisite_step_id),
+  CHECK (step_id != prerequisite_step_id)
+);
+CREATE INDEX IF NOT EXISTS step_prerequisites_prerequisite_step_id_idx
+  ON step_prerequisites (prerequisite_step_id);
+
+-- Migration: every existing `ideas` row becomes a plan_type='idea' plan —
+-- a real migration, not a parallel system (confirmed 2026-09-18). The old
+-- free-text `prerequisites` column has no equivalent in the new
+-- step-graph model (it was prose, not structured data), so it's folded
+-- into description rather than silently dropped. Migrated Ideas get zero
+-- steps — fabricating a workflow for old rows would invent data that
+-- never existed; the UI treats an empty workflow as normal. Guarded by
+-- migrated_from_idea_id so this block is safely re-runnable. The `ideas`
+-- table itself is deliberately NOT dropped here — kept read-only as a
+-- safety net for one release, dropped in a follow-up commit once the new
+-- module is verified against the real DB.
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'ideas') THEN
+    INSERT INTO plans (plan_type, name, description, start_date, created_by, created_at, updated_at, migrated_from_idea_id)
+    SELECT
+      'idea',
+      i.name,
+      CASE WHEN i.prerequisites IS NOT NULL AND i.prerequisites <> ''
+        THEN i.description || E'\n\nPrerequisites (migrated): ' || i.prerequisites
+        ELSE i.description
+      END,
+      i.expected_start_date,
+      i.created_by,
+      i.created_at,
+      i.updated_at,
+      i.id
+    FROM ideas i
+    WHERE NOT EXISTS (SELECT 1 FROM plans p WHERE p.migrated_from_idea_id = i.id);
+  END IF;
+END $$;
+
+-- v3 Phase 2: deliverables + Minutes of Meeting — see
+-- docs/erp-v3-roadmap.md's "Process / Strategy / Idea" section and
+-- docs/handover.md for the confirmed modeling decisions.
+
+-- A deliverable placeholder on a step: a text answer, or an image/PDF
+-- upload, known only after the step happens. A step can have more than
+-- one (confirmed 2026-09-18) — each row here is one placeholder, not a
+-- cap of one per kind. text_value is only used for kind='text'; image/pdf
+-- kinds are filled via step_deliverable_files below instead.
+CREATE TABLE IF NOT EXISTS step_deliverable_defs (
+  id SERIAL PRIMARY KEY,
+  step_id INTEGER NOT NULL REFERENCES steps(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL CHECK (kind IN ('text', 'image', 'pdf')),
+  label TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  text_value TEXT,
+  filled_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  filled_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS step_deliverable_defs_step_id_idx ON step_deliverable_defs (step_id);
+
+-- Image/PDF deliverable uploads, versioned: re-uploading inserts a new row
+-- rather than overwriting — old versions stay retrievable (confirmed
+-- 2026-09-18). First table of its kind in this app — every existing
+-- upload (procurement/accounting/avatars) is a single TEXT url column
+-- with no history. "Current" version is MAX(version_number) per def,
+-- computed live (see lib/planDeliverables.ts), not stored as an
+-- is_current flag — same "compute live" precedent this app already uses
+-- elsewhere.
+CREATE TABLE IF NOT EXISTS step_deliverable_files (
+  id SERIAL PRIMARY KEY,
+  deliverable_def_id INTEGER NOT NULL REFERENCES step_deliverable_defs(id) ON DELETE CASCADE,
+  version_number INTEGER NOT NULL,
+  blob_url TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  mime_type TEXT NOT NULL,
+  size_bytes INTEGER,
+  uploaded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  uploaded_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (deliverable_def_id, version_number)
+);
+CREATE INDEX IF NOT EXISTS step_deliverable_files_def_id_idx ON step_deliverable_files (deliverable_def_id);
+
+-- Minutes of Meeting, for Meeting-type steps: light structure (confirmed
+-- 2026-09-18), distinct from the step's generic `notes` field, and IS
+-- that step's deliverable (not a separate concept) — filling this
+-- satisfies requires_deliverable for a meeting step, same as filled
+-- deliverable defs do for a task step (see lib/planSteps.ts's
+-- isDeliverableGateSatisfied). Only `discussion` is required for the gate
+-- (confirmed 2026-09-19) — Attendees/Decisions/Action Items stay optional.
+-- One per step (a step only has one meeting), so PRIMARY KEY IS
+-- step_id — this is also an upsert target, not insert-then-update.
+CREATE TABLE IF NOT EXISTS minutes_of_meeting (
+  step_id INTEGER PRIMARY KEY REFERENCES steps(id) ON DELETE CASCADE,
+  attendees TEXT NOT NULL DEFAULT '',
+  discussion TEXT NOT NULL DEFAULT '',
+  decisions TEXT NOT NULL DEFAULT '',
+  action_items TEXT NOT NULL DEFAULT '',
+  filled_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  filled_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- v3 Phase 4: sharing, duplication, promotion — see docs/erp-v3-roadmap.md
+-- and docs/handover.md for the confirmed modeling decisions.
+
+-- Who besides Admin-level can view a plan. Confirmed scope override for
+-- this build (overrides docs/erp-v3-roadmap.md's "down to Manager-level"
+-- language — the app has zero hierarchy/Manager concept: employee_details
+-- has only free-text position/department, no manager_id, no departments/
+-- teams/projects tables exist anywhere in the schema): Admin picks
+-- specific individual users (any role) via multi-select — a superset a
+-- later Manager-level auto-expansion can layer on top of with zero
+-- rework: that future feature would just insert additional rows here
+-- computed from an org-hierarchy lookup, this table's shape doesn't
+-- change at all. Keyed on the top-level (parent_milestone_id IS NULL)
+-- plan only — sharing a Strategy implicitly grants its Milestones/Stages
+-- too (see lib/planShares.ts's canUserViewPlan, which resolves a Stage up
+-- to its root Strategy before checking this table).
+CREATE TABLE IF NOT EXISTS plan_shares (
+  plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  shared_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  shared_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (plan_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS plan_shares_user_id_idx ON plan_shares (user_id);

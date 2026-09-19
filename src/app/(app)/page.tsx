@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { Boxes, CalendarCheck, CalendarClock, Lightbulb, Package, UserCheck, Wallet } from "lucide-react";
+import { Boxes, CalendarCheck, CalendarClock, GitBranch, Package, UserCheck, Wallet } from "lucide-react";
 import { getSession } from "@/lib/auth";
 import { isAdminLevel, listUsers } from "@/lib/users";
 import { listEventsForRecipient } from "@/lib/events";
@@ -10,7 +10,7 @@ import { getAttendanceForDate, listAllAttendance, listAllLeaveRequests, listLeav
 import { listPurchaseOrders } from "@/lib/purchaseOrders";
 import { listInventoryItems } from "@/lib/inventory";
 import { listTransactions } from "@/lib/accounting";
-import { listIdeas } from "@/lib/ideas";
+import { listPlans } from "@/lib/plans";
 import { toMuscatDateInput } from "@/lib/time";
 import { formatMoney } from "@/lib/procurementDisplay";
 import { getBaseCurrency } from "@/lib/settings";
@@ -44,7 +44,7 @@ export default async function HomePage() {
           listPurchaseOrders(),
           listInventoryItems(),
           listTransactions(),
-          listIdeas(),
+          listPlans(),
           getBaseCurrency(),
           getExchangeRateSnapshot(),
         ])
@@ -60,7 +60,7 @@ export default async function HomePage() {
   ];
 
   if (admin && adminData) {
-    const [allUsers, allLeave, allAttendance, purchaseOrders, inventoryItems, transactions, ideas, baseCurrency, exchangeRateSnapshot] =
+    const [allUsers, allLeave, allAttendance, purchaseOrders, inventoryItems, transactions, plans, baseCurrency, exchangeRateSnapshot] =
       adminData;
 
     const openPOs = purchaseOrders.filter((po) => po.status === "ordered" || po.status === "in_transit").length;
@@ -138,7 +138,7 @@ export default async function HomePage() {
       ...(blendedLedger
         ? [{ icon: Wallet, value: formatMoney(blendedLedger.total, baseCurrency), label: `Ledger net (blended)` }]
         : []),
-      { icon: Lightbulb, value: ideas.length, label: "Ideas logged" }
+      { icon: GitBranch, value: plans.length, label: "Plans logged" }
     );
   }
 
