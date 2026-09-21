@@ -90,6 +90,7 @@ export default function VendorFormModal({
   const [newEmail, setNewEmail] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [newAlternateEmail, setNewAlternateEmail] = useState("");
+  const [newWebsite, setNewWebsite] = useState("");
 
   const [pricing, setPricing] = useState(vendorLink?.pricing ?? "");
   const [paymentTerms, setPaymentTerms] = useState(vendorLink?.payment_terms ?? "");
@@ -189,6 +190,7 @@ export default function VendorFormModal({
                     email: newEmail,
                     phone: newPhone,
                     alternateEmail: newAlternateEmail,
+                    website: newWebsite,
                     ...offering,
                   }
             ),
@@ -323,6 +325,15 @@ export default function VendorFormModal({
                     className={inputClass}
                     value={newAlternateEmail}
                     onChange={(e) => setNewAlternateEmail(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Website</label>
+                  <input
+                    className={inputClass}
+                    value={newWebsite}
+                    onChange={(e) => setNewWebsite(e.target.value)}
+                    placeholder="www.example.com"
                   />
                 </div>
               </>

@@ -18,6 +18,7 @@ export default function EditVendorModal({
   const [email, setEmail] = useState(vendor.email);
   const [phone, setPhone] = useState(vendor.phone);
   const [alternateEmail, setAlternateEmail] = useState(vendor.alternate_email);
+  const [website, setWebsite] = useState(vendor.website);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,6 +41,7 @@ export default function EditVendorModal({
           email: email.trim(),
           phone: phone.trim(),
           alternateEmail: alternateEmail.trim(),
+          website: website.trim(),
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -129,6 +131,16 @@ export default function EditVendorModal({
             className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
             value={alternateEmail}
             onChange={(e) => setAlternateEmail(e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-sm font-medium">Website</label>
+          <input
+            className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+            value={website}
+            onChange={(e) => setWebsite(e.target.value)}
+            placeholder="www.example.com"
           />
         </div>
 

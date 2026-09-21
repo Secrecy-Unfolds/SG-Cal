@@ -1,5 +1,11 @@
 import { query } from "@/lib/db";
-import type { ProcurementStatus, RfqStatus } from "@/lib/procurementDisplay";
+import { del } from "@vercel/blob";
+import type {
+  ProcurementStatus,
+  RfqStatus,
+  VendorDocumentCategory,
+  VendorDocumentRow,
+} from "@/lib/procurementDisplay";
 
 // Single source of truth lives in procurementDisplay.ts (client-safe — no
 // server-only imports), so client components can use it directly without
@@ -24,6 +30,7 @@ export type VendorRow = {
   email: string;
   phone: string;
   alternate_email: string;
+  website: string;
   created_at: Date;
 };
 
@@ -133,27 +140,40 @@ export async function productHasVendor(productId: number, vendorId: number): Pro
 
 export async function searchVendors(q: string): Promise<VendorRow[]> {
   const res = await query<VendorRow>(
-    `SELECT id, name, country, niche, email, phone, alternate_email, created_at FROM procurement_vendors
+    `SELECT id, name, country, niche, email, phone, alternate_email, website, created_at FROM procurement_vendors
      WHERE name ILIKE '%' || $1 || '%' ORDER BY name ASC LIMIT 10`,
     [q]
   );
   return res.rows;
 }
 
-export type VendorWithProductsRow = VendorRow & { products: { id: number; name: string }[] };
+export type VendorWithProductsRow = VendorRow & {
+  products: { id: number; name: string }[];
+  documents: VendorDocumentRow[];
+};
 
 export async function listVendors(): Promise<VendorWithProductsRow[]> {
+  // Products and documents are separate correlated subqueries (not joins) so
+  // one can't multiply the other's rows.
   const res = await query<VendorWithProductsRow>(
-    `SELECT v.id, v.name, v.country, v.niche, v.email, v.phone, v.alternate_email, v.created_at,
+    `SELECT v.id, v.name, v.country, v.niche, v.email, v.phone, v.alternate_email, v.website, v.created_at,
             COALESCE(
-              json_agg(json_build_object('id', p.id, 'name', p.name) ORDER BY p.name)
-                FILTER (WHERE p.id IS NOT NULL),
+              (SELECT json_agg(json_build_object('id', p.id, 'name', p.name) ORDER BY p.name)
+               FROM procurement_product_vendors pv JOIN procurement_products p ON p.id = pv.product_id
+               WHERE pv.vendor_id = v.id),
               '[]'
-            ) AS products
+            ) AS products,
+            COALESCE(
+              (SELECT json_agg(json_build_object(
+                  'id', d.id, 'vendor_id', d.vendor_id, 'category', d.category, 'blob_url', d.blob_url,
+                  'file_name', d.file_name, 'mime_type', d.mime_type, 'size_bytes', d.size_bytes,
+                  'uploaded_by_username', du.username, 'uploaded_at', d.uploaded_at
+                ) ORDER BY d.uploaded_at DESC)
+               FROM procurement_vendor_documents d LEFT JOIN users du ON du.id = d.uploaded_by
+               WHERE d.vendor_id = v.id),
+              '[]'
+            ) AS documents
      FROM procurement_vendors v
-     LEFT JOIN procurement_product_vendors pv ON pv.vendor_id = v.id
-     LEFT JOIN procurement_products p ON p.id = pv.product_id
-     GROUP BY v.id
      ORDER BY v.name ASC`
   );
   return res.rows;
@@ -161,7 +181,7 @@ export async function listVendors(): Promise<VendorWithProductsRow[]> {
 
 export async function getVendorById(id: number): Promise<VendorRow | null> {
   const res = await query<VendorRow>(
-    `SELECT id, name, country, niche, email, phone, alternate_email, created_at
+    `SELECT id, name, country, niche, email, phone, alternate_email, website, created_at
      FROM procurement_vendors WHERE id = $1`,
     [id]
   );
@@ -170,10 +190,10 @@ export async function getVendorById(id: number): Promise<VendorRow | null> {
 
 export async function updateVendorIdentity(id: number, input: VendorIdentityInput): Promise<VendorRow | null> {
   const res = await query<VendorRow>(
-    `UPDATE procurement_vendors SET name = $1, country = $2, niche = $3, email = $4, phone = $5, alternate_email = $6
-     WHERE id = $7
-     RETURNING id, name, country, niche, email, phone, alternate_email, created_at`,
-    [input.name, input.country, input.niche, input.email, input.phone, input.alternateEmail, id]
+    `UPDATE procurement_vendors SET name = $1, country = $2, niche = $3, email = $4, phone = $5, alternate_email = $6, website = $7
+     WHERE id = $8
+     RETURNING id, name, country, niche, email, phone, alternate_email, website, created_at`,
+    [input.name, input.country, input.niche, input.email, input.phone, input.alternateEmail, input.website, id]
   );
   return res.rows[0] ?? null;
 }
@@ -182,8 +202,56 @@ export async function updateVendorIdentity(id: number, input: VendorIdentityInpu
 // ON DELETE CASCADE (removes every product link) and
 // procurement_products.preferred_vendor_id is ON DELETE SET NULL (clears it
 // on any product that had this vendor marked preferred).
+//
+// Its uploaded documents' DB rows cascade too, but the files in Blob storage
+// don't — those are deleted best-effort after the DB delete succeeds (same
+// reasoning as lib/planDeliverables.ts's deleteDeliverableDef).
 export async function deleteVendor(id: number): Promise<void> {
+  const docs = await query<{ blob_url: string }>(
+    `SELECT blob_url FROM procurement_vendor_documents WHERE vendor_id = $1`,
+    [id]
+  );
   await query(`DELETE FROM procurement_vendors WHERE id = $1`, [id]);
+  await Promise.all(docs.rows.map((d) => del(d.blob_url).catch(() => {})));
+}
+
+export async function addVendorDocument(input: {
+  vendorId: number;
+  category: VendorDocumentCategory;
+  blobUrl: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  uploadedBy: number;
+}): Promise<VendorDocumentRow> {
+  const res = await query<VendorDocumentRow>(
+    `WITH ins AS (
+       INSERT INTO procurement_vendor_documents (vendor_id, category, blob_url, file_name, mime_type, size_bytes, uploaded_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *
+     )
+     SELECT ins.id, ins.vendor_id, ins.category, ins.blob_url, ins.file_name, ins.mime_type, ins.size_bytes,
+            u.username AS uploaded_by_username, ins.uploaded_at
+     FROM ins LEFT JOIN users u ON u.id = ins.uploaded_by`,
+    [input.vendorId, input.category, input.blobUrl, input.fileName, input.mimeType, input.sizeBytes, input.uploadedBy]
+  );
+  return res.rows[0];
+}
+
+export async function getVendorDocument(
+  id: number
+): Promise<{ id: number; vendor_id: number; blob_url: string } | null> {
+  const res = await query<{ id: number; vendor_id: number; blob_url: string }>(
+    `SELECT id, vendor_id, blob_url FROM procurement_vendor_documents WHERE id = $1`,
+    [id]
+  );
+  return res.rows[0] ?? null;
+}
+
+export async function deleteVendorDocument(id: number): Promise<void> {
+  const doc = await getVendorDocument(id);
+  if (!doc) return;
+  await query(`DELETE FROM procurement_vendor_documents WHERE id = $1`, [id]);
+  await del(doc.blob_url).catch(() => {});
 }
 
 export type ProductInput = {
@@ -290,6 +358,7 @@ export type VendorIdentityInput = {
   email: string;
   phone: string;
   alternateEmail: string;
+  website: string; // already normalized (see normalizeWebsite) or ""
 };
 
 export type VendorOfferingInput = {
@@ -307,10 +376,10 @@ export type VendorOfferingInput = {
 
 export async function createVendor(input: VendorIdentityInput): Promise<VendorRow> {
   const res = await query<VendorRow>(
-    `INSERT INTO procurement_vendors (name, country, niche, email, phone, alternate_email)
-     VALUES ($1,$2,$3,$4,$5,$6)
-     RETURNING id, name, country, niche, email, phone, alternate_email, created_at`,
-    [input.name, input.country, input.niche, input.email, input.phone, input.alternateEmail]
+    `INSERT INTO procurement_vendors (name, country, niche, email, phone, alternate_email, website)
+     VALUES ($1,$2,$3,$4,$5,$6,$7)
+     RETURNING id, name, country, niche, email, phone, alternate_email, website, created_at`,
+    [input.name, input.country, input.niche, input.email, input.phone, input.alternateEmail, input.website]
   );
   return res.rows[0];
 }

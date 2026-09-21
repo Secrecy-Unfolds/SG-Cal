@@ -207,11 +207,15 @@ export default function ProductDetailClient({
         ← Back to Procurement Planning
       </a>
 
-      <div className="flex flex-col sm:flex-row gap-4 mt-3 mb-6">
+      {/* items-start: without it the flex row stretches the picture box to the
+          height of the whole text column, so a long description elongated the
+          image. The picture now sits beside just the name/actions, and the
+          description runs full-width underneath. */}
+      <div className={`flex flex-col sm:flex-row sm:items-start gap-4 mt-3 ${product.description ? "mb-4" : "mb-6"}`}>
         <div className="w-full sm:w-40 aspect-[4/3] sm:aspect-square bg-black/5 dark:bg-white/5 rounded-xl overflow-hidden flex items-center justify-center shrink-0">
           {product.picture_url ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={product.picture_url} alt={product.name} className="w-full h-full object-cover" />
+            <img src={product.picture_url} alt={product.name} className="w-full h-full object-contain" />
           ) : (
             <span className="text-3xl text-black/20 dark:text-white/20">📦</span>
           )}
@@ -223,9 +227,6 @@ export default function ProductDetailClient({
             {PROCUREMENT_STATUS_LABELS[product.status]}
           </span>
           <h1 className="text-xl font-semibold break-words">{product.name}</h1>
-          {product.description && (
-            <p className="text-sm text-black/70 dark:text-white/70 mt-1 whitespace-pre-wrap">{product.description}</p>
-          )}
           <div className="flex flex-wrap gap-2 mt-3">
             <span className="btn-glow inline-block">
               <button
@@ -257,6 +258,10 @@ export default function ProductDetailClient({
           </div>
         </div>
       </div>
+
+      {product.description && (
+        <p className="text-sm text-black/70 dark:text-white/70 mb-6 whitespace-pre-wrap">{product.description}</p>
+      )}
 
       {error && <p className="text-sm text-red-600 dark:text-red-400 mb-4">{error}</p>}
       {poCreatedMessage && <p className="text-sm text-green-600 dark:text-green-400 mb-4">{poCreatedMessage}</p>}

@@ -135,6 +135,25 @@ ALTER TABLE procurement_vendors ADD COLUMN IF NOT EXISTS email TEXT NOT NULL DEF
 ALTER TABLE procurement_vendors ADD COLUMN IF NOT EXISTS phone TEXT NOT NULL DEFAULT '';
 ALTER TABLE procurement_vendors ADD COLUMN IF NOT EXISTS alternate_email TEXT NOT NULL DEFAULT '';
 
+-- 0.2.8: vendor website + a documents section (company profile, product
+-- catalogue, price list, ...). Files live in Vercel Blob; one row per file,
+-- no versioning (upload again / delete the old one). ON DELETE CASCADE from
+-- the vendor — lib/procurement.ts's deleteVendor also removes the blobs.
+ALTER TABLE procurement_vendors ADD COLUMN IF NOT EXISTS website TEXT NOT NULL DEFAULT '';
+
+CREATE TABLE IF NOT EXISTS procurement_vendor_documents (
+  id SERIAL PRIMARY KEY,
+  vendor_id INTEGER NOT NULL REFERENCES procurement_vendors(id) ON DELETE CASCADE,
+  category TEXT NOT NULL DEFAULT 'other',
+  blob_url TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  mime_type TEXT NOT NULL DEFAULT '',
+  size_bytes INTEGER NOT NULL DEFAULT 0,
+  uploaded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  uploaded_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS procurement_vendor_documents_vendor_id_idx ON procurement_vendor_documents (vendor_id);
+
 CREATE TABLE IF NOT EXISTS procurement_product_vendors (
   id SERIAL PRIMARY KEY,
   product_id INTEGER NOT NULL REFERENCES procurement_products(id) ON DELETE CASCADE,

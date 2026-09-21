@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ConfirmModal from "@/components/ConfirmModal";
 import EditVendorModal from "@/components/procurement/EditVendorModal";
+import VendorDocumentsPanel from "@/components/procurement/VendorDocumentsPanel";
 import type { VendorWithProductsRow } from "@/lib/procurement";
 import { HudFrame } from "@/components/hud/HudFrame";
 import { PaginationControls, usePagination } from "@/components/Pagination";
@@ -65,6 +66,16 @@ export default function VendorsListClient({ vendors }: { vendors: VendorWithProd
                     {[v.email, v.phone].filter(Boolean).join(" · ")}
                   </div>
                 )}
+                {v.website && (
+                  <a
+                    href={v.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block text-xs text-accent dark:text-blue-300 hover:underline truncate"
+                  >
+                    {v.website.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+                  </a>
+                )}
               </div>
               <div className="shrink-0 flex gap-2">
                 <span className="btn-glow inline-block">
@@ -105,6 +116,8 @@ export default function VendorsListClient({ vendors }: { vendors: VendorWithProd
                 ))}
               </div>
             )}
+
+            <VendorDocumentsPanel vendorId={v.id} documents={v.documents} onChanged={() => router.refresh()} />
           </HudFrame>
         ))}
       </div>

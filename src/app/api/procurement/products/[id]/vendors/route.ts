@@ -9,6 +9,7 @@ import {
 } from "@/lib/procurement";
 import { getAdminLevelRecipientEmails, sendMailInBackground } from "@/lib/mailer";
 import { vendorAddedEmail } from "@/lib/procurementEmailTemplates";
+import { normalizeWebsite } from "@/lib/procurementDisplay";
 
 export const runtime = "nodejs";
 
@@ -74,7 +75,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const email = typeof body?.email === "string" ? body.email.trim() : "";
     const phone = typeof body?.phone === "string" ? body.phone.trim() : "";
     const alternateEmail = typeof body?.alternateEmail === "string" ? body.alternateEmail.trim() : "";
-    const vendor = await createVendor({ name, country, niche, email, phone, alternateEmail });
+    const website = normalizeWebsite(typeof body?.website === "string" ? body.website : "");
+    if (website === null) {
+      return NextResponse.json({ error: "Website must be a valid http(s) address, e.g. example.com" }, { status: 400 });
+    }
+    const vendor = await createVendor({ name, country, niche, email, phone, alternateEmail, website });
     vendorId = vendor.id;
   }
 

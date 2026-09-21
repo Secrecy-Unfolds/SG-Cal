@@ -85,3 +85,64 @@ export function formatDateOnly(value: string | null): string {
   if (isNaN(d.getTime())) return "—";
   return d.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
 }
+
+// A vendor's website, as entered: '' (none) or a URL. A missing scheme gets
+// "https://" prepended, and only http/https is accepted — the value is
+// rendered as a clickable link, so anything else (javascript:, data:, ...)
+// must never be stored. Returns null when the input isn't a usable URL.
+export function normalizeWebsite(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return "";
+  const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  try {
+    const url = new URL(withScheme);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    if (!url.hostname.includes(".")) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+// Vendor documents (company profile, catalogue, ...) — a fixed category list
+// rather than free text so they group/filter consistently.
+export const VENDOR_DOCUMENT_CATEGORIES = [
+  "company_profile",
+  "product_catalogue",
+  "price_list",
+  "certificate",
+  "contract",
+  "other",
+] as const;
+export type VendorDocumentCategory = (typeof VENDOR_DOCUMENT_CATEGORIES)[number];
+
+export const VENDOR_DOCUMENT_CATEGORY_LABELS: Record<VendorDocumentCategory, string> = {
+  company_profile: "Company profile",
+  product_catalogue: "Product catalogue",
+  price_list: "Price list",
+  certificate: "Certificate",
+  contract: "Contract",
+  other: "Other",
+};
+
+export function isVendorDocumentCategory(value: unknown): value is VendorDocumentCategory {
+  return VENDOR_DOCUMENT_CATEGORIES.includes(value as VendorDocumentCategory);
+}
+
+export type VendorDocumentRow = {
+  id: number;
+  vendor_id: number;
+  category: VendorDocumentCategory;
+  blob_url: string;
+  file_name: string;
+  mime_type: string;
+  size_bytes: number;
+  uploaded_by_username: string | null;
+  uploaded_at: string; // ISO
+};
+
+export function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}

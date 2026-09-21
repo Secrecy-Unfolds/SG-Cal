@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { isAdminLevel } from "@/lib/users";
 import { deleteVendor, getVendorById, updateVendorIdentity } from "@/lib/procurement";
+import { normalizeWebsite } from "@/lib/procurementDisplay";
 
 export const runtime = "nodejs";
 
@@ -30,12 +31,16 @@ export async function PUT(req: NextRequest, { params }: { params: { vendorId: st
   const email = typeof body?.email === "string" ? body.email.trim() : "";
   const phone = typeof body?.phone === "string" ? body.phone.trim() : "";
   const alternateEmail = typeof body?.alternateEmail === "string" ? body.alternateEmail.trim() : "";
+  const website = normalizeWebsite(typeof body?.website === "string" ? body.website : "");
 
   if (!name) {
     return NextResponse.json({ error: "Vendor name is required" }, { status: 400 });
   }
+  if (website === null) {
+    return NextResponse.json({ error: "Website must be a valid http(s) address, e.g. example.com" }, { status: 400 });
+  }
 
-  const vendor = await updateVendorIdentity(id, { name, country, niche, email, phone, alternateEmail });
+  const vendor = await updateVendorIdentity(id, { name, country, niche, email, phone, alternateEmail, website });
   return NextResponse.json({ vendor });
 }
 
