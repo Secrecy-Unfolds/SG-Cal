@@ -24,10 +24,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const name = typeof body?.name === "string" ? body.name.trim() : "";
   const description = typeof body?.description === "string" ? body.description.trim() : "";
   const prerequisiteMilestoneId = typeof body?.prerequisiteMilestoneId === "number" ? body.prerequisiteMilestoneId : null;
+  const startDate = typeof body?.startDate === "string" && body.startDate ? body.startDate : null;
 
   if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
 
-  const result = await updateMilestone(id, { name, description, prerequisiteMilestoneId });
+  const result = await updateMilestone(id, { name, description, startDate, prerequisiteMilestoneId });
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
 
   return NextResponse.json({ milestone: result.milestone });

@@ -47,13 +47,23 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const name = typeof body?.name === "string" ? body.name.trim() : "";
   const description = typeof body?.description === "string" ? body.description.trim() : "";
   const startDate = typeof body?.startDate === "string" && body.startDate ? body.startDate : null;
+  // Only a Stage carries a prerequisite; absent/undefined leaves it alone.
+  const prerequisiteStageId: number | null | undefined =
+    typeof body?.prerequisiteStageId === "number"
+      ? body.prerequisiteStageId
+      : body?.prerequisiteStageId === null
+      ? null
+      : undefined;
 
   if (!name) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
 
-  const plan = await updatePlan(id, { name, description, startDate });
-  if (!plan) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const result = await updatePlan(id, { name, description, startDate, prerequisiteStageId });
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error }, { status: result.notFound ? 404 : 400 });
+  }
+  const plan = result.plan;
 
   const recipients = await getAdminLevelRecipientEmails("ideas");
   const { subject, html } = planUpdatedEmail(plan, session.username);

@@ -30,6 +30,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const startAtStr = typeof body?.startAt === "string" ? body.startAt : "";
   const endAtStr = typeof body?.endAt === "string" ? body.endAt : "";
   const assigneeId = typeof body?.assigneeId === "number" ? body.assigneeId : null;
+  const attendeeIds: number[] | undefined = Array.isArray(body?.attendeeIds)
+    ? body.attendeeIds.filter((aid: unknown): aid is number => typeof aid === "number")
+    : undefined;
   const requiresDeliverable = body?.requiresDeliverable === true;
   const prerequisiteStepIds: number[] | undefined = Array.isArray(body?.prerequisiteStepIds)
     ? body.prerequisiteStepIds.filter((pid: unknown): pid is number => typeof pid === "number")
@@ -56,7 +59,16 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json({ error: "Invalid start/end date" }, { status: 400 });
   }
 
-  const result = await updateStep(id, { title, notes, startAt, endAt, assigneeId, requiresDeliverable, newDeliverableDefs });
+  const result = await updateStep(id, {
+    title,
+    notes,
+    startAt,
+    endAt,
+    assigneeId,
+    attendeeIds,
+    requiresDeliverable,
+    newDeliverableDefs,
+  });
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
 
   if (prerequisiteStepIds !== undefined) {

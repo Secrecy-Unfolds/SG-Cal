@@ -6,6 +6,7 @@ import { muscatInputToUTC, toMuscatDateInput, toMuscatTimeInput } from "@/lib/ti
 import type { StepRow } from "@/lib/planSteps";
 import type { EventType } from "@/lib/events";
 import type { DeliverableKind } from "@/lib/planDeliverablesDisplay";
+import { defaultStartDate, startBeforeFloorMessage, type StartFloor } from "@/lib/planTiming";
 
 const inputClass =
   "w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent";
@@ -16,6 +17,7 @@ type StepOption = { id: number; title: string };
 export default function StepFormModal({
   planId,
   otherSteps,
+  startFloor = null,
   step,
   onClose,
   onSaved,
@@ -23,6 +25,10 @@ export default function StepFormModal({
 }: {
   planId: number;
   otherSteps: StepOption[];
+  // Earliest date this step may start on — the latest start among its
+  // plan/Stage/Milestone/Strategy (see lib/planTiming.ts). New steps
+  // pre-fill with it (or today, if later); earlier dates can't be picked.
+  startFloor?: StartFloor;
   step?: StepRow;
   onClose: () => void;
   onSaved: () => void;
@@ -35,10 +41,12 @@ export default function StepFormModal({
   const [stepType, setStepType] = useState<EventType>(step?.step_type ?? "task");
   const [title, setTitle] = useState(step?.title ?? "");
   const [notes, setNotes] = useState(step?.notes ?? "");
-  const [date, setDate] = useState(toMuscatDateInput(initialStart));
+  const [date, setDate] = useState(step ? toMuscatDateInput(initialStart) : defaultStartDate(startFloor));
   const [startTime, setStartTime] = useState(toMuscatTimeInput(initialStart));
   const [endTime, setEndTime] = useState(initialEnd ? toMuscatTimeInput(initialEnd) : "");
   const [assigneeId, setAssigneeId] = useState<number | null>(step?.assignee_id ?? null);
+  // A Meeting step has attendees instead of an assignee.
+  const [attendeeIds, setAttendeeIds] = useState<number[]>(step?.attendees.map((a) => a.id) ?? []);
   const [prerequisiteIds, setPrerequisiteIds] = useState<number[]>(step?.prerequisite_step_ids ?? []);
   const [requiresDeliverable, setRequiresDeliverable] = useState(step?.requires_deliverable ?? false);
   const [newDefs, setNewDefs] = useState<{ kind: DeliverableKind; label: string }[]>([]);
@@ -59,6 +67,14 @@ export default function StepFormModal({
       .then((data) => setAllUsers(data.users ?? []))
       .catch(() => setAllUsers([]));
   }, []);
+
+  function addAttendee(id: number) {
+    setAttendeeIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+  }
+
+  function removeAttendee(id: number) {
+    setAttendeeIds((prev) => prev.filter((a) => a !== id));
+  }
 
   function togglePrerequisite(id: number) {
     setPrerequisiteIds((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]));
@@ -85,6 +101,10 @@ export default function StepFormModal({
       setError("Tasks need a due time");
       return;
     }
+    if (startFloor && date < startFloor.date) {
+      setError(startBeforeFloorMessage("A step", startFloor));
+      return;
+    }
     setSaving(true);
     try {
       const startAt = muscatInputToUTC(date, startTime).toISOString();
@@ -100,7 +120,8 @@ export default function StepFormModal({
           notes,
           startAt,
           endAt,
-          assigneeId,
+          assigneeId: isTask ? assigneeId : null,
+          attendeeIds: isTask ? [] : attendeeIds,
           requiresDeliverable,
           prerequisiteStepIds: prerequisiteIds,
           ...(isEdit ? { newDeliverableDefs: newDefs } : { deliverableDefs: newDefs }),
@@ -201,6 +222,7 @@ export default function StepFormModal({
               type="date"
               className={`${inputClass} dark:[color-scheme:dark]`}
               value={date}
+              min={startFloor?.date}
               onChange={(e) => setDate(e.target.value)}
               required
             />
@@ -227,6 +249,13 @@ export default function StepFormModal({
           </div>
         </div>
 
+        {startFloor && (
+          <p className="text-xs text-black/40 dark:text-white/40 -mt-2">
+            Can&rsquo;t start before {startFloor.date} &mdash; the start of {startFloor.label}.
+          </p>
+        )}
+
+        {isTask ? (
         <div className="space-y-1">
           <label className="text-sm font-medium">Assigned to</label>
           <select
@@ -244,6 +273,42 @@ export default function StepFormModal({
             ))}
           </select>
         </div>
+        ) : (
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Attendees</label>
+            {attendeeIds.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {attendeeIds.map((id) => (
+                  <span
+                    key={id}
+                    className="inline-flex items-center gap-1 rounded-full text-xs font-medium px-2.5 py-1 border bg-accent/10 dark:bg-accent/20 text-accent dark:text-blue-300 border-accent/30"
+                  >
+                    {allUsers.find((u) => u.id === id)?.username ?? step?.attendees.find((a) => a.id === id)?.username ?? `#${id}`}
+                    <button type="button" onClick={() => removeAttendee(id)} aria-label="Remove attendee" className="hover:text-red-600">
+                      ✕
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <select
+              className={`${inputClass} [color-scheme:light] dark:[color-scheme:dark]`}
+              value=""
+              onChange={(e) => e.target.value && addAttendee(Number(e.target.value))}
+            >
+              <option className="bg-white text-ink dark:bg-neutral-900 dark:text-neutral-100" value="">
+                {attendeeIds.length === 0 ? "Add an attendee…" : "Add another attendee…"}
+              </option>
+              {allUsers
+                .filter((u) => !attendeeIds.includes(u.id))
+                .map((u) => (
+                  <option key={u.id} className="bg-white text-ink dark:bg-neutral-900 dark:text-neutral-100" value={u.id}>
+                    {u.username}
+                  </option>
+                ))}
+            </select>
+          </div>
+        )}
 
         {selectableSteps.length > 0 && (
           <div className="space-y-1">

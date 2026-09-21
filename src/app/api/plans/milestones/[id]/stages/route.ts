@@ -31,9 +31,18 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const name = typeof body?.name === "string" ? body.name.trim() : "";
   const description = typeof body?.description === "string" ? body.description.trim() : "";
   const startDate = typeof body?.startDate === "string" && body.startDate ? body.startDate : null;
+  const prerequisiteStageId = typeof body?.prerequisiteStageId === "number" ? body.prerequisiteStageId : null;
 
   if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
 
-  const stage = await createStage({ milestoneId, name, description, startDate, createdBy: session.uid });
-  return NextResponse.json({ id: stage.id }, { status: 201 });
+  const result = await createStage({
+    milestoneId,
+    name,
+    description,
+    startDate,
+    prerequisiteStageId,
+    createdBy: session.uid,
+  });
+  if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
+  return NextResponse.json({ id: result.id }, { status: 201 });
 }

@@ -5,6 +5,8 @@ import { getPlanById } from "@/lib/plans";
 import { getMilestoneById, listMilestonesForStrategy, listStagesForMilestone } from "@/lib/planMilestones";
 import { getPlanProgressForPlans } from "@/lib/planProgress";
 import { canUserViewPlan } from "@/lib/planShares";
+import { getFloorForMilestone, getFloorForStage } from "@/lib/planStartRules";
+import { buildStageGraph } from "@/lib/planGraphData";
 import MilestoneDetailClient from "@/components/plans/MilestoneDetailClient";
 
 export default async function MilestoneDetailPage({
@@ -29,11 +31,16 @@ export default async function MilestoneDetailPage({
   if (!(await canUserViewPlan(strategyId, session.uid, session.role))) redirect("/plans");
   const isAdmin = isAdminLevel(session.role);
 
-  const [stages, siblingMilestones] = await Promise.all([
+  const [stages, siblingMilestones, milestoneStartFloor, stageStartFloor] = await Promise.all([
     listStagesForMilestone(milestoneId),
     listMilestonesForStrategy(strategyId),
+    getFloorForMilestone(strategyId),
+    getFloorForStage(milestoneId),
   ]);
-  const progressByStage = await getPlanProgressForPlans(stages.map((s) => s.id));
+  const [progressByStage, graphStages] = await Promise.all([
+    getPlanProgressForPlans(stages.map((s) => s.id)),
+    buildStageGraph(stages),
+  ]);
 
   return (
     <MilestoneDetailClient
@@ -42,6 +49,9 @@ export default async function MilestoneDetailPage({
       siblingMilestones={siblingMilestones}
       stages={stages}
       progressByStage={progressByStage}
+      graphStages={graphStages}
+      milestoneStartFloor={milestoneStartFloor}
+      stageStartFloor={stageStartFloor}
       isAdmin={isAdmin}
     />
   );

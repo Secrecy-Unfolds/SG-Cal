@@ -1,15 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/hud/PageHeader";
 import { HudFrameButton } from "@/components/hud/HudFrame";
 import MilestoneFormModal from "@/components/plans/MilestoneFormModal";
 import StageFormModal from "@/components/plans/StageFormModal";
 import PlanProgressBar from "@/components/plans/PlanProgressBar";
+import PlanHierarchyGraph from "@/components/plans/PlanHierarchyGraph";
+import SegmentedToggle from "@/components/plans/SegmentedToggle";
 import type { PlanRow } from "@/lib/plans";
 import type { MilestoneRow, StagePlanRow } from "@/lib/planMilestones";
 import type { PlanProgress } from "@/lib/planProgress";
+import type { StartFloor } from "@/lib/planTiming";
+import {
+  stageTreeNode,
+  type GraphFrame,
+  type GraphStage,
+  type MilestoneGraphDepth,
+  type TreeNode,
+} from "@/lib/planGraph";
 import { formatDateOnly } from "@/lib/procurementDisplay";
 
 export default function MilestoneDetailClient({
@@ -18,6 +28,9 @@ export default function MilestoneDetailClient({
   siblingMilestones,
   stages,
   progressByStage,
+  graphStages,
+  milestoneStartFloor,
+  stageStartFloor,
   isAdmin,
 }: {
   strategyPlan: PlanRow;
@@ -25,9 +38,30 @@ export default function MilestoneDetailClient({
   siblingMilestones: MilestoneRow[];
   stages: StagePlanRow[];
   progressByStage: Record<number, PlanProgress>;
+  graphStages: GraphStage[];
+  // Earliest date this milestone itself may start on (its Strategy's start).
+  milestoneStartFloor: StartFloor;
+  // Earliest date a new Stage inside it may start on (this Milestone's /
+  // its Strategy's start).
+  stageStartFloor: StartFloor;
   isAdmin: boolean;
 }) {
   const router = useRouter();
+  const [view, setView] = useState<"list" | "graph">("list");
+  const [depth, setDepth] = useState<MilestoneGraphDepth>("stages");
+
+  const treeNodes = useMemo(
+    () => graphStages.map((s) => stageTreeNode(s, depth === "steps")),
+    [graphStages, depth]
+  );
+  const frames = useMemo<GraphFrame[]>(
+    () => [
+      { kindLabel: "Strategy", name: strategyPlan.name },
+      { kindLabel: "Milestone", name: milestone.name },
+    ],
+    [strategyPlan.name, milestone.name]
+  );
+  const handleSelectNode = useCallback((node: TreeNode) => node.href && router.push(node.href), [router]);
   const [showEdit, setShowEdit] = useState(false);
   const [showCreateStage, setShowCreateStage] = useState(false);
 
@@ -83,7 +117,8 @@ export default function MilestoneDetailClient({
       </PageHeader>
 
       <div className="rounded-2xl border border-black/5 dark:border-white/10 p-4 mb-4 bg-white dark:bg-neutral-900">
-        {milestone.description && <div className="text-sm whitespace-pre-wrap">{milestone.description}</div>}
+        <div className="text-xs text-black/50 dark:text-white/50">Start date: {formatDateOnly(milestone.start_date)}</div>
+        {milestone.description && <div className="text-sm mt-2 whitespace-pre-wrap">{milestone.description}</div>}
         <PlanProgressBar
           progress={overall.progress}
           total={overall.total}
@@ -93,10 +128,35 @@ export default function MilestoneDetailClient({
         />
       </div>
 
+      {stages.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 mb-3">
+          <SegmentedToggle
+            options={[
+              { value: "list", label: "List" },
+              { value: "graph", label: "Graph" },
+            ]}
+            value={view}
+            onChange={setView}
+          />
+          {view === "graph" && (
+            <SegmentedToggle
+              options={[
+                { value: "stages", label: "Stages only" },
+                { value: "steps", label: "+ Steps" },
+              ]}
+              value={depth}
+              onChange={setDepth}
+            />
+          )}
+        </div>
+      )}
+
       {stages.length === 0 ? (
         <p className="text-sm text-black/50 dark:text-white/50">
           No stages yet{isAdmin ? " — add the first one." : "."}
         </p>
+      ) : view === "graph" ? (
+        <PlanHierarchyGraph nodes={treeNodes} frames={frames} onSelectNode={handleSelectNode} />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {stages.map((stage) => {
@@ -112,6 +172,11 @@ export default function MilestoneDetailClient({
                 <div className="text-xs text-black/50 dark:text-white/50 mt-1">
                   Start date: {formatDateOnly(stage.start_date)}
                 </div>
+                {stage.prerequisite_stage_id !== null && (
+                  <div className="text-xs text-black/40 dark:text-white/40 mt-1">
+                    After: {stages.find((s) => s.id === stage.prerequisite_stage_id)?.name ?? "—"}
+                  </div>
+                )}
                 {stage.description && (
                   <div className="text-xs text-black/50 dark:text-white/50 mt-2 line-clamp-2">{stage.description}</div>
                 )}
@@ -132,13 +197,20 @@ export default function MilestoneDetailClient({
           strategyPlanId={strategyPlan.id}
           otherMilestones={siblingMilestones}
           milestone={milestone}
+          startFloor={milestoneStartFloor}
           onClose={() => setShowEdit(false)}
           onSaved={afterMilestoneChange}
           onDeleted={afterMilestoneDeleted}
         />
       )}
       {showCreateStage && (
-        <StageFormModal milestoneId={milestone.id} onClose={() => setShowCreateStage(false)} onSaved={afterStageChange} />
+        <StageFormModal
+          milestoneId={milestone.id}
+          startFloor={stageStartFloor}
+          siblingStages={stages.map((s) => ({ id: s.id, name: s.name }))}
+          onClose={() => setShowCreateStage(false)}
+          onSaved={afterStageChange}
+        />
       )}
     </div>
   );

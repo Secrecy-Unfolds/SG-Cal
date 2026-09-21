@@ -896,6 +896,16 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
+-- 0.2.6: start-date hierarchy + stage ordering.
+-- A Milestone gets its own start date (Strategy.start_date <= Milestone <=
+-- Stage <= step), enforced in src/lib/planStartRules.ts — a child can't
+-- start before its parent. A Stage (plan_type='process' row with
+-- parent_milestone_id set) can now name ONE prerequisite sibling Stage
+-- (same shape as milestones.prerequisite_milestone_id): ordering/graph
+-- edge only, deliberately NOT a done-gate.
+ALTER TABLE milestones ADD COLUMN IF NOT EXISTS start_date DATE;
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS prerequisite_stage_id INTEGER REFERENCES plans(id) ON DELETE SET NULL;
+
 -- Steps: the workflow unit shared by every plan type (and by a Stage,
 -- which is just a plan_type='process' plan). Every step is backed by a
 -- real `events` row unconditionally (src/lib/events.ts's
@@ -945,6 +955,19 @@ CREATE TABLE IF NOT EXISTS step_prerequisites (
 );
 CREATE INDEX IF NOT EXISTS step_prerequisites_prerequisite_step_id_idx
   ON step_prerequisites (prerequisite_step_id);
+
+-- 0.2.6: a Meeting step has attendees (the backing event's own
+-- event_attendees rows), not an assignee. Any pre-existing meeting step
+-- that still carries an assignee has that person moved over to attendees;
+-- idempotent — once assignee_id is NULL on every meeting step there's
+-- nothing left for either statement to touch.
+INSERT INTO event_attendees (event_id, user_id)
+  SELECT e.id, e.assignee_id
+  FROM steps s JOIN events e ON e.id = s.event_id
+  WHERE s.step_type = 'meeting' AND e.assignee_id IS NOT NULL
+  ON CONFLICT DO NOTHING;
+UPDATE events SET assignee_id = NULL
+  WHERE assignee_id IS NOT NULL AND id IN (SELECT event_id FROM steps WHERE step_type = 'meeting');
 
 -- Migration: every existing `ideas` row becomes a plan_type='idea' plan —
 -- a real migration, not a parallel system (confirmed 2026-09-18). The old

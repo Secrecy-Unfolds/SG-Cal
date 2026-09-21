@@ -23,6 +23,9 @@ export async function POST(req: NextRequest) {
   const startAtStr = typeof body?.startAt === "string" ? body.startAt : "";
   const endAtStr = typeof body?.endAt === "string" ? body.endAt : "";
   const assigneeId = typeof body?.assigneeId === "number" ? body.assigneeId : null;
+  const attendeeIds: number[] = Array.isArray(body?.attendeeIds)
+    ? body.attendeeIds.filter((id: unknown): id is number => typeof id === "number")
+    : [];
   const requiresDeliverable = body?.requiresDeliverable === true;
   const prerequisiteStepIds: number[] = Array.isArray(body?.prerequisiteStepIds)
     ? body.prerequisiteStepIds.filter((id: unknown): id is number => typeof id === "number")
@@ -63,6 +66,7 @@ export async function POST(req: NextRequest) {
     startAt,
     endAt,
     assigneeId,
+    attendeeIds,
     requiresDeliverable,
     deliverableDefs,
     prerequisiteStepIds,

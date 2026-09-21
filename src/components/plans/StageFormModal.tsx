@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { defaultStartDate, startBeforeFloorMessage, type StartFloor } from "@/lib/planTiming";
 
 const inputClass =
   "w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent";
@@ -11,16 +12,23 @@ const inputClass =
 // /api/plans, and with no type picker (a Stage's type is fixed).
 export default function StageFormModal({
   milestoneId,
+  startFloor = null,
+  siblingStages,
   onClose,
   onSaved,
 }: {
   milestoneId: number;
+  // Earliest date this stage may start on — its Milestone's / Strategy's
+  // start. New stages pre-fill with it (or today, if later).
+  startFloor?: StartFloor;
+  siblingStages: { id: number; name: string }[];
   onClose: () => void;
   onSaved: () => void;
 }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [startDate, setStartDate] = useState("");
+  const [startDate, setStartDate] = useState(defaultStartDate(startFloor));
+  const [prerequisiteStageId, setPrerequisiteStageId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,12 +39,16 @@ export default function StageFormModal({
       setError("Name is required");
       return;
     }
+    if (startFloor && startDate && startDate < startFloor.date) {
+      setError(startBeforeFloorMessage("A stage", startFloor));
+      return;
+    }
     setSaving(true);
     try {
       const res = await fetch(`/api/plans/milestones/${milestoneId}/stages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), description, startDate: startDate || null }),
+        body: JSON.stringify({ name: name.trim(), description, startDate: startDate || null, prerequisiteStageId }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -88,9 +100,38 @@ export default function StageFormModal({
             type="date"
             className={`${inputClass} dark:[color-scheme:dark]`}
             value={startDate}
+            min={startFloor?.date}
             onChange={(e) => setStartDate(e.target.value)}
           />
+          {startFloor && (
+            <p className="text-xs text-black/40 dark:text-white/40">
+              Can&rsquo;t start before {startFloor.date} &mdash; the start of {startFloor.label}.
+            </p>
+          )}
         </div>
+
+        {siblingStages.length > 0 && (
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Prerequisite stage (optional)</label>
+            <select
+              className={`${inputClass} [color-scheme:light] dark:[color-scheme:dark]`}
+              value={prerequisiteStageId ?? ""}
+              onChange={(e) => setPrerequisiteStageId(e.target.value ? Number(e.target.value) : null)}
+            >
+              <option className="bg-white text-ink dark:bg-neutral-900 dark:text-neutral-100" value="">
+                None
+              </option>
+              {siblingStages.map((s) => (
+                <option key={s.id} className="bg-white text-ink dark:bg-neutral-900 dark:text-neutral-100" value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-black/40 dark:text-white/40">
+              Shows this stage after the prerequisite in the graph. Ordering only &mdash; it doesn&rsquo;t block marking steps done.
+            </p>
+          </div>
+        )}
 
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/hud/PageHeader";
@@ -8,12 +8,16 @@ import PlanFormModal from "@/components/plans/PlanFormModal";
 import PlanProgressBar from "@/components/plans/PlanProgressBar";
 import PlanShareModal from "@/components/plans/PlanShareModal";
 import PromoteIdeaModal from "@/components/plans/PromoteIdeaModal";
+import AddToStrategyModal from "@/components/plans/AddToStrategyModal";
 import StepFormModal from "@/components/plans/StepFormModal";
 import StepCard from "@/components/plans/StepCard";
-import StepWorkflowGraph from "@/components/plans/StepWorkflowGraph";
+import PlanHierarchyGraph from "@/components/plans/PlanHierarchyGraph";
+import SegmentedToggle from "@/components/plans/SegmentedToggle";
 import type { PlanRow } from "@/lib/plans";
 import type { StepRow } from "@/lib/planSteps";
 import type { PlanProgress } from "@/lib/planProgress";
+import type { StartFloor } from "@/lib/planTiming";
+import { graphStepFromRow, stepTreeNode, type GraphFrame, type TreeNode } from "@/lib/planGraph";
 import { PLAN_TYPE_LABELS, type StepStatus } from "@/lib/planDisplay";
 import { formatDateOnly } from "@/lib/procurementDisplay";
 
@@ -22,12 +26,26 @@ export default function PlanDetailClient({
   steps,
   progress,
   backLink,
+  stepStartFloor,
+  planStartFloor,
+  siblingStages,
+  frames,
   isAdmin,
 }: {
   plan: PlanRow;
   steps: StepRow[];
   progress: PlanProgress;
   backLink?: { href: string; label: string } | null;
+  // Earliest date a step in this plan may start on (this plan's own start,
+  // and — for a Stage — its Milestone's / Strategy's).
+  stepStartFloor: StartFloor;
+  // Earliest date this plan's OWN start may be set to (a Stage only —
+  // its Milestone's / Strategy's start).
+  planStartFloor: StartFloor;
+  siblingStages: { id: number; name: string }[];
+  // Strategy > Milestone > Stage context the step graph is drawn inside
+  // (empty for a standalone Process/Idea).
+  frames: GraphFrame[];
   isAdmin: boolean;
 }) {
   const router = useRouter();
@@ -36,6 +54,7 @@ export default function PlanDetailClient({
   const [editingStep, setEditingStep] = useState<StepRow | null>(null);
   const [showShare, setShowShare] = useState(false);
   const [showPromote, setShowPromote] = useState(false);
+  const [showAddToStrategy, setShowAddToStrategy] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
   const [view, setView] = useState<"list" | "graph">("list");
@@ -89,6 +108,16 @@ export default function PlanDetailClient({
 
   const otherStepOptions = steps.map((s) => ({ id: s.id, title: s.title }));
 
+  const treeNodes = useMemo(() => steps.map((s) => stepTreeNode(graphStepFromRow(s))), [steps]);
+  const handleSelectNode = useCallback(
+    (node: TreeNode) => {
+      if (!isAdmin) return;
+      const step = steps.find((s) => s.id === node.stepId);
+      if (step) setEditingStep(step);
+    },
+    [isAdmin, steps]
+  );
+
   return (
     <div>
       {backLink && (
@@ -117,6 +146,16 @@ export default function PlanDetailClient({
                   className="btn-skew px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5 disabled:opacity-50"
                 >
                   {duplicating ? "Duplicating..." : "Duplicate"}
+                </button>
+              </span>
+            )}
+            {plan.plan_type === "process" && isRoot && (
+              <span className="btn-glow inline-block">
+                <button
+                  onClick={() => setShowAddToStrategy(true)}
+                  className="btn-skew px-4 py-2 text-sm border border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/5"
+                >
+                  Add to Strategy
                 </button>
               </span>
             )}
@@ -161,26 +200,15 @@ export default function PlanDetailClient({
         <p className="text-sm text-black/50 dark:text-white/50">No steps yet{isAdmin ? " — add the first one." : "."}</p>
       ) : (
         <>
-          <div className="flex rounded-lg border border-black/10 dark:border-white/10 p-1 text-sm w-fit mb-3">
-            <button
-              type="button"
-              onClick={() => setView("list")}
-              className={`btn-skew px-3 py-1 font-medium transition-colors ${
-                view === "list" ? "bg-accent text-ink" : "text-black/50 dark:text-white/50"
-              }`}
-            >
-              List
-            </button>
-            <button
-              type="button"
-              onClick={() => setView("graph")}
-              className={`btn-skew px-3 py-1 font-medium transition-colors ${
-                view === "graph" ? "bg-accent text-ink" : "text-black/50 dark:text-white/50"
-              }`}
-            >
-              Graph
-            </button>
-          </div>
+          <SegmentedToggle
+            className="mb-3"
+            options={[
+              { value: "list", label: "List" },
+              { value: "graph", label: "Graph" },
+            ]}
+            value={view}
+            onChange={setView}
+          />
 
           {view === "list" ? (
             <div className="space-y-2">
@@ -196,18 +224,26 @@ export default function PlanDetailClient({
               ))}
             </div>
           ) : (
-            <StepWorkflowGraph steps={steps} readOnly={!isAdmin} onSelectStep={(step) => setEditingStep(step)} />
+            <PlanHierarchyGraph nodes={treeNodes} frames={frames} onSelectNode={handleSelectNode} />
           )}
         </>
       )}
 
       {showEditPlan && (
-        <PlanFormModal plan={plan} onClose={() => setShowEditPlan(false)} onSaved={afterPlanChange} onDeleted={afterPlanDeleted} />
+        <PlanFormModal
+          plan={plan}
+          startFloor={planStartFloor}
+          siblingStages={siblingStages}
+          onClose={() => setShowEditPlan(false)}
+          onSaved={afterPlanChange}
+          onDeleted={afterPlanDeleted}
+        />
       )}
       {showCreateStep && (
         <StepFormModal
           planId={plan.id}
           otherSteps={otherStepOptions}
+          startFloor={stepStartFloor}
           onClose={() => setShowCreateStep(false)}
           onSaved={afterStepChange}
           onDeleted={afterStepChange}
@@ -217,10 +253,26 @@ export default function PlanDetailClient({
         <StepFormModal
           planId={plan.id}
           otherSteps={otherStepOptions}
+          startFloor={stepStartFloor}
           step={editingStep}
           onClose={() => setEditingStep(null)}
           onSaved={afterStepChange}
           onDeleted={afterStepChange}
+        />
+      )}
+      {showAddToStrategy && (
+        <AddToStrategyModal
+          plan={plan}
+          steps={steps}
+          onClose={() => setShowAddToStrategy(false)}
+          onDone={(newPlanId) => {
+            setShowAddToStrategy(false);
+            // Duplicate -> a new Stage row; move -> the same id, now a Stage
+            // (refresh re-runs the server page, which then shows its
+            // Strategy/Milestone breadcrumb and frames).
+            router.push(`/plans/${newPlanId}`);
+            router.refresh();
+          }}
         />
       )}
       {showShare && <PlanShareModal planId={plan.id} onClose={() => setShowShare(false)} onSaved={() => setShowShare(false)} />}

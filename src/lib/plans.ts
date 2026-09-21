@@ -1,6 +1,9 @@
 import { query, withTransaction } from "@/lib/db";
 import type { PoolClient } from "pg";
 import type { PlanType } from "@/lib/planDisplay";
+import { getMilestoneById, validateStagePrerequisite } from "@/lib/planMilestones";
+import { earliestStartUnderPlan, getFloorForPlanStart, getFloorForStage } from "@/lib/planStartRules";
+import { daysBetweenDates, startAfterDescendantsMessage, startBeforeFloorMessage } from "@/lib/planTiming";
 
 export type PlanRow = {
   id: number;
@@ -9,6 +12,9 @@ export type PlanRow = {
   name: string;
   description: string;
   start_date: string | null; // "YYYY-MM-DD"
+  // Only meaningful on a Stage (parent_milestone_id set) — its one optional
+  // prerequisite sibling Stage. Ordering/graph edge only, not a done-gate.
+  prerequisite_stage_id: number | null;
   promoted_from_plan_id: number | null;
   duplicated_from_plan_id: number | null;
   migrated_from_idea_id: number | null;
@@ -19,7 +25,7 @@ export type PlanRow = {
 };
 
 const PLAN_SELECT = `
-  SELECT p.id, p.plan_type, p.parent_milestone_id, p.name, p.description, p.start_date,
+  SELECT p.id, p.plan_type, p.parent_milestone_id, p.name, p.description, p.start_date, p.prerequisite_stage_id,
          p.promoted_from_plan_id, p.duplicated_from_plan_id, p.migrated_from_idea_id,
          p.created_by, u.username AS created_by_username, p.created_at, p.updated_at
   FROM plans p
@@ -69,15 +75,48 @@ export async function createPlan(input: {
   return created;
 }
 
+// Start-date hierarchy (Strategy <= Milestone <= Stage <= step, see
+// lib/planStartRules.ts): a Stage's start can't precede its Milestone's or
+// Strategy's, and no plan's start can move LATER than something already
+// scheduled inside it. `prerequisiteStageId` undefined leaves a Stage's
+// prerequisite untouched (the form only sends it for Stages).
 export async function updatePlan(
   id: number,
-  input: { name: string; description: string; startDate: string | null }
-): Promise<PlanRow | null> {
+  input: { name: string; description: string; startDate: string | null; prerequisiteStageId?: number | null }
+): Promise<{ ok: true; plan: PlanRow } | { ok: false; error: string; notFound?: boolean }> {
+  const existing = await getPlanById(id);
+  if (!existing) return { ok: false, error: "Not found", notFound: true };
+
+  const isStage = existing.parent_milestone_id !== null;
+  const noun = isStage ? "A stage" : `A ${existing.plan_type}`;
+
+  // Only re-checked when the start date actually changes, so a plan
+  // dated before this rule existed can still be renamed/edited in place.
+  if (input.startDate && input.startDate !== existing.start_date) {
+    const floor = await getFloorForPlanStart(id);
+    if (floor && input.startDate < floor.date) {
+      return { ok: false, error: startBeforeFloorMessage(noun, floor) };
+    }
+    const earliest = await earliestStartUnderPlan(id);
+    if (earliest && earliest < input.startDate) {
+      return { ok: false, error: startAfterDescendantsMessage(`This ${isStage ? "stage" : existing.plan_type}`, input.startDate, earliest) };
+    }
+  }
+
+  let prerequisiteStageId = existing.prerequisite_stage_id;
+  if (isStage && input.prerequisiteStageId !== undefined) {
+    const error = await validateStagePrerequisite(existing.parent_milestone_id!, input.prerequisiteStageId, id);
+    if (error) return { ok: false, error };
+    prerequisiteStageId = input.prerequisiteStageId;
+  }
+
   await query(
-    `UPDATE plans SET name = $1, description = $2, start_date = $3, updated_at = now() WHERE id = $4`,
-    [input.name, input.description, input.startDate, id]
+    `UPDATE plans SET name = $1, description = $2, start_date = $3, prerequisite_stage_id = $4, updated_at = now() WHERE id = $5`,
+    [input.name, input.description, input.startDate, prerequisiteStageId, id]
   );
-  return getPlanById(id);
+  const plan = await getPlanById(id);
+  if (!plan) return { ok: false, error: "Not found", notFound: true };
+  return { ok: true, plan };
 }
 
 // A plan's steps are each backed by their own real `events` row (see
@@ -135,6 +174,7 @@ async function cloneStepsForPlan(
 ): Promise<Map<number, number>> {
   const stepsRes = await client.query<{
     id: number;
+    event_id: number;
     step_type: "task" | "meeting";
     notes: string;
     requires_deliverable: boolean;
@@ -144,7 +184,7 @@ async function cloneStepsForPlan(
     end_at: Date | null;
     assignee_id: number | null;
   }>(
-    `SELECT s.id, s.step_type, s.notes, s.requires_deliverable, s.sort_order,
+    `SELECT s.id, s.event_id, s.step_type, s.notes, s.requires_deliverable, s.sort_order,
             e.title, e.start_at, e.end_at, e.assignee_id
      FROM steps s JOIN events e ON e.id = s.event_id
      WHERE s.plan_id = $1 ORDER BY s.sort_order ASC, s.id ASC`,
@@ -164,8 +204,18 @@ async function cloneStepsForPlan(
     const eventRes = await client.query<{ id: number }>(
       `INSERT INTO events (title, description, type, is_tentative, start_at, end_at, created_by, assignee_id, status)
        VALUES ($1, '', $2, false, $3, $4, $5, $6, $7) RETURNING id`,
-      [step.title, step.step_type, newStart, newEnd, createdBy, step.assignee_id, eventStatus]
+      [step.title, step.step_type, newStart, newEnd, createdBy, step.step_type === "meeting" ? null : step.assignee_id, eventStatus]
     );
+
+    // A meeting step's attendees carry over (they ARE the meeting's people,
+    // not per-run state like deliverable answers).
+    if (step.step_type === "meeting") {
+      await client.query(
+        `INSERT INTO event_attendees (event_id, user_id)
+         SELECT $1, ea.user_id FROM event_attendees ea WHERE ea.event_id = $2`,
+        [eventRes.rows[0].id, step.event_id]
+      );
+    }
 
     const newStepRes = await client.query<{ id: number }>(
       `INSERT INTO steps (plan_id, event_id, step_type, notes, requires_deliverable, sort_order, created_by)
@@ -265,17 +315,29 @@ export async function duplicatePlan(
         [id]
       );
       const milestoneIdMap = new Map<number, number>();
+      const stageIdMap = new Map<number, number>();
+      const stagePrerequisites: { oldId: number; oldPrerequisiteId: number }[] = [];
 
+      // Every level restarts "today" (Strategy <= Milestone <= Stage <=
+      // steps — the shifted steps all land on or after today, since the
+      // earliest one is moved to now), so the copy satisfies the same
+      // start-date hierarchy an original does.
       for (const m of milestonesRes.rows) {
         const newMsRes = await client.query<{ id: number }>(
-          `INSERT INTO milestones (strategy_plan_id, name, description, sort_order) VALUES ($1, $2, $3, $4) RETURNING id`,
-          [newPlanId, m.name, m.description, m.sort_order]
+          `INSERT INTO milestones (strategy_plan_id, name, description, start_date, sort_order)
+           VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+          [newPlanId, m.name, m.description, today, m.sort_order]
         );
         const newMilestoneId = newMsRes.rows[0].id;
         milestoneIdMap.set(m.id, newMilestoneId);
 
-        const stagesRes = await client.query<{ id: number; name: string; description: string }>(
-          `SELECT id, name, description FROM plans WHERE parent_milestone_id = $1`,
+        const stagesRes = await client.query<{
+          id: number;
+          name: string;
+          description: string;
+          prerequisite_stage_id: number | null;
+        }>(
+          `SELECT id, name, description, prerequisite_stage_id FROM plans WHERE parent_milestone_id = $1`,
           [m.id]
         );
         for (const stage of stagesRes.rows) {
@@ -284,7 +346,22 @@ export async function duplicatePlan(
              VALUES ('process', $1, $2, $3, $4, $5) RETURNING id`,
             [newMilestoneId, stage.name, stage.description, today, createdBy]
           );
+          stageIdMap.set(stage.id, newStageRes.rows[0].id);
+          if (stage.prerequisite_stage_id !== null) {
+            stagePrerequisites.push({ oldId: stage.id, oldPrerequisiteId: stage.prerequisite_stage_id });
+          }
           await cloneStepsForPlan(client, stage.id, newStageRes.rows[0].id, dayShiftMs, createdBy);
+        }
+      }
+
+      // Stage prerequisites, remapped once every Stage in the clone has a
+      // new id (a Stage's prerequisite is always a sibling in its own
+      // Milestone, so every reference resolves).
+      for (const sp of stagePrerequisites) {
+        const newSelfId = stageIdMap.get(sp.oldId);
+        const newPrereqId = stageIdMap.get(sp.oldPrerequisiteId);
+        if (newSelfId && newPrereqId) {
+          await client.query(`UPDATE plans SET prerequisite_stage_id = $1 WHERE id = $2`, [newPrereqId, newSelfId]);
         }
       }
 
@@ -310,6 +387,81 @@ export async function duplicatePlan(
   });
 
   return { ok: true, id: newPlanId };
+}
+
+// Adds a standalone Process to a Strategy's Milestone as a Stage (0.2.6).
+//  - "move": the SAME plan row becomes the Stage (parent_milestone_id set) —
+//    it leaves the standalone Processes list, keeps its steps, progress and
+//    dates. Confirmed with the user as the meaning of "link the same".
+//    Its own plan_shares rows are dropped: a Stage has no share row of its
+//    own — visibility now follows the Strategy's shares — so leaving them
+//    would just be dead rows.
+//  - "duplicate": a brand-new Stage is created from a copy of the Process
+//    (name/description/steps/prerequisites/deliverable placeholders/meeting
+//    attendees), starting at zero progress on a start date the caller
+//    supplies. Every step moves by the same number of days as the new start
+//    is from the Process's own start date (its earliest step, if it has no
+//    start date — or if a step somehow predates it), so relative spacing is
+//    kept. The original is untouched.
+// Either way the Stage must respect the start-date hierarchy (Strategy <=
+// Milestone <= Stage <= steps): the move is rejected if the Process (or
+// its earliest step) starts before the Milestone's floor; a duplicate's
+// chosen start date can't be before it.
+export async function addProcessToStrategy(
+  planId: number,
+  input: { milestoneId: number; mode: "move" | "duplicate"; startDate: string | null },
+  createdBy: number
+): Promise<{ ok: true; id: number } | { ok: false; error: string }> {
+  const plan = await getPlanById(planId);
+  if (!plan) return { ok: false, error: "Not found" };
+  if (plan.plan_type !== "process" || plan.parent_milestone_id !== null) {
+    return { ok: false, error: "Only a standalone Process can be added to a Strategy as a Stage" };
+  }
+  const milestone = await getMilestoneById(input.milestoneId);
+  if (!milestone) return { ok: false, error: "Milestone not found" };
+
+  const floor = await getFloorForStage(input.milestoneId);
+  const earliestStep = await earliestStartUnderPlan(planId);
+  const baseline = [plan.start_date, earliestStep]
+    .filter((d): d is string => !!d)
+    .reduce<string | null>((min, d) => (min === null || d < min ? d : min), null);
+
+  if (input.mode === "move") {
+    if (floor && baseline && baseline < floor.date) {
+      return {
+        ok: false,
+        error: `This process starts on ${baseline}, before ${floor.label} starts (${floor.date}). Duplicate it with a new start date instead, or change its dates first.`,
+      };
+    }
+    await withTransaction(async (client) => {
+      await client.query(
+        `UPDATE plans SET parent_milestone_id = $1, prerequisite_stage_id = NULL, updated_at = now() WHERE id = $2`,
+        [input.milestoneId, planId]
+      );
+      await client.query(`DELETE FROM plan_shares WHERE plan_id = $1`, [planId]);
+    });
+    return { ok: true, id: planId };
+  }
+
+  const startDate = input.startDate;
+  if (!startDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+    return { ok: false, error: "A start date is required for the duplicate" };
+  }
+  if (floor && startDate < floor.date) {
+    return { ok: false, error: `A stage can't start before ${floor.date} — the start of ${floor.label}` };
+  }
+  const shiftDays = baseline ? daysBetweenDates(baseline, startDate) : 0;
+
+  const newId = await withTransaction(async (client) => {
+    const res = await client.query<{ id: number }>(
+      `INSERT INTO plans (plan_type, parent_milestone_id, name, description, start_date, duplicated_from_plan_id, created_by)
+       VALUES ('process', $1, $2, $3, $4, $5, $6) RETURNING id`,
+      [input.milestoneId, plan.name, plan.description, startDate, plan.id, createdBy]
+    );
+    await cloneStepsForPlan(client, planId, res.rows[0].id, shiftDays * 86_400_000, createdBy);
+    return res.rows[0].id;
+  });
+  return { ok: true, id: newId };
 }
 
 // Idea -> Process/Strategy promotion (confirmed 2026-09-18): an Idea is

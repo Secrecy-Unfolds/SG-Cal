@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Phase 5 of the Process/Strategy/Idea workflow builder — an overdue
-  // step's assignee plus admin-level "Plans & Strategy" (still the
+  // step's assignee (attendees, for a meeting) plus admin-level "Plans & Strategy" (still the
   // "ideas" category internally, see lib/notificationPreferencesDisplay.ts)
   // subscribers get notified, same shape as the task-due-soon reminder
   // above. Recipients are resolved per step, not hoisted out of the loop,
@@ -59,8 +59,10 @@ export async function GET(req: NextRequest) {
   const plansAdminEmails = await getAdminLevelRecipientEmails("ideas");
   const overdueSteps = await listStepsNeedingOverdueReminder();
   for (const step of overdueSteps) {
-    const assigneeEmails = await getEmailsByIds([step.assignee_id]);
-    const recipients = Array.from(new Set([...assigneeEmails, ...plansAdminEmails]));
+    // A task's reminder goes to its assignee, a meeting's to its attendees.
+    const personIds = step.step_type === "task" ? (step.assignee_id !== null ? [step.assignee_id] : []) : step.attendee_ids;
+    const personEmails = await getEmailsByIds(personIds);
+    const recipients = Array.from(new Set([...personEmails, ...plansAdminEmails]));
     const { subject, html } = stepOverdueEmail(step);
     sendMailInBackground({ to: recipients, subject, html });
     await markOverdueReminderSent(step.id);

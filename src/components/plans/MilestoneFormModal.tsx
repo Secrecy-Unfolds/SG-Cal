@@ -3,6 +3,7 @@
 import { useState } from "react";
 import ConfirmModal from "@/components/ConfirmModal";
 import type { MilestoneRow } from "@/lib/planMilestones";
+import { defaultStartDate, startBeforeFloorMessage, type StartFloor } from "@/lib/planTiming";
 
 const inputClass =
   "w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent";
@@ -11,11 +12,15 @@ export default function MilestoneFormModal({
   strategyPlanId,
   otherMilestones,
   milestone,
+  startFloor = null,
   onClose,
   onSaved,
   onDeleted,
 }: {
   strategyPlanId: number;
+  // Earliest date this milestone may start on — its Strategy's start. New
+  // milestones pre-fill with it (or today, if later).
+  startFloor?: StartFloor;
   otherMilestones: MilestoneRow[];
   milestone?: MilestoneRow;
   onClose: () => void;
@@ -27,6 +32,7 @@ export default function MilestoneFormModal({
 
   const [name, setName] = useState(milestone?.name ?? "");
   const [description, setDescription] = useState(milestone?.description ?? "");
+  const [startDate, setStartDate] = useState(isEdit ? milestone?.start_date ?? "" : defaultStartDate(startFloor));
   const [prerequisiteId, setPrerequisiteId] = useState<number | null>(milestone?.prerequisite_milestone_id ?? null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -40,6 +46,10 @@ export default function MilestoneFormModal({
       setError("Name is required");
       return;
     }
+    if (startFloor && startDate && startDate < startFloor.date) {
+      setError(startBeforeFloorMessage("A milestone", startFloor));
+      return;
+    }
     setSaving(true);
     try {
       const res = await fetch(isEdit ? `/api/plans/milestones/${milestone!.id}` : `/api/plans/${strategyPlanId}/milestones`, {
@@ -48,6 +58,7 @@ export default function MilestoneFormModal({
         body: JSON.stringify({
           name: name.trim(),
           description,
+          startDate: startDate || null,
           prerequisiteMilestoneId: prerequisiteId,
         }),
       });
@@ -114,6 +125,22 @@ export default function MilestoneFormModal({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-sm font-medium">Start date</label>
+          <input
+            type="date"
+            className={`${inputClass} dark:[color-scheme:dark]`}
+            value={startDate}
+            min={startFloor?.date}
+            onChange={(e) => setStartDate(e.target.value)}
+          />
+          {startFloor && (
+            <p className="text-xs text-black/40 dark:text-white/40">
+              Can&rsquo;t start before {startFloor.date} &mdash; the start of {startFloor.label}.
+            </p>
+          )}
         </div>
 
         {selectableMilestones.length > 0 && (

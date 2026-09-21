@@ -31,6 +31,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const name = typeof body?.name === "string" ? body.name.trim() : "";
   const description = typeof body?.description === "string" ? body.description.trim() : "";
   const prerequisiteMilestoneId = typeof body?.prerequisiteMilestoneId === "number" ? body.prerequisiteMilestoneId : null;
+  const startDate = typeof body?.startDate === "string" && body.startDate ? body.startDate : null;
 
   if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
 
@@ -39,6 +40,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     strategyPlanId,
     name,
     description,
+    startDate,
     prerequisiteMilestoneId,
     sortOrder: existing.length,
   });

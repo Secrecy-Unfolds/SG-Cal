@@ -1,6 +1,9 @@
 import { query, withTransaction } from "@/lib/db";
 import { del } from "@vercel/blob";
-import { updateEvent, validateEventTiming, type EventType } from "@/lib/events";
+import { setAttendees, updateEvent, validateEventTiming, type EventAttendee, type EventType } from "@/lib/events";
+import { getFloorForSteps } from "@/lib/planStartRules";
+import { startBeforeFloorMessage } from "@/lib/planTiming";
+import { toMuscatDateInput } from "@/lib/time";
 import { prerequisitesSatisfied, type StepStatus } from "@/lib/planDisplay";
 import type { TaskStatus } from "@/lib/eventDisplay";
 import { isDeliverableDefFilled, type DeliverableDefRow, type DeliverableKind } from "@/lib/planDeliverables";
@@ -37,8 +40,13 @@ export type StepRow = {
   start_at: Date;
   end_at: Date | null;
   event_status: TaskStatus;
+  // A Task step has an assignee; a Meeting step has attendees instead
+  // (assignee_id is always null for a meeting — see createStep). Attendees
+  // are the backing event's own event_attendees rows, the same ones
+  // Calendar shows on the meeting.
   assignee_id: number | null;
   assignee_username: string | null;
+  attendees: EventAttendee[];
   prerequisite_step_ids: number[];
   // Phase 2: aggregated inline (same nested json_agg pattern events'
   // attendees already uses) rather than fetched separately — see
@@ -54,6 +62,12 @@ const STEP_SELECT = `
          s.created_at, s.updated_at,
          e.title, e.description AS event_description, e.start_at, e.end_at, e.status AS event_status,
          e.assignee_id, au.username AS assignee_username,
+         COALESCE(
+           (SELECT json_agg(json_build_object('id', ea.user_id, 'username', eu.username) ORDER BY eu.username)
+            FROM event_attendees ea JOIN users eu ON eu.id = ea.user_id
+            WHERE ea.event_id = e.id),
+           '[]'
+         ) AS attendees,
          COALESCE(
            (SELECT json_agg(sp.prerequisite_step_id ORDER BY sp.prerequisite_step_id)
             FROM step_prerequisites sp WHERE sp.step_id = s.id),
@@ -120,7 +134,9 @@ export type OverdueStepReminder = {
   step_type: EventType;
   start_at: Date;
   end_at: Date | null;
-  assignee_id: number;
+  // A task's reminder goes to its assignee, a meeting's to its attendees.
+  assignee_id: number | null;
+  attendee_ids: number[];
   plan_name: string;
 };
 
@@ -129,24 +145,25 @@ export type OverdueStepReminder = {
 // since "blocked" isn't a resolution). "Due moment" is end_at (the due
 // time) for a task, start_at (when it happens) for a meeting — a meeting
 // that already passed without being recorded is exactly the case worth
-// nudging someone about. Requires an assignee (nothing to notify
-// otherwise) — mirrors Calendar's own task/meeting reminder pattern
+// nudging someone about. Requires an assignee (task) or at least one
+// attendee (meeting) — nothing to notify otherwise) — mirrors Calendar's own task/meeting reminder pattern
 // (src/lib/events.ts's listTasksNeedingEndReminder/
 // listMeetingsNeedingStartReminder), reusing the same "gated by a
 // *_reminder_sent_at column, marked once fired" mechanism rather than a
 // new one.
 export async function listStepsNeedingOverdueReminder(): Promise<OverdueStepReminder[]> {
   const res = await query<OverdueStepReminder>(
-    `SELECT s.id, e.title, s.notes, s.step_type, e.start_at, e.end_at, e.assignee_id, p.name AS plan_name
+    `SELECT s.id, e.title, s.notes, s.step_type, e.start_at, e.end_at, e.assignee_id, p.name AS plan_name,
+            COALESCE((SELECT json_agg(ea.user_id) FROM event_attendees ea WHERE ea.event_id = e.id), '[]') AS attendee_ids
      FROM steps s
      JOIN events e ON e.id = s.event_id
      JOIN plans p ON p.id = s.plan_id
      WHERE s.status NOT IN ('done', 'skipped', 'na')
        AND s.overdue_reminder_sent_at IS NULL
-       AND e.assignee_id IS NOT NULL
        AND (
-         (s.step_type = 'task' AND e.end_at IS NOT NULL AND e.end_at < now())
-         OR (s.step_type = 'meeting' AND e.start_at < now())
+         (s.step_type = 'task' AND e.assignee_id IS NOT NULL AND e.end_at IS NOT NULL AND e.end_at < now())
+         OR (s.step_type = 'meeting' AND e.start_at < now()
+             AND EXISTS (SELECT 1 FROM event_attendees ea WHERE ea.event_id = e.id))
        )
      ORDER BY e.start_at ASC`
   );
@@ -160,10 +177,28 @@ export async function markOverdueReminderSent(id: number): Promise<void> {
 // Plan authoring (steps included) is Admin-level-only end to end (see
 // docs/erp-v3-roadmap.md / the plans API routes), so — unlike Calendar's
 // own resolveTaskAssignment in lib/events.ts, which restricts a plain
-// "user" to self-assigning — a step's author can assign either a task or
-// a meeting step to anyone. TaskStatus on the backing event is only
-// meaningful for step_type='task' (mirrors how standalone Calendar
-// meetings already always carry an unused 'backlog' status).
+// "user" to self-assigning — a step's author can assign a task step to
+// anyone. A MEETING step has attendees instead of an assignee (0.2.6): its
+// backing event's assignee_id stays null and its people live in
+// event_attendees, same as a Calendar meeting. TaskStatus on the backing
+// event is only meaningful for step_type='task' (mirrors how standalone
+// Calendar meetings already always carry an unused 'backlog' status).
+//
+// Start-date hierarchy (Strategy <= Milestone <= Stage <= step): a step
+// can't be dated before the start of the plan/Stage it lives in (nor its
+// Milestone/Strategy) — see lib/planStartRules.ts.
+async function validateStepStart(planId: number, startAt: Date): Promise<string | null> {
+  const floor = await getFloorForSteps(planId);
+  if (floor && toMuscatDateInput(startAt) < floor.date) return startBeforeFloorMessage("A step", floor);
+  return null;
+}
+
+async function validateAttendeeIds(ids: number[]): Promise<string | null> {
+  if (ids.length === 0) return null;
+  const res = await query<{ id: number }>(`SELECT id FROM users WHERE id = ANY($1::int[])`, [ids]);
+  return res.rows.length === ids.length ? null : "One or more attendees don't exist";
+}
+
 export async function createStep(input: {
   planId: number;
   stepType: EventType;
@@ -171,13 +206,23 @@ export async function createStep(input: {
   notes: string;
   startAt: Date;
   endAt: Date | null;
-  assigneeId: number | null;
+  assigneeId: number | null; // ignored for a meeting
+  attendeeIds: number[]; // ignored for a task
   requiresDeliverable: boolean;
   deliverableDefs: { kind: DeliverableKind; label: string }[];
   prerequisiteStepIds: number[];
   sortOrder: number;
   createdBy: number;
 }): Promise<{ ok: true; step: StepRow } | { ok: false; error: string }> {
+  const isMeeting = input.stepType === "meeting";
+  const assigneeId = isMeeting ? null : input.assigneeId;
+  const attendeeIds = isMeeting ? Array.from(new Set(input.attendeeIds)) : [];
+
+  const startError = await validateStepStart(input.planId, input.startAt);
+  if (startError) return { ok: false, error: startError };
+  const attendeeError = await validateAttendeeIds(attendeeIds);
+  if (attendeeError) return { ok: false, error: attendeeError };
+
   const timingError = validateEventTiming({
     type: input.stepType,
     isTentative: false,
@@ -197,15 +242,20 @@ export async function createStep(input: {
   }
 
   const eventStatus: TaskStatus =
-    input.stepType === "task" ? (input.assigneeId !== null ? "pending" : "backlog") : "backlog";
+    input.stepType === "task" ? (assigneeId !== null ? "pending" : "backlog") : "backlog";
 
   const stepId = await withTransaction(async (client) => {
     const eventRes = await client.query<{ id: number }>(
       `INSERT INTO events (title, description, type, is_tentative, start_at, end_at, created_by, assignee_id, status)
        VALUES ($1, '', $2, false, $3, $4, $5, $6, $7) RETURNING id`,
-      [input.title, input.stepType, input.startAt, input.endAt, input.createdBy, input.assigneeId, eventStatus]
+      [input.title, input.stepType, input.startAt, input.endAt, input.createdBy, assigneeId, eventStatus]
     );
     const eventId = eventRes.rows[0].id;
+
+    if (attendeeIds.length > 0) {
+      const values = attendeeIds.map((_, i) => `($1, $${i + 2})`).join(", ");
+      await client.query(`INSERT INTO event_attendees (event_id, user_id) VALUES ${values}`, [eventId, ...attendeeIds]);
+    }
 
     const stepRes = await client.query<{ id: number }>(
       `INSERT INTO steps (plan_id, event_id, step_type, notes, requires_deliverable, sort_order, created_by)
@@ -246,7 +296,8 @@ export async function updateStep(
     notes: string;
     startAt: Date;
     endAt: Date | null;
-    assigneeId: number | null;
+    assigneeId: number | null; // ignored for a meeting
+    attendeeIds?: number[]; // meeting only; undefined leaves attendees untouched
     requiresDeliverable: boolean;
     // Existing deliverable defs are managed via their own
     // /api/plans/steps/[id]/deliverables/** routes, not here — this only
@@ -258,6 +309,21 @@ export async function updateStep(
   const existing = await getStepById(id);
   if (!existing) return { ok: false, error: "Not found" };
 
+  const isMeeting = existing.step_type === "meeting";
+  const assigneeId = isMeeting ? null : input.assigneeId;
+  const attendeeIds = isMeeting && input.attendeeIds ? Array.from(new Set(input.attendeeIds)) : null;
+
+  // Only re-checked when the date actually moves — a step scheduled before
+  // this rule existed can still have its notes/title/etc. edited in place.
+  if (toMuscatDateInput(input.startAt) !== toMuscatDateInput(existing.start_at)) {
+    const startError = await validateStepStart(existing.plan_id, input.startAt);
+    if (startError) return { ok: false, error: startError };
+  }
+  if (attendeeIds) {
+    const attendeeError = await validateAttendeeIds(attendeeIds);
+    if (attendeeError) return { ok: false, error: attendeeError };
+  }
+
   const timingError = validateEventTiming({
     type: existing.step_type,
     isTentative: false,
@@ -268,7 +334,7 @@ export async function updateStep(
 
   const eventStatus: TaskStatus =
     existing.step_type === "task"
-      ? input.assigneeId !== null
+      ? assigneeId !== null
         ? existing.event_status === "backlog"
           ? "pending"
           : existing.event_status
@@ -282,9 +348,10 @@ export async function updateStep(
     isTentative: false,
     startAt: input.startAt,
     endAt: input.endAt,
-    assigneeId: input.assigneeId,
+    assigneeId,
     status: eventStatus,
   });
+  if (attendeeIds) await setAttendees(existing.event_id, attendeeIds);
 
   // Editing the due date resets the overdue reminder flag if it was
   // already sent — mirrors updateEvent's own start/end-reminder reset

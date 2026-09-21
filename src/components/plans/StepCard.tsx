@@ -97,7 +97,13 @@ export default function StepCard({
             {step.step_type === "task" && step.end_at
               ? `Due ${formatMuscatDateTime(new Date(step.end_at))}`
               : formatMuscatDateTime(new Date(step.start_at))}
-            {step.assignee_username ? ` · ${step.assignee_username}` : " · Unassigned"}
+            {step.step_type === "task"
+              ? step.assignee_username
+                ? ` · ${step.assignee_username}`
+                : " · Unassigned"
+              : step.attendees.length > 0
+              ? ` · Attendees: ${step.attendees.map((a) => a.username).join(", ")}`
+              : " · No attendees"}
           </div>
           {step.notes && <div className="text-xs text-black/50 dark:text-white/50 mt-1.5">{step.notes}</div>}
           {prerequisiteSteps.length > 0 && (
