@@ -251,12 +251,17 @@ export async function deleteEvent(id: number): Promise<void> {
 
 // Meetings starting within the next hour that haven't had their "starting soon"
 // email sent yet. Tentative meetings have no fixed start, so they never qualify.
+// A Process/Strategy step's backing event is excluded from both this and the
+// task query below — steps get their own plan-aware reminders
+// (lib/planSteps.ts's listStepsNeedingUpcomingReminder), which also skip a
+// step that's already done/skipped/n-a (a Calendar event can't know that).
 export async function listMeetingsNeedingStartReminder(): Promise<EventRow[]> {
   const res = await query<EventRow>(
     `${SELECT_BASE}
      WHERE e.type = 'meeting'
        AND e.is_tentative = false
        AND e.start_reminder_sent_at IS NULL
+       AND NOT EXISTS (SELECT 1 FROM steps st WHERE st.event_id = e.id)
        AND e.start_at > now()
        AND e.start_at <= now() + interval '1 hour'
      ORDER BY e.start_at ASC`
@@ -271,6 +276,7 @@ export async function listTasksNeedingEndReminder(): Promise<EventRow[]> {
      WHERE e.type = 'task'
        AND e.end_at IS NOT NULL
        AND e.end_reminder_sent_at IS NULL
+       AND NOT EXISTS (SELECT 1 FROM steps st WHERE st.event_id = e.id)
        AND e.end_at > now()
        AND e.end_at <= now() + interval '3 hours'
      ORDER BY e.end_at ASC`

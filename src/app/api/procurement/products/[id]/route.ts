@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { isAdminLevel } from "@/lib/users";
+import { canAccessModule } from "@/lib/orgModules";
 import {
   deleteProduct,
   getProductById,
@@ -25,6 +26,7 @@ function parseProductBody(body: any) {
   const pictureUrl = typeof body?.pictureUrl === "string" && body.pictureUrl.trim() ? body.pictureUrl.trim() : null;
   const description = typeof body?.description === "string" ? body.description.trim() : "";
   const requiredFor = typeof body?.requiredFor === "string" ? body.requiredFor.trim() : "";
+  const projectId = typeof body?.projectId === "number" ? body.projectId : null;
   const requiredBy = typeof body?.requiredBy === "string" && body.requiredBy ? body.requiredBy : null;
   const quantityNeeded = Number.isFinite(body?.quantityNeeded) && body.quantityNeeded > 0 ? Math.floor(body.quantityNeeded) : 1;
   const quantityUnit = typeof body?.quantityUnit === "string" && body.quantityUnit.trim() ? body.quantityUnit.trim() : "pcs";
@@ -47,6 +49,7 @@ function parseProductBody(body: any) {
     pictureUrl,
     description,
     requiredFor,
+    projectId,
     requiredBy,
     quantityNeeded,
     quantityUnit,
@@ -67,7 +70,7 @@ function parseProductBody(body: any) {
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!isAdminLevel(session.role)) {
+  if (!isAdminLevel(session.role) && !(await canAccessModule(session, "procurement"))) {
     return NextResponse.json({ error: "Only Admin-level accounts can view procurement planning" }, { status: 403 });
   }
 

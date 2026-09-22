@@ -21,10 +21,12 @@ export default function InvestorsClient({
   investors,
   investments,
   payouts,
+  isAdmin,
 }: {
   investors: InvestorRow[];
   investments: InvestmentRow[];
   payouts: InvestmentPayoutRow[];
+  isAdmin: boolean;
 }) {
   const router = useRouter();
   const [showCreateInvestor, setShowCreateInvestor] = useState(false);
@@ -93,13 +95,15 @@ export default function InvestorsClient({
     <div>
       {error && <p className="text-sm text-red-600 dark:text-red-400 mb-4">{error}</p>}
 
-      <div className="flex justify-end mb-4">
-        <span className="btn-glow inline-block">
-          <button onClick={() => setShowCreateInvestor(true)} className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium">
-            + Add Investor
-          </button>
-        </span>
-      </div>
+      {isAdmin && (
+        <div className="flex justify-end mb-4">
+          <span className="btn-glow inline-block">
+            <button onClick={() => setShowCreateInvestor(true)} className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium">
+              + Add Investor
+            </button>
+          </span>
+        </div>
+      )}
 
       {investors.length === 0 ? (
         <p className="text-sm text-black/50 dark:text-white/50">No investors yet.</p>
@@ -141,35 +145,37 @@ export default function InvestorsClient({
                       </div>
                     )}
                   </div>
-                  <div className="shrink-0 flex gap-2">
-                    <span className="btn-glow inline-block">
-                      <button
-                        type="button"
-                        onClick={() => setInvestingFor(investor)}
-                        className="text-xs btn-skew bg-accent text-ink px-3 py-1.5"
-                      >
-                        + Investment
-                      </button>
-                    </span>
-                    <span className="btn-glow inline-block">
-                      <button
-                        type="button"
-                        onClick={() => setEditingInvestor(investor)}
-                        className="text-xs btn-skew border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
-                      >
-                        Edit
-                      </button>
-                    </span>
-                    <span className="btn-glow-red inline-block">
-                      <button
-                        type="button"
-                        onClick={() => setDeletingInvestor(investor)}
-                        className="text-xs btn-skew border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 px-3 py-1.5"
-                      >
-                        Delete
-                      </button>
-                    </span>
-                  </div>
+                  {isAdmin && (
+                    <div className="shrink-0 flex gap-2">
+                      <span className="btn-glow inline-block">
+                        <button
+                          type="button"
+                          onClick={() => setInvestingFor(investor)}
+                          className="text-xs btn-skew bg-accent text-ink px-3 py-1.5"
+                        >
+                          + Investment
+                        </button>
+                      </span>
+                      <span className="btn-glow inline-block">
+                        <button
+                          type="button"
+                          onClick={() => setEditingInvestor(investor)}
+                          className="text-xs btn-skew border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
+                        >
+                          Edit
+                        </button>
+                      </span>
+                      <span className="btn-glow-red inline-block">
+                        <button
+                          type="button"
+                          onClick={() => setDeletingInvestor(investor)}
+                          className="text-xs btn-skew border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 px-3 py-1.5"
+                        >
+                          Delete
+                        </button>
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {investorInvestments.length === 0 ? (
@@ -197,33 +203,35 @@ export default function InvestorsClient({
                               <span className="text-sm font-medium truncate">{formatMoney(inv.amount, inv.currency)}</span>
                               <span className="text-xs text-black/40 dark:text-white/40 truncate">{inv.date}</span>
                             </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <select
-                                className="text-xs rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-1 focus:outline-none focus:ring-2 focus:ring-accent"
-                                value={inv.status}
-                                onChange={(e) => handleStatusChange(inv, e.target.value)}
-                              >
-                                {INVESTMENT_STATUSES_BY_TYPE[inv.investment_type].map((s) => (
-                                  <option key={s} value={s} className="bg-white text-ink dark:bg-neutral-900 dark:text-neutral-100">
-                                    {INVESTMENT_STATUS_LABELS[s]}
-                                  </option>
-                                ))}
-                              </select>
-                              <button
-                                type="button"
-                                onClick={() => setPayoutFor(inv)}
-                                className="text-xs text-accent hover:underline"
-                              >
-                                + Payout
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setDeletingInvestment(inv)}
-                                className="text-xs text-red-600 dark:text-red-400 hover:underline"
-                              >
-                                Delete
-                              </button>
-                            </div>
+                            {isAdmin && (
+                              <div className="flex items-center gap-2 shrink-0">
+                                <select
+                                  className="text-xs rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-1 focus:outline-none focus:ring-2 focus:ring-accent"
+                                  value={inv.status}
+                                  onChange={(e) => handleStatusChange(inv, e.target.value)}
+                                >
+                                  {INVESTMENT_STATUSES_BY_TYPE[inv.investment_type].map((s) => (
+                                    <option key={s} value={s} className="bg-white text-ink dark:bg-neutral-900 dark:text-neutral-100">
+                                      {INVESTMENT_STATUS_LABELS[s]}
+                                    </option>
+                                  ))}
+                                </select>
+                                <button
+                                  type="button"
+                                  onClick={() => setPayoutFor(inv)}
+                                  className="text-xs text-accent hover:underline"
+                                >
+                                  + Payout
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setDeletingInvestment(inv)}
+                                  className="text-xs text-red-600 dark:text-red-400 hover:underline"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            )}
                           </div>
                           {inv.terms && <div className="text-xs text-black/50 dark:text-white/50 mt-1">{inv.terms}</div>}
                           {investmentPayouts.length > 0 && (
@@ -244,7 +252,7 @@ export default function InvestorsClient({
       )}
       <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
-      {showCreateInvestor && (
+      {isAdmin && showCreateInvestor && (
         <InvestorFormModal
           onClose={() => setShowCreateInvestor(false)}
           onSaved={() => {
@@ -253,7 +261,7 @@ export default function InvestorsClient({
           }}
         />
       )}
-      {editingInvestor && (
+      {isAdmin && editingInvestor && (
         <InvestorFormModal
           investor={editingInvestor}
           onClose={() => setEditingInvestor(null)}
@@ -263,7 +271,7 @@ export default function InvestorsClient({
           }}
         />
       )}
-      {investingFor && (
+      {isAdmin && investingFor && (
         <InvestmentFormModal
           investor={investingFor}
           onClose={() => setInvestingFor(null)}
@@ -273,7 +281,7 @@ export default function InvestorsClient({
           }}
         />
       )}
-      {payoutFor && (
+      {isAdmin && payoutFor && (
         <PayoutFormModal
           investment={payoutFor}
           onClose={() => setPayoutFor(null)}

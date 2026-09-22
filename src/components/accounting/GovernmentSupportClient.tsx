@@ -14,9 +14,11 @@ import { PaginationControls, usePagination } from "@/components/Pagination";
 export default function GovernmentSupportClient({
   supporters,
   records,
+  isAdmin,
 }: {
   supporters: GovernmentSupporterRow[];
   records: GovernmentSupportRow[];
+  isAdmin: boolean;
 }) {
   const router = useRouter();
   const [showCreateSupporter, setShowCreateSupporter] = useState(false);
@@ -69,13 +71,15 @@ export default function GovernmentSupportClient({
     <div>
       {error && <p className="text-sm text-red-600 dark:text-red-400 mb-4">{error}</p>}
 
-      <div className="flex justify-end mb-4">
-        <span className="btn-glow inline-block">
-          <button onClick={() => setShowCreateSupporter(true)} className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium">
-            + Add Supporter
-          </button>
-        </span>
-      </div>
+      {isAdmin && (
+        <div className="flex justify-end mb-4">
+          <span className="btn-glow inline-block">
+            <button onClick={() => setShowCreateSupporter(true)} className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium">
+              + Add Supporter
+            </button>
+          </span>
+        </div>
+      )}
 
       {supporters.length === 0 ? (
         <p className="text-sm text-black/50 dark:text-white/50">No government/Royal supporters yet.</p>
@@ -109,35 +113,37 @@ export default function GovernmentSupportClient({
                       </div>
                     )}
                   </div>
-                  <div className="shrink-0 flex gap-2">
-                    <span className="btn-glow inline-block">
-                      <button
-                        type="button"
-                        onClick={() => setRecordingFor(supporter)}
-                        className="text-xs btn-skew bg-accent text-ink px-3 py-1.5"
-                      >
-                        + Support
-                      </button>
-                    </span>
-                    <span className="btn-glow inline-block">
-                      <button
-                        type="button"
-                        onClick={() => setEditingSupporter(supporter)}
-                        className="text-xs btn-skew border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
-                      >
-                        Edit
-                      </button>
-                    </span>
-                    <span className="btn-glow-red inline-block">
-                      <button
-                        type="button"
-                        onClick={() => setDeletingSupporter(supporter)}
-                        className="text-xs btn-skew border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 px-3 py-1.5"
-                      >
-                        Delete
-                      </button>
-                    </span>
-                  </div>
+                  {isAdmin && (
+                    <div className="shrink-0 flex gap-2">
+                      <span className="btn-glow inline-block">
+                        <button
+                          type="button"
+                          onClick={() => setRecordingFor(supporter)}
+                          className="text-xs btn-skew bg-accent text-ink px-3 py-1.5"
+                        >
+                          + Support
+                        </button>
+                      </span>
+                      <span className="btn-glow inline-block">
+                        <button
+                          type="button"
+                          onClick={() => setEditingSupporter(supporter)}
+                          className="text-xs btn-skew border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
+                        >
+                          Edit
+                        </button>
+                      </span>
+                      <span className="btn-glow-red inline-block">
+                        <button
+                          type="button"
+                          onClick={() => setDeletingSupporter(supporter)}
+                          className="text-xs btn-skew border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 px-3 py-1.5"
+                        >
+                          Delete
+                        </button>
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {supporterRecords.length === 0 ? (
@@ -156,13 +162,15 @@ export default function GovernmentSupportClient({
                             {r.expectations ? ` · ${r.expectations}` : " · No expectation of return"}
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => setDeletingRecordId(r.id)}
-                          className="text-xs text-red-600 dark:text-red-400 hover:underline shrink-0"
-                        >
-                          Delete
-                        </button>
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            onClick={() => setDeletingRecordId(r.id)}
+                            className="text-xs text-red-600 dark:text-red-400 hover:underline shrink-0"
+                          >
+                            Delete
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -174,7 +182,7 @@ export default function GovernmentSupportClient({
       )}
       <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
-      {showCreateSupporter && (
+      {isAdmin && showCreateSupporter && (
         <GovernmentSupporterFormModal
           onClose={() => setShowCreateSupporter(false)}
           onSaved={() => {
@@ -183,7 +191,7 @@ export default function GovernmentSupportClient({
           }}
         />
       )}
-      {editingSupporter && (
+      {isAdmin && editingSupporter && (
         <GovernmentSupporterFormModal
           supporter={editingSupporter}
           onClose={() => setEditingSupporter(null)}
@@ -193,7 +201,7 @@ export default function GovernmentSupportClient({
           }}
         />
       )}
-      {recordingFor && (
+      {isAdmin && recordingFor && (
         <GovernmentSupportFormModal
           supporter={recordingFor}
           onClose={() => setRecordingFor(null)}

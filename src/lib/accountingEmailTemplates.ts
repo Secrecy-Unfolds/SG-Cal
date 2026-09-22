@@ -1,8 +1,8 @@
-import type { AccountingTransactionRow } from "@/lib/accounting";
+import type { AccountingTransactionRow, PayrollRunRow } from "@/lib/accounting";
 import type { PurchaseOrderRow } from "@/lib/purchaseOrders";
 import { escapeHtml, introText, wrap } from "@/lib/emailShell";
 import { formatMoney } from "@/lib/procurementDisplay";
-import { formatMuscatDateOnly } from "@/lib/time";
+import { formatMuscat, formatMuscatDateOnly } from "@/lib/time";
 
 const EXPENSE_COLOR = "#dc2626";
 const INCOME_COLOR = "#16a34a";
@@ -101,6 +101,38 @@ export function transactionFromVendorInvoiceEmail(
       introText(
         `${whoSafe} logged a vendor invoice against Purchase Order #${po.id} (${escapeHtml(po.vendor_name)}), which automatically posted this expense:`
       ) + transactionCard(t)
+    ),
+  };
+}
+
+// Org structure Phase 6 (confirmed 2026-09-22): the last of the three
+// silent auto-postings flagged in erp-v3-roadmap.md now emails someone.
+// Deliberately a whole-run summary, not a per-employee breakdown — the
+// roadmap's own note left "whole run vs. per-employee lines" as an open
+// question, moved to erp-v4-roadmap.md; this stays neutral rather than
+// pre-deciding it. `totalsByCurrency` can list more than one line since
+// salaries aren't all necessarily set in the same currency.
+export function payrollRunEmail(
+  run: PayrollRunRow,
+  employeesPaid: number,
+  totalsByCurrency: Record<string, number>,
+  who: string
+): { subject: string; html: string } {
+  const whoSafe = escapeHtml(who);
+  const monthLabel = formatMuscat(new Date(run.run_month), { month: "long", year: "numeric" });
+  const totalsList = Object.entries(totalsByCurrency)
+    .map(([currency, amount]) => `<strong>${escapeHtml(formatMoney(amount, currency))}</strong>`)
+    .join(" + ");
+  return {
+    subject: `Payroll run: ${monthLabel}`,
+    html: wrap(
+      `${whoSafe} ran payroll for ${monthLabel}`,
+      "Payroll run",
+      introText(
+        `${whoSafe} ran payroll for <strong>${monthLabel}</strong> — ${employeesPaid} employee${
+          employeesPaid === 1 ? "" : "s"
+        } paid, ${totalsList || "nothing to post"} posted to the Ledger as expense transactions.`
+      )
     ),
   };
 }

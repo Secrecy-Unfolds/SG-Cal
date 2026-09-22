@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
-import { getSession, hashPassword, verifyPassword } from "@/lib/auth";
+import {
+  getSession,
+  hashPassword,
+  secondsUntilNextMuscatMidnight,
+  SESSION_COOKIE,
+  signSession,
+  verifyPassword,
+} from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -19,17 +26,37 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "New password must be at least 8 characters" }, { status: 400 });
   }
 
-  const res = await query<{ id: number; password_hash: string }>(
-    "SELECT id, password_hash FROM users WHERE id = $1",
+  const res = await query<{ id: number; username: string; password_hash: string; must_change_password: boolean }>(
+    "SELECT id, username, password_hash, must_change_password FROM users WHERE id = $1",
     [session.uid]
   );
   const user = res.rows[0];
   if (!user || !(await verifyPassword(currentPassword, user.password_hash))) {
     return NextResponse.json({ error: "Current password is incorrect" }, { status: 400 });
   }
+  // After a Super-Admin reset the whole point is choosing your own — keeping
+  // the temporary one would defeat it.
+  if (user.must_change_password && newPassword === currentPassword) {
+    return NextResponse.json({ error: "Choose a password different from the temporary one" }, { status: 400 });
+  }
 
   const newHash = await hashPassword(newPassword);
-  await query("UPDATE users SET password_hash = $1 WHERE id = $2", [newHash, user.id]);
+  await query("UPDATE users SET password_hash = $1, must_change_password = false WHERE id = $2", [
+    newHash,
+    user.id,
+  ]);
 
-  return NextResponse.json({ ok: true });
+  const response = NextResponse.json({ ok: true });
+  // Always re-sign the session (without the "must change password" lock):
+  // the old token may still carry it, which would keep the middleware
+  // redirecting even though the DB flag is now clear.
+  const token = await signSession({ uid: user.id, username: user.username, role: session.role });
+  response.cookies.set(SESSION_COOKIE, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: secondsUntilNextMuscatMidnight(),
+  });
+  return response;
 }

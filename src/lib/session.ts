@@ -14,6 +14,12 @@ export type SessionPayload = {
   uid: number;
   username: string;
   role: UserRole;
+  // "Must change password": set on the token at login when the account was
+  // flagged by a Super-Admin reset, so the (DB-less) edge middleware can lock
+  // the session to the change-password page. getSession() also derives it
+  // from the DB, which covers a session that was already open when the
+  // reset happened.
+  mcp?: boolean;
 };
 
 // Sessions expire at the next midnight (Asia/Muscat), not on a rolling
@@ -45,7 +51,12 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
     ) {
       return null;
     }
-    return { uid: payload.uid, username: payload.username, role: payload.role };
+    return {
+      uid: payload.uid,
+      username: payload.username,
+      role: payload.role,
+      ...(payload.mcp === true ? { mcp: true } : {}),
+    };
   } catch {
     return null;
   }

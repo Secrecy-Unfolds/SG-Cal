@@ -16,11 +16,13 @@ export default function CapitalBudgetsClient({
   products,
   baseCurrency,
   exchangeRateSnapshot,
+  isAdmin,
 }: {
   budgets: CapitalBudgetRow[];
   products: ProductRow[];
   baseCurrency: string;
   exchangeRateSnapshot: ExchangeRateSnapshot;
+  isAdmin: boolean;
 }) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
@@ -115,11 +117,13 @@ export default function CapitalBudgetsClient({
             </HudFrame>
           )}
         </div>
-        <span className="btn-glow shrink-0 inline-block">
-          <button onClick={() => setShowCreate(true)} className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium">
-            + Add Budget
-          </button>
-        </span>
+        {isAdmin && (
+          <span className="btn-glow shrink-0 inline-block">
+            <button onClick={() => setShowCreate(true)} className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium">
+              + Add Budget
+            </button>
+          </span>
+        )}
       </div>
 
       {budgets.length === 0 ? (
@@ -149,18 +153,22 @@ export default function CapitalBudgetsClient({
                     <span className={`text-sm font-medium ${over ? "text-red-600 dark:text-red-400" : ""}`}>
                       {formatMoney(b.actual, b.currency)} / {formatMoney(b.amount, b.currency)}
                     </span>
-                    <button
-                      onClick={() => setEditing(b)}
-                      className="text-xs text-accent hover:underline"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => setDeleting(b)}
-                      className="text-xs text-red-600 dark:text-red-400 hover:underline"
-                    >
-                      Delete
-                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={() => setEditing(b)}
+                        className="text-xs text-accent hover:underline"
+                      >
+                        Edit
+                      </button>
+                    )}
+                    {isAdmin && (
+                      <button
+                        onClick={() => setDeleting(b)}
+                        className="text-xs text-red-600 dark:text-red-400 hover:underline"
+                      >
+                        Delete
+                      </button>
+                    )}
                   </div>
                 </div>
                 <div className="h-1.5 rounded-full bg-black/5 dark:bg-white/10 overflow-hidden">
@@ -176,7 +184,7 @@ export default function CapitalBudgetsClient({
       )}
       <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
-      {showCreate && (
+      {isAdmin && showCreate && (
         <CapitalBudgetFormModal
           products={products}
           onClose={() => setShowCreate(false)}
@@ -186,7 +194,7 @@ export default function CapitalBudgetsClient({
           }}
         />
       )}
-      {editing && (
+      {isAdmin && editing && (
         <CapitalBudgetFormModal
           budget={editing}
           products={products}

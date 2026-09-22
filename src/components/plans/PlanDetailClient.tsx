@@ -190,7 +190,10 @@ export default function PlanDetailClient({
       </PageHeader>
 
       <div className="rounded-2xl border border-black/5 dark:border-white/10 p-4 mb-4 bg-white dark:bg-neutral-900">
-        <div className="text-xs text-black/50 dark:text-white/50">Start date: {formatDateOnly(plan.start_date)}</div>
+        <div className="text-xs text-black/50 dark:text-white/50">
+          Start date: {formatDateOnly(plan.start_date)}
+          {isRoot && plan.project_name && ` · Project: ${plan.project_name}`}
+        </div>
         {plan.description && <div className="text-sm mt-2 whitespace-pre-wrap">{plan.description}</div>}
         <PlanProgressBar progress={progress.progress} total={progress.total} done={progress.done} className="mt-3" />
         {duplicateError && <p className="text-xs text-red-600 dark:text-red-400 mt-2">{duplicateError}</p>}

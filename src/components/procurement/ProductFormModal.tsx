@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import CurrencySelect from "@/components/CurrencySelect";
 import {
   computeCapitalNeeded,
@@ -16,6 +16,8 @@ export type ProductData = {
   picture_url: string | null;
   description: string;
   required_for: string;
+  project_id: number | null;
+  project_name: string | null;
   required_by: string | null;
   quantity_needed: number;
   quantity_unit: string;
@@ -50,6 +52,8 @@ export default function ProductFormModal({
   const [uploading, setUploading] = useState(false);
   const [description, setDescription] = useState(product?.description ?? "");
   const [requiredFor, setRequiredFor] = useState(product?.required_for ?? "");
+  const [projectId, setProjectId] = useState<number | null>(product?.project_id ?? null);
+  const [projects, setProjects] = useState<{ id: number; name: string }[]>([]);
   const [requiredBy, setRequiredBy] = useState(product?.required_by ?? "");
   const [quantityNeeded, setQuantityNeeded] = useState(product?.quantity_needed ?? 1);
   const [quantityUnit, setQuantityUnit] = useState(product?.quantity_unit ?? "pcs");
@@ -65,6 +69,13 @@ export default function ProductFormModal({
   const [notificationsMuted, setNotificationsMuted] = useState(product?.notifications_muted ?? false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/projects")
+      .then((res) => (res.ok ? res.json() : { projects: [] }))
+      .then((data) => setProjects(data.projects ?? []))
+      .catch(() => setProjects([]));
+  }, []);
 
   const computedCapital = computeCapitalNeeded({
     unitPrice: unitPrice === "" ? null : unitPrice,
@@ -128,6 +139,7 @@ export default function ProductFormModal({
           pictureUrl,
           description,
           requiredFor,
+          projectId,
           requiredBy: requiredBy || null,
           quantityNeeded,
           quantityUnit,
@@ -234,6 +246,27 @@ export default function ProductFormModal({
               onChange={(e) => setRequiredBy(e.target.value)}
             />
           </div>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-sm font-medium">Project (optional)</label>
+          <select
+            className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent [color-scheme:light] dark:[color-scheme:dark]"
+            value={projectId ?? ""}
+            onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : null)}
+          >
+            <option className="bg-white text-ink dark:bg-neutral-900 dark:text-neutral-100" value="">
+              No project
+            </option>
+            {projects.map((p) => (
+              <option key={p.id} className="bg-white text-ink dark:bg-neutral-900 dark:text-neutral-100" value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-black/40 dark:text-white/40">
+            A real, structured link alongside &ldquo;Required for&rdquo; above — not a replacement for it.
+          </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

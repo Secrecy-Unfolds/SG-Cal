@@ -31,7 +31,9 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
 
   const tempPassword = generateTempPassword();
   const passwordHash = await hashPassword(tempPassword);
-  await query("UPDATE users SET password_hash = $1 WHERE id = $2", [passwordHash, id]);
+  // must_change_password: they can only use the temporary one to reach the
+  // change-password page (see src/middleware.ts).
+  await query("UPDATE users SET password_hash = $1, must_change_password = true WHERE id = $2", [passwordHash, id]);
 
   const { subject, html } = passwordResetEmail(session.username, tempPassword);
   sendMailInBackground({ to: [target.email], subject, html });

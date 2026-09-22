@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { isAdminLevel } from "@/lib/users";
+import { canAccessModule } from "@/lib/orgModules";
 import { getCustomerById } from "@/lib/customers";
 import { getInvoiceById, listLineItemsForInvoice } from "@/lib/invoices";
 import { renderInvoicePdf } from "@/lib/pdf/invoicePdf";
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   let authorized = token !== null && token === invoice.access_token;
   if (!authorized) {
     const session = await getSession();
-    authorized = !!session && isAdminLevel(session.role);
+    authorized = !!session && (isAdminLevel(session.role) || (await canAccessModule(session, "accounting")));
   }
   if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

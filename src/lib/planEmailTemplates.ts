@@ -1,5 +1,5 @@
 import type { PlanRow } from "@/lib/plans";
-import type { OverdueStepReminder } from "@/lib/planSteps";
+import type { OverdueStepReminder, UpcomingStepReminder } from "@/lib/planSteps";
 import { PLAN_TYPE_LABELS } from "@/lib/planDisplay";
 import { escapeHtml, introText, wrap } from "@/lib/emailShell";
 import { formatDateOnly } from "@/lib/procurementDisplay";
@@ -84,6 +84,44 @@ export function stepOverdueEmail(step: OverdueStepReminder): { subject: string; 
               <div style="font-size:15px; font-weight:600; color:#111827;">${escapeHtml(step.title)}</div>
               <div style="font-size:12px; color:#6b7280; margin-top:4px; line-height:1.6;">
                 ${kindLabel} &middot; ${step.step_type === "task" ? "Was due" : "Was scheduled for"}
+                <strong>${stepDueLabel(step)}</strong>
+              </div>
+              ${
+                step.notes
+                  ? `<div style="margin-top:8px; font-size:13px; line-height:1.5; color:#4b5563; white-space:pre-wrap;">${escapeHtml(
+                      step.notes
+                    )}</div>`
+                  : ""
+              }
+            </td>
+          </tr>
+        </table>`
+    ),
+  };
+}
+
+// "Upcoming" counterpart of stepOverdueEmail — amber accent instead of red,
+// and it names the lead time (task: ~3 hours before due; meeting: ~1 hour
+// before it starts) matching Calendar's own reminders.
+export function stepUpcomingEmail(step: UpcomingStepReminder): { subject: string; html: string } {
+  const isTask = step.step_type === "task";
+  const kindLabel = isTask ? "Task" : "Meeting";
+  const soon = isTask ? "due in about 3 hours" : "starting in about an hour";
+  return {
+    subject: `${isTask ? "Due in 3 hours" : "Starting in 1 hour"}: ${step.title}`,
+    html: wrap(
+      `"${step.title}" (${step.plan_name}) is ${soon}`,
+      isTask ? "Step due soon" : "Step starting soon",
+      introText(
+        `Heads up — this ${kindLabel.toLowerCase()} step in "${escapeHtml(step.plan_name)}" is ${soon}:`
+      ) +
+        `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 14px;">
+          <tr>
+            <td style="width:4px; background:#d97706; border-radius:4px; font-size:0;">&nbsp;</td>
+            <td style="padding:2px 0 12px 14px;">
+              <div style="font-size:15px; font-weight:600; color:#111827;">${escapeHtml(step.title)}</div>
+              <div style="font-size:12px; color:#6b7280; margin-top:4px; line-height:1.6;">
+                ${kindLabel} &middot; ${isTask ? "Due" : "Starts"}
                 <strong>${stepDueLabel(step)}</strong>
               </div>
               ${

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ConfirmModal from "@/components/ConfirmModal";
 import type { PlanRow } from "@/lib/plans";
 import { PLAN_TYPES, PLAN_TYPE_LABELS, type PlanType } from "@/lib/planDisplay";
@@ -36,8 +36,19 @@ export default function PlanFormModal({
   const [description, setDescription] = useState(plan?.description ?? "");
   const [startDate, setStartDate] = useState(plan?.start_date ?? "");
   const [prerequisiteStageId, setPrerequisiteStageId] = useState<number | null>(plan?.prerequisite_stage_id ?? null);
+  const [projectId, setProjectId] = useState<number | null>(plan?.project_id ?? null);
+  const [projects, setProjects] = useState<{ id: number; name: string }[]>([]);
   const isStage = !!plan && plan.parent_milestone_id !== null;
   const selectableStages = (siblingStages ?? []).filter((s) => s.id !== plan?.id);
+
+  useEffect(() => {
+    if (isStage) return; // a Stage's project link isn't shown — its Strategy carries it
+    fetch("/api/projects")
+      .then((res) => (res.ok ? res.json() : { projects: [] }))
+      .then((data) => setProjects(data.projects ?? []))
+      .catch(() => setProjects([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -64,6 +75,7 @@ export default function PlanFormModal({
           name: name.trim(),
           description,
           startDate: startDate || null,
+          projectId: isStage ? plan?.project_id ?? null : projectId,
           ...(isStage ? { prerequisiteStageId } : {}),
         }),
       });
@@ -171,6 +183,26 @@ export default function PlanFormModal({
             </p>
           )}
         </div>
+
+        {!isStage && (
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Project (optional)</label>
+            <select
+              className={`${inputClass} [color-scheme:light] dark:[color-scheme:dark]`}
+              value={projectId ?? ""}
+              onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : null)}
+            >
+              <option className="bg-white text-ink dark:bg-neutral-900 dark:text-neutral-100" value="">
+                No project
+              </option>
+              {projects.map((p) => (
+                <option key={p.id} className="bg-white text-ink dark:bg-neutral-900 dark:text-neutral-100" value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {isStage && selectableStages.length > 0 && (
           <div className="space-y-1">

@@ -20,10 +20,14 @@ export default function VendorDocumentsPanel({
   vendorId,
   documents,
   onChanged,
+  canManage = true,
 }: {
   vendorId: number;
   documents: VendorDocumentRow[];
   onChanged: () => void;
+  // Organization structure Phase 4: false for a department-module
+  // "procurement" viewer — the list stays visible, upload/delete don't.
+  canManage?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState<VendorDocumentCategory>("company_profile");
@@ -121,43 +125,49 @@ export default function VendorDocumentsPanel({
                       {doc.uploaded_by_username ? ` · ${doc.uploaded_by_username}` : ""}
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmingDelete(doc)}
-                    disabled={deletingId === doc.id}
-                    className="text-xs text-red-600 dark:text-red-400 disabled:opacity-50"
-                  >
-                    {deletingId === doc.id ? "Deleting..." : "Delete"}
-                  </button>
+                  {canManage && (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingDelete(doc)}
+                      disabled={deletingId === doc.id}
+                      className="text-xs text-red-600 dark:text-red-400 disabled:opacity-50"
+                    >
+                      {deletingId === doc.id ? "Deleting..." : "Delete"}
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
           )}
 
-          <form onSubmit={handleUpload} className="flex flex-wrap items-center gap-2">
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value as VendorDocumentCategory)}
-              className="rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-1.5 text-xs [color-scheme:light] dark:[color-scheme:dark]"
-            >
-              {VENDOR_DOCUMENT_CATEGORIES.map((c) => (
-                <option key={c} value={c} className="bg-white text-ink dark:bg-neutral-900 dark:text-neutral-100">
-                  {VENDOR_DOCUMENT_CATEGORY_LABELS[c]}
-                </option>
-              ))}
-            </select>
-            <input ref={fileInput} type="file" accept={ACCEPT} className="text-xs max-w-full" />
-            <button
-              type="submit"
-              disabled={uploading}
-              className="rounded-lg border border-black/10 dark:border-white/10 px-3 py-1.5 text-xs hover:bg-black/[0.03] dark:hover:bg-white/5 disabled:opacity-50"
-            >
-              {uploading ? "Uploading..." : "Upload"}
-            </button>
-          </form>
-          <p className="text-xs text-black/40 dark:text-white/40">
-            PDF, images, Word/Excel/PowerPoint, CSV, TXT or ZIP — up to 4MB each.
-          </p>
+          {canManage && (
+            <>
+              <form onSubmit={handleUpload} className="flex flex-wrap items-center gap-2">
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value as VendorDocumentCategory)}
+                  className="rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-1.5 text-xs [color-scheme:light] dark:[color-scheme:dark]"
+                >
+                  {VENDOR_DOCUMENT_CATEGORIES.map((c) => (
+                    <option key={c} value={c} className="bg-white text-ink dark:bg-neutral-900 dark:text-neutral-100">
+                      {VENDOR_DOCUMENT_CATEGORY_LABELS[c]}
+                    </option>
+                  ))}
+                </select>
+                <input ref={fileInput} type="file" accept={ACCEPT} className="text-xs max-w-full" />
+                <button
+                  type="submit"
+                  disabled={uploading}
+                  className="rounded-lg border border-black/10 dark:border-white/10 px-3 py-1.5 text-xs hover:bg-black/[0.03] dark:hover:bg-white/5 disabled:opacity-50"
+                >
+                  {uploading ? "Uploading..." : "Upload"}
+                </button>
+              </form>
+              <p className="text-xs text-black/40 dark:text-white/40">
+                PDF, images, Word/Excel/PowerPoint, CSV, TXT or ZIP — up to 4MB each.
+              </p>
+            </>
+          )}
           {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
         </div>
       )}

@@ -16,7 +16,7 @@ function formatRunMonth(runMonth: string): string {
   return d.toLocaleDateString(undefined, { month: "long", year: "numeric", timeZone: "UTC" });
 }
 
-export default function PayrollRunsClient({ runs }: { runs: PayrollRunRow[] }) {
+export default function PayrollRunsClient({ runs, isAdmin }: { runs: PayrollRunRow[]; isAdmin: boolean }) {
   const router = useRouter();
   const [month, setMonth] = useState(currentMonthInput());
   const [running, setRunning] = useState(false);
@@ -51,29 +51,31 @@ export default function PayrollRunsClient({ runs }: { runs: PayrollRunRow[] }) {
 
   return (
     <div>
-      <HudFrame
-        corners="all"
-        className="bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl p-4 mb-4 flex flex-wrap items-end gap-3"
-      >
-        <div className="space-y-1">
-          <label className="text-sm font-medium">Month</label>
-          <input
-            type="month"
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-            className="rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 text-sm dark:[color-scheme:dark]"
-          />
-        </div>
-        <span className="btn-glow inline-block">
-          <button
-            onClick={handleRunPayroll}
-            disabled={running}
-            className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium disabled:opacity-50"
-          >
-            {running ? "Running..." : "Run payroll"}
-          </button>
-        </span>
-      </HudFrame>
+      {isAdmin && (
+        <HudFrame
+          corners="all"
+          className="bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl p-4 mb-4 flex flex-wrap items-end gap-3"
+        >
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Month</label>
+            <input
+              type="month"
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+              className="rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 text-sm dark:[color-scheme:dark]"
+            />
+          </div>
+          <span className="btn-glow inline-block">
+            <button
+              onClick={handleRunPayroll}
+              disabled={running}
+              className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium disabled:opacity-50"
+            >
+              {running ? "Running..." : "Run payroll"}
+            </button>
+          </span>
+        </HudFrame>
+      )}
 
       {error && <p className="text-sm text-red-600 dark:text-red-400 mb-3">{error}</p>}
       {successMessage && <p className="text-sm text-green-600 dark:text-green-400 mb-3">{successMessage}</p>}

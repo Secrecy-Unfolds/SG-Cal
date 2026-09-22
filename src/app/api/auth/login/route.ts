@@ -24,8 +24,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Username and password required" }, { status: 400 });
   }
 
-  const res = await query<{ id: number; username: string; password_hash: string; role: string }>(
-    "SELECT id, username, password_hash, role FROM users WHERE username = $1",
+  const res = await query<{
+    id: number;
+    username: string;
+    password_hash: string;
+    role: string;
+    must_change_password: boolean;
+  }>(
+    "SELECT id, username, password_hash, role, must_change_password FROM users WHERE username = $1",
     [username]
   );
   const user = res.rows[0];
@@ -36,8 +42,18 @@ export async function POST(req: NextRequest) {
   clearLoginAttempts(rateLimitKey);
   const role = isUserRole(user.role) ? user.role : "admin";
 
-  const token = await signSession({ uid: user.id, username: user.username, role });
-  const response = NextResponse.json({ ok: true, username: user.username, role });
+  const token = await signSession({
+    uid: user.id,
+    username: user.username,
+    role,
+    ...(user.must_change_password ? { mcp: true } : {}),
+  });
+  const response = NextResponse.json({
+    ok: true,
+    username: user.username,
+    role,
+    mustChangePassword: user.must_change_password,
+  });
   response.cookies.set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

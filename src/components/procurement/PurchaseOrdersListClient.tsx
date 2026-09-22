@@ -15,7 +15,13 @@ function firstOfMonth(): string {
   return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
 }
 
-export default function PurchaseOrdersListClient({ orders }: { orders: PurchaseOrderRow[] }) {
+export default function PurchaseOrdersListClient({
+  orders,
+  isAdmin,
+}: {
+  orders: PurchaseOrderRow[];
+  isAdmin: boolean;
+}) {
   const router = useRouter();
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -133,7 +139,7 @@ export default function PurchaseOrdersListClient({ orders }: { orders: PurchaseO
             <div className="shrink-0 flex flex-col items-end gap-2">
               {po.status === "closed" ? (
                 <span className="text-xs text-black/40 dark:text-white/40">Closed — no further edits</span>
-              ) : (
+              ) : isAdmin ? (
                 <>
                   <select
                     value={po.status}
@@ -159,6 +165,8 @@ export default function PurchaseOrdersListClient({ orders }: { orders: PurchaseO
                     Delivery details
                   </button>
                 </>
+              ) : (
+                <span className="text-xs text-black/40 dark:text-white/40">{PO_STATUS_LABELS[po.status]}</span>
               )}
               <Link href={`/purchase-orders/${po.id}`} className="text-xs text-accent hover:underline">
                 GRN / Invoices / Closure →
@@ -170,7 +178,7 @@ export default function PurchaseOrdersListClient({ orders }: { orders: PurchaseO
       )}
       <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
-      {editingDelivery && (
+      {isAdmin && editingDelivery && (
         <DeliveryDetailsModal
           po={editingDelivery}
           onClose={() => setEditingDelivery(null)}

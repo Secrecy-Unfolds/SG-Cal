@@ -20,12 +20,16 @@ export default function ProcurementTabs({
   purchaseOrders,
   requisitions,
   actorId,
+  isAdmin,
 }: {
   products: ProductData[];
   vendors: VendorWithProductsRow[];
   purchaseOrders: PurchaseOrderRow[];
   requisitions: PurchaseRequisitionRow[];
   actorId: number;
+  // Organization structure Phase 4: false for a department-module
+  // "procurement" viewer — every tab renders read-only.
+  isAdmin: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("products");
 
@@ -44,10 +48,12 @@ export default function ProcurementTabs({
         onChange={setTab}
       />
 
-      {tab === "products" && <ProcurementListClient products={products} />}
-      {tab === "vendors" && <VendorsListClient vendors={vendors} />}
-      {tab === "orders" && <PurchaseOrdersListClient orders={purchaseOrders} />}
-      {tab === "requisitions" && <RequisitionsListClient requisitions={requisitions} actorId={actorId} />}
+      {tab === "products" && <ProcurementListClient products={products} isAdmin={isAdmin} />}
+      {tab === "vendors" && <VendorsListClient vendors={vendors} isAdmin={isAdmin} />}
+      {tab === "orders" && <PurchaseOrdersListClient orders={purchaseOrders} isAdmin={isAdmin} />}
+      {tab === "requisitions" && (
+        <RequisitionsListClient requisitions={requisitions} actorId={actorId} isAdmin={isAdmin} />
+      )}
     </div>
   );
 }

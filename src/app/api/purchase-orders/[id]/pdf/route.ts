@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { isAdminLevel } from "@/lib/users";
+import { canAccessModule } from "@/lib/orgModules";
 import { getPurchaseOrderById } from "@/lib/purchaseOrders";
 import { getVendorById } from "@/lib/procurement";
 import { renderPurchaseOrderPdf } from "@/lib/pdf/purchaseOrderPdf";
@@ -15,7 +16,7 @@ function parseId(idParam: string): number | null {
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!isAdminLevel(session.role)) {
+  if (!isAdminLevel(session.role) && !(await canAccessModule(session, "procurement"))) {
     return NextResponse.json({ error: "Only Admins and Super Admins can view this" }, { status: 403 });
   }
 

@@ -15,6 +15,11 @@ export type PlanRow = {
   // Only meaningful on a Stage (parent_milestone_id set) — its one optional
   // prerequisite sibling Stage. Ordering/graph edge only, not a done-gate.
   prerequisite_stage_id: number | null;
+  // Optional link to a Project (Organization structure, Phase 3) — "required
+  // for" stays free text elsewhere in the app; this is the structured escape
+  // hatch alongside it, not a replacement.
+  project_id: number | null;
+  project_name: string | null;
   promoted_from_plan_id: number | null;
   duplicated_from_plan_id: number | null;
   migrated_from_idea_id: number | null;
@@ -26,10 +31,12 @@ export type PlanRow = {
 
 const PLAN_SELECT = `
   SELECT p.id, p.plan_type, p.parent_milestone_id, p.name, p.description, p.start_date, p.prerequisite_stage_id,
+         p.project_id, pr.name AS project_name,
          p.promoted_from_plan_id, p.duplicated_from_plan_id, p.migrated_from_idea_id,
          p.created_by, u.username AS created_by_username, p.created_at, p.updated_at
   FROM plans p
   LEFT JOIN users u ON u.id = p.created_by
+  LEFT JOIN projects pr ON pr.id = p.project_id
 `;
 
 // Phase 1 only ever lists/creates standalone plans (parent_milestone_id
@@ -63,12 +70,13 @@ export async function createPlan(input: {
   name: string;
   description: string;
   startDate: string | null;
+  projectId: number | null;
   createdBy: number;
 }): Promise<PlanRow> {
   const res = await query<{ id: number }>(
-    `INSERT INTO plans (plan_type, name, description, start_date, created_by)
-     VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-    [input.planType, input.name, input.description, input.startDate, input.createdBy]
+    `INSERT INTO plans (plan_type, name, description, start_date, project_id, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+    [input.planType, input.name, input.description, input.startDate, input.projectId, input.createdBy]
   );
   const created = await getPlanById(res.rows[0].id);
   if (!created) throw new Error("Failed to load created plan");
@@ -82,7 +90,13 @@ export async function createPlan(input: {
 // prerequisite untouched (the form only sends it for Stages).
 export async function updatePlan(
   id: number,
-  input: { name: string; description: string; startDate: string | null; prerequisiteStageId?: number | null }
+  input: {
+    name: string;
+    description: string;
+    startDate: string | null;
+    projectId: number | null;
+    prerequisiteStageId?: number | null;
+  }
 ): Promise<{ ok: true; plan: PlanRow } | { ok: false; error: string; notFound?: boolean }> {
   const existing = await getPlanById(id);
   if (!existing) return { ok: false, error: "Not found", notFound: true };
@@ -111,8 +125,8 @@ export async function updatePlan(
   }
 
   await query(
-    `UPDATE plans SET name = $1, description = $2, start_date = $3, prerequisite_stage_id = $4, updated_at = now() WHERE id = $5`,
-    [input.name, input.description, input.startDate, prerequisiteStageId, id]
+    `UPDATE plans SET name = $1, description = $2, start_date = $3, project_id = $4, prerequisite_stage_id = $5, updated_at = now() WHERE id = $6`,
+    [input.name, input.description, input.startDate, input.projectId, prerequisiteStageId, id]
   );
   const plan = await getPlanById(id);
   if (!plan) return { ok: false, error: "Not found", notFound: true };
@@ -296,9 +310,9 @@ export async function duplicatePlan(
     const today = new Date().toISOString().slice(0, 10);
 
     const newPlanRes = await client.query<{ id: number }>(
-      `INSERT INTO plans (plan_type, name, description, start_date, duplicated_from_plan_id, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-      [plan.plan_type, `${plan.name} (copy)`, plan.description, today, plan.id, createdBy]
+      `INSERT INTO plans (plan_type, name, description, start_date, project_id, duplicated_from_plan_id, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+      [plan.plan_type, `${plan.name} (copy)`, plan.description, today, plan.project_id, plan.id, createdBy]
     );
     const newPlanId = newPlanRes.rows[0].id;
 

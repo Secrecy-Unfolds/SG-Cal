@@ -29,6 +29,7 @@ export default function LedgerPanel({
   baseCurrency,
   exchangeRateSnapshot,
   actorRole,
+  isAdmin,
 }: {
   transactions: AccountingTransactionRow[];
   expenseBudgets: ExpenseBudgetRow[];
@@ -39,6 +40,7 @@ export default function LedgerPanel({
   baseCurrency: string;
   exchangeRateSnapshot: ExchangeRateSnapshot;
   actorRole: UserRole;
+  isAdmin: boolean;
 }) {
   const [subTab, setSubTab] = useState<SubTab>("transactions");
 
@@ -64,6 +66,7 @@ export default function LedgerPanel({
           baseCurrency={baseCurrency}
           exchangeRateSnapshot={exchangeRateSnapshot}
           actorRole={actorRole}
+          isAdmin={isAdmin}
         />
       )}
       {subTab === "budgets" && (
@@ -71,11 +74,12 @@ export default function LedgerPanel({
           budgets={expenseBudgets}
           baseCurrency={baseCurrency}
           exchangeRateSnapshot={exchangeRateSnapshot}
+          isAdmin={isAdmin}
         />
       )}
-      {subTab === "recurringExpenses" && <RecurringExpensesClient recurring={recurringExpenses} />}
-      {subTab === "recurringIncome" && <RecurringIncomeClient recurring={recurringIncome} />}
-      {subTab === "accounts" && <FinancialAccountsClient accounts={financialAccounts} />}
+      {subTab === "recurringExpenses" && <RecurringExpensesClient recurring={recurringExpenses} isAdmin={isAdmin} />}
+      {subTab === "recurringIncome" && <RecurringIncomeClient recurring={recurringIncome} isAdmin={isAdmin} />}
+      {subTab === "accounts" && <FinancialAccountsClient accounts={financialAccounts} isAdmin={isAdmin} />}
       {subTab === "closedPeriods" && <ClosedPeriodsClient periods={closedPeriods} actorRole={actorRole} />}
     </div>
   );

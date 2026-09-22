@@ -142,7 +142,10 @@ export default function StrategyDetailClient({
       </PageHeader>
 
       <div className="rounded-2xl border border-black/5 dark:border-white/10 p-4 mb-4 bg-white dark:bg-neutral-900">
-        <div className="text-xs text-black/50 dark:text-white/50">Start date: {formatDateOnly(plan.start_date)}</div>
+        <div className="text-xs text-black/50 dark:text-white/50">
+          Start date: {formatDateOnly(plan.start_date)}
+          {plan.project_name && ` · Project: ${plan.project_name}`}
+        </div>
         {plan.description && <div className="text-sm mt-2 whitespace-pre-wrap">{plan.description}</div>}
         <PlanProgressBar
           progress={overall.progress}

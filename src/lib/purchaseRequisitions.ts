@@ -81,6 +81,7 @@ export async function decideRequisition(
       pictureUrl: null,
       description: existing.description,
       requiredFor: "",
+      projectId: null,
       requiredBy: null,
       quantityNeeded: existing.quantity_needed,
       quantityUnit: existing.quantity_unit,

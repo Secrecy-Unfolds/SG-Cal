@@ -101,6 +101,14 @@ export default function StepFormModal({
       setError("Tasks need a due time");
       return;
     }
+    if (isTask && assigneeId === null) {
+      setError("Choose who this task is assigned to");
+      return;
+    }
+    if (!isTask && attendeeIds.length === 0) {
+      setError("Add at least one attendee");
+      return;
+    }
     if (startFloor && date < startFloor.date) {
       setError(startBeforeFloorMessage("A step", startFloor));
       return;
@@ -259,12 +267,13 @@ export default function StepFormModal({
         <div className="space-y-1">
           <label className="text-sm font-medium">Assigned to</label>
           <select
+            required
             className={`${inputClass} [color-scheme:light] dark:[color-scheme:dark]`}
             value={assigneeId ?? ""}
             onChange={(e) => setAssigneeId(e.target.value ? Number(e.target.value) : null)}
           >
             <option className="bg-white text-ink dark:bg-neutral-900 dark:text-neutral-100" value="">
-              Unassigned
+              Choose who&rsquo;s responsible…
             </option>
             {allUsers.map((u) => (
               <option key={u.id} className="bg-white text-ink dark:bg-neutral-900 dark:text-neutral-100" value={u.id}>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { isAdminLevel } from "@/lib/users";
+import { canAccessModule } from "@/lib/orgModules";
 import { computeProcurementReport } from "@/lib/procurementReports";
 import { renderProcurementReportPdf } from "@/lib/pdf/procurementReportPdf";
 
@@ -9,7 +10,7 @@ export const runtime = "nodejs";
 export async function GET(req: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!isAdminLevel(session.role)) {
+  if (!isAdminLevel(session.role) && !(await canAccessModule(session, "procurement"))) {
     return NextResponse.json({ error: "Only Admins and Super Admins can view this" }, { status: 403 });
   }
 

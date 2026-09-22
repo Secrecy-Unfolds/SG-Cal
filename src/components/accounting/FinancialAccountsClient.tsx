@@ -10,7 +10,13 @@ import { formatMoney } from "@/lib/procurementDisplay";
 import { HudFrame } from "@/components/hud/HudFrame";
 import { PaginationControls, usePagination } from "@/components/Pagination";
 
-export default function FinancialAccountsClient({ accounts }: { accounts: FinancialAccountRow[] }) {
+export default function FinancialAccountsClient({
+  accounts,
+  isAdmin,
+}: {
+  accounts: FinancialAccountRow[];
+  isAdmin: boolean;
+}) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<FinancialAccountRow | null>(null);
@@ -34,13 +40,15 @@ export default function FinancialAccountsClient({ accounts }: { accounts: Financ
 
   return (
     <div>
-      <div className="flex justify-end mb-4">
-        <span className="btn-glow inline-block">
-          <button onClick={() => setShowCreate(true)} className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium">
-            + Add Account
-          </button>
-        </span>
-      </div>
+      {isAdmin && (
+        <div className="flex justify-end mb-4">
+          <span className="btn-glow inline-block">
+            <button onClick={() => setShowCreate(true)} className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium">
+              + Add Account
+            </button>
+          </span>
+        </div>
+      )}
 
       {accounts.length === 0 ? (
         <p className="text-sm text-black/50 dark:text-white/50">No bank/cash accounts yet — transactions show as &quot;Unassigned&quot;.</p>
@@ -59,14 +67,16 @@ export default function FinancialAccountsClient({ accounts }: { accounts: Financ
                     {FINANCIAL_ACCOUNT_TYPE_LABELS[a.account_type]} · {a.currency}
                   </div>
                 </div>
-                <div className="shrink-0 flex gap-2">
-                  <button onClick={() => setEditing(a)} className="text-xs text-accent hover:underline">
-                    Edit
-                  </button>
-                  <button onClick={() => setDeleting(a)} className="text-xs text-red-600 dark:text-red-400 hover:underline">
-                    Delete
-                  </button>
-                </div>
+                {isAdmin && (
+                  <div className="shrink-0 flex gap-2">
+                    <button onClick={() => setEditing(a)} className="text-xs text-accent hover:underline">
+                      Edit
+                    </button>
+                    <button onClick={() => setDeleting(a)} className="text-xs text-red-600 dark:text-red-400 hover:underline">
+                      Delete
+                    </button>
+                  </div>
+                )}
               </div>
               <div className={`text-lg font-semibold ${parseFloat(a.balance) < 0 ? "text-red-600 dark:text-red-400" : ""}`}>
                 {formatMoney(a.balance, a.currency)}
@@ -77,7 +87,7 @@ export default function FinancialAccountsClient({ accounts }: { accounts: Financ
       )}
       <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
-      {showCreate && (
+      {isAdmin && showCreate && (
         <FinancialAccountFormModal
           onClose={() => setShowCreate(false)}
           onSaved={() => {
@@ -86,7 +96,7 @@ export default function FinancialAccountsClient({ accounts }: { accounts: Financ
           }}
         />
       )}
-      {editing && (
+      {isAdmin && editing && (
         <FinancialAccountFormModal
           account={editing}
           onClose={() => setEditing(null)}

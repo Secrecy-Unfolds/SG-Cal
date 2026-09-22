@@ -23,11 +23,16 @@ export default function PurchaseOrderDetailClient({
   receipts,
   invoices,
   payments,
+  isAdmin,
 }: {
   po: PurchaseOrderRow;
   receipts: GoodsReceiptRow[];
   invoices: VendorInvoiceRow[];
   payments: Record<number, VendorPaymentRow[]>;
+  // Organization structure Phase 4: false for a department-module
+  // "procurement" viewer — GRN/Invoice/Payment/Close/email stay hidden;
+  // the PDF download link stays available (read-only export).
+  isAdmin: boolean;
 }) {
   const router = useRouter();
   const [showDelivery, setShowDelivery] = useState(false);
@@ -140,14 +145,16 @@ export default function PurchaseOrderDetailClient({
         >
           Download PO PDF
         </a>
-        <button
-          type="button"
-          onClick={handleEmailVendor}
-          disabled={emailingVendor}
-          className="text-xs text-accent hover:underline disabled:opacity-50"
-        >
-          {emailingVendor ? "Sending…" : "Email PO to vendor"}
-        </button>
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={handleEmailVendor}
+            disabled={emailingVendor}
+            className="text-xs text-accent hover:underline disabled:opacity-50"
+          >
+            {emailingVendor ? "Sending…" : "Email PO to vendor"}
+          </button>
+        )}
       </div>
 
       {error && <p className="text-sm text-red-600 dark:text-red-400 mb-4">{error}</p>}
@@ -179,7 +186,7 @@ export default function PurchaseOrderDetailClient({
             <div className="text-sm">{[po.carrier, po.tracking_reference].filter(Boolean).join(" · ") || "—"}</div>
           </div>
         )}
-        {!closed && (
+        {!closed && isAdmin && (
           <div className="col-span-2 sm:col-span-4">
             <button type="button" onClick={() => setShowDelivery(true)} className="text-xs text-accent hover:underline">
               Edit delivery details
@@ -222,7 +229,7 @@ export default function PurchaseOrderDetailClient({
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
           <SectionLabel>GOODS RECEIPT (GRN)</SectionLabel>
-          {!closed && (
+          {!closed && isAdmin && (
             <span className="btn-glow inline-block">
               <button
                 onClick={() => setShowGrn(true)}
@@ -256,7 +263,7 @@ export default function PurchaseOrderDetailClient({
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
           <SectionLabel>VENDOR INVOICES</SectionLabel>
-          {!closed && (
+          {!closed && isAdmin && (
             <span className="btn-glow inline-block">
               <button
                 onClick={() => setShowInvoice(true)}
@@ -299,7 +306,7 @@ export default function PurchaseOrderDetailClient({
                     >
                       PDF
                     </a>
-                    {!closed && inv.outstanding_balance > 0 && (
+                    {!closed && isAdmin && inv.outstanding_balance > 0 && (
                       <button
                         type="button"
                         onClick={() => setPayingInvoice(inv)}
@@ -332,6 +339,10 @@ export default function PurchaseOrderDetailClient({
         <SectionLabel>CLOSURE</SectionLabel>
         {closed ? (
           <p className="text-sm text-black/50 dark:text-white/50">This purchase order is closed.</p>
+        ) : !isAdmin ? (
+          <p className="text-sm text-black/50 dark:text-white/50">
+            {closeEligible ? "Ready to close — needs an Admin." : "Needs a GRN, an invoice, and full payment before this can close."}
+          </p>
         ) : (
           <div className="flex flex-wrap items-center gap-3">
             <span className="btn-glow inline-block">
@@ -361,23 +372,23 @@ export default function PurchaseOrderDetailClient({
         )}
       </div>
 
-      {showDelivery && (
+      {isAdmin && showDelivery && (
         <DeliveryDetailsModal po={po} onClose={() => setShowDelivery(false)} onSaved={() => { setShowDelivery(false); refresh(); }} />
       )}
-      {showGrn && (
+      {isAdmin && showGrn && (
         <GrnFormModal po={po} onClose={() => setShowGrn(false)} onSaved={() => { setShowGrn(false); refresh(); }} />
       )}
-      {showInvoice && (
+      {isAdmin && showInvoice && (
         <VendorInvoiceFormModal po={po} onClose={() => setShowInvoice(false)} onSaved={() => { setShowInvoice(false); refresh(); }} />
       )}
-      {payingInvoice && (
+      {isAdmin && payingInvoice && (
         <PaymentFormModal
           invoice={payingInvoice}
           onClose={() => setPayingInvoice(null)}
           onSaved={() => { setPayingInvoice(null); refresh(); }}
         />
       )}
-      {showForceClose && <ForceCloseModal onClose={() => setShowForceClose(false)} onConfirm={handleForceClose} />}
+      {isAdmin && showForceClose && <ForceCloseModal onClose={() => setShowForceClose(false)} onConfirm={handleForceClose} />}
     </div>
   );
 }

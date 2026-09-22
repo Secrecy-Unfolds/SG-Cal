@@ -4,14 +4,33 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ConfirmModal from "@/components/ConfirmModal";
 import type { LeaveRequestRow } from "@/lib/hr";
-import { LEAVE_STATUS_BADGE_CLASS, LEAVE_STATUS_LABELS } from "@/lib/hrDisplay";
+import {
+  LEAVE_STATUS_BADGE_CLASS,
+  LEAVE_STATUS_LABELS,
+  countLeaveDays,
+  countLeaveDaysInYear,
+  formatDays,
+  type LeaveBalance,
+} from "@/lib/hrDisplay";
 import { formatDateOnly } from "@/lib/procurementDisplay";
 import { HudFrame } from "@/components/hud/HudFrame";
 import { PaginationControls, usePagination } from "@/components/Pagination";
 
 type PendingDecision = { request: LeaveRequestRow; status: "approved" | "rejected" };
 
-export default function LeaveRequestsAdminClient({ requests }: { requests: LeaveRequestRow[] }) {
+export default function LeaveRequestsAdminClient({
+  requests,
+  balances,
+  holidays,
+  readOnly = false,
+}: {
+  requests: LeaveRequestRow[];
+  balances: Record<number, LeaveBalance>;
+  holidays: string[];
+  // Organization structure Phase 4: a department-module viewer sees the
+  // list but not the Approve/Reject controls — decisions stay Admin-level.
+  readOnly?: boolean;
+}) {
   const router = useRouter();
   const [pending, setPending] = useState<PendingDecision | null>(null);
   const [working, setWorking] = useState(false);
@@ -67,6 +86,33 @@ export default function LeaveRequestsAdminClient({ requests }: { requests: Leave
                   {formatDateOnly(r.start_date)}
                   {r.start_date !== r.end_date ? ` – ${formatDateOnly(r.end_date)}` : ""}
                 </div>
+                {(() => {
+                  const days = countLeaveDays(r.start_date, r.end_date, holidays);
+                  const balance = balances[r.user_id];
+                  const year = Number(r.start_date.slice(0, 4));
+                  const remaining = balance && balance.year === year ? balance.remaining : null;
+                  const exceeds =
+                    r.status === "pending" &&
+                    remaining !== null &&
+                    countLeaveDaysInYear(r.start_date, r.end_date, holidays, year) > remaining;
+                  return (
+                    <div className="text-xs mt-1">
+                      <span className="text-black/60 dark:text-white/60">{formatDays(days)}</span>
+                      {balance && balance.year === year && (
+                        <span className="text-black/40 dark:text-white/40">
+                          {balance.allowance === null
+                            ? " · no allowance set"
+                            : ` · ${formatDays(balance.remaining ?? 0)} left of ${formatDays(balance.allowance)} in ${balance.year}`}
+                        </span>
+                      )}
+                      {exceeds && (
+                        <span className="ml-2 text-amber-600 dark:text-amber-400 font-medium">
+                          Exceeds remaining balance
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
                 {r.reason && <div className="text-xs text-black/40 dark:text-white/40 mt-1">{r.reason}</div>}
                 {r.status !== "pending" && r.decided_by_username && (
                   <div className="text-xs text-black/40 dark:text-white/40 mt-1">
@@ -74,7 +120,7 @@ export default function LeaveRequestsAdminClient({ requests }: { requests: Leave
                   </div>
                 )}
               </div>
-              {r.status === "pending" && (
+              {!readOnly && r.status === "pending" && (
                 <div className="flex gap-2 shrink-0">
                   <span className="btn-glow inline-block">
                     <button

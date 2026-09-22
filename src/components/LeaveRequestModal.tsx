@@ -1,14 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import { countLeaveDays, countLeaveDaysInYear, formatDays, type LeaveBalance } from "@/lib/hrDisplay";
 
 const inputClass =
   "w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent";
 
 export default function LeaveRequestModal({
+  balance,
+  holidays,
   onClose,
   onSaved,
 }: {
+  balance: LeaveBalance | null;
+  holidays: string[];
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -17,6 +22,15 @@ export default function LeaveRequestModal({
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Live preview: working days = Sun-Thu minus public holidays. Warn-only
+  // when it's more than what's left — the request can still be submitted.
+  const validRange = !!startDate && !!endDate && endDate >= startDate;
+  const days = validRange ? countLeaveDays(startDate, endDate, holidays) : null;
+  const year = startDate ? Number(startDate.slice(0, 4)) : null;
+  const daysInYear = validRange && year ? countLeaveDaysInYear(startDate, endDate, holidays, year) : 0;
+  const remaining = balance && year === balance.year ? balance.remaining : null;
+  const exceeds = remaining !== null && daysInYear > remaining;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -27,6 +41,10 @@ export default function LeaveRequestModal({
     }
     if (endDate < startDate) {
       setError("End date must be on or after the start date");
+      return;
+    }
+    if (days === 0) {
+      setError("That range has no working days — weekends (Fri/Sat) and public holidays don't count as leave");
       return;
     }
     setSaving(true);
@@ -90,6 +108,22 @@ export default function LeaveRequestModal({
             />
           </div>
         </div>
+
+        {days !== null && (
+          <div
+            className={`rounded-lg px-3 py-2 text-xs ${
+              days === 0 || exceeds
+                ? "bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                : "bg-black/[0.03] dark:bg-white/5 text-black/60 dark:text-white/60"
+            }`}
+          >
+            <strong>{formatDays(days)}</strong> of leave (Sun&ndash;Thu, excluding public holidays).
+            {remaining !== null &&
+              (exceeds
+                ? ` This is more than your remaining balance of ${formatDays(remaining)} — you can still submit it, and your approver will see that.`
+                : ` You have ${formatDays(remaining)} left this year.`)}
+          </div>
+        )}
 
         <div className="space-y-1">
           <label className="text-sm font-medium">Reason (optional)</label>

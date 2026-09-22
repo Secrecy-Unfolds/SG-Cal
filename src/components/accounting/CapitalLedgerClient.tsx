@@ -15,10 +15,12 @@ export default function CapitalLedgerClient({
   entries,
   baseCurrency,
   exchangeRateSnapshot,
+  isAdmin,
 }: {
   entries: CapitalEntryRow[];
   baseCurrency: string;
   exchangeRateSnapshot: ExchangeRateSnapshot;
+  isAdmin: boolean;
 }) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
@@ -89,11 +91,13 @@ export default function CapitalLedgerClient({
             </HudFrame>
           )}
         </div>
-        <span className="btn-glow shrink-0 inline-block">
-          <button onClick={() => setShowCreate(true)} className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium">
-            + Add Entry
-          </button>
-        </span>
+        {isAdmin && (
+          <span className="btn-glow shrink-0 inline-block">
+            <button onClick={() => setShowCreate(true)} className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium">
+              + Add Entry
+            </button>
+          </span>
+        )}
       </div>
 
       {entries.length === 0 ? (
@@ -119,9 +123,11 @@ export default function CapitalLedgerClient({
               </div>
               <div className="flex items-center gap-3 shrink-0">
                 <span className="text-sm font-medium">{formatMoney(e.amount, e.currency)}</span>
-                <button onClick={() => setDeletingId(e.id)} className="text-xs text-red-600 dark:text-red-400 hover:underline">
-                  Delete
-                </button>
+                {isAdmin && (
+                  <button onClick={() => setDeletingId(e.id)} className="text-xs text-red-600 dark:text-red-400 hover:underline">
+                    Delete
+                  </button>
+                )}
               </div>
             </HudFrame>
           ))}
@@ -129,7 +135,7 @@ export default function CapitalLedgerClient({
       )}
       <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
-      {showCreate && (
+      {isAdmin && showCreate && (
         <CapitalEntryFormModal
           onClose={() => setShowCreate(false)}
           onSaved={() => {

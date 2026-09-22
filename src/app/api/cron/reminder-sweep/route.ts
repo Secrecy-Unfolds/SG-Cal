@@ -12,8 +12,15 @@ import { isAuthorizedCronRequest } from "@/lib/cronAuth";
 import { maybeSendDailyDigest, maybeSendWeeklyDigest } from "@/lib/digests";
 import { processRecurringExpenses } from "@/lib/recurringExpenses";
 import { processRecurringIncome } from "@/lib/recurringIncome";
-import { listStepsNeedingOverdueReminder, markOverdueReminderSent } from "@/lib/planSteps";
-import { stepOverdueEmail } from "@/lib/planEmailTemplates";
+import {
+  listStepsNeedingOverdueReminder,
+  listStepsNeedingUpcomingReminder,
+  markOverdueReminderSent,
+  markUpcomingReminderSent,
+} from "@/lib/planSteps";
+import { stepOverdueEmail, stepUpcomingEmail } from "@/lib/planEmailTemplates";
+import { listExpiringDocumentsNeedingReminder, markExpiryReminderSent } from "@/lib/hr";
+import { documentExpiringEmail } from "@/lib/hrEmailTemplates";
 
 export const runtime = "nodejs";
 
@@ -57,6 +64,27 @@ export async function GET(req: NextRequest) {
   // above. Recipients are resolved per step, not hoisted out of the loop,
   // since each step can have a different assignee.
   const plansAdminEmails = await getAdminLevelRecipientEmails("ideas");
+
+  // Upcoming (0.2.10): a task due within 3 hours / a meeting starting within
+  // an hour. Mirrors Calendar's own recipients — a task's assignee plus
+  // admin-level "Plans & Strategy" subscribers, but a meeting only goes to
+  // its attendees (Calendar deliberately doesn't broadcast meeting reminders).
+  // Calendar's own sweeps skip step-backed events, so nobody is emailed twice.
+  const upcomingSteps = await listStepsNeedingUpcomingReminder();
+  for (const step of upcomingSteps) {
+    const recipients =
+      step.step_type === "task"
+        ? Array.from(
+            new Set([
+              ...(step.assignee_id !== null ? await getEmailsByIds([step.assignee_id]) : []),
+              ...plansAdminEmails,
+            ])
+          )
+        : await getEmailsByIds(step.attendee_ids);
+    const { subject, html } = stepUpcomingEmail(step);
+    sendMailInBackground({ to: recipients, subject, html });
+    await markUpcomingReminderSent(step.id);
+  }
   const overdueSteps = await listStepsNeedingOverdueReminder();
   for (const step of overdueSteps) {
     // A task's reminder goes to its assignee, a meeting's to its attendees.
@@ -66,6 +94,19 @@ export async function GET(req: NextRequest) {
     const { subject, html } = stepOverdueEmail(step);
     sendMailInBackground({ to: recipients, subject, html });
     await markOverdueReminderSent(step.id);
+  }
+
+  // Organization structure Phase 5 (0.2.17): Civil ID / Passport / Visa /
+  // Contract expiry reminders — the employee themselves (personal, not
+  // preference-gated) plus Admin-level "hr" subscribers.
+  const hrAdminEmails = await getAdminLevelRecipientEmails("hr");
+  const expiringDocs = await listExpiringDocumentsNeedingReminder();
+  for (const doc of expiringDocs) {
+    const employeeEmails = await getEmailsByIds([doc.user_id]);
+    const recipients = Array.from(new Set([...employeeEmails, ...hrAdminEmails]));
+    const { subject, html } = documentExpiringEmail(doc.username, doc.kind, doc.expiry_date);
+    sendMailInBackground({ to: recipients, subject, html });
+    await markExpiryReminderSent(doc.user_id, doc.kind);
   }
 
   // The digests' actual configured send time (Super Admin Settings page) is
@@ -84,7 +125,9 @@ export async function GET(req: NextRequest) {
     ok: true,
     meetingsNotified: meetings.length,
     tasksNotified: tasks.length,
+    upcomingStepsNotified: upcomingSteps.length,
     overdueStepsNotified: overdueSteps.length,
+    expiringDocumentsNotified: expiringDocs.length,
     dailyDigest,
     weeklyDigest,
     recurringExpensesPosted: recurringExpenses.posted,

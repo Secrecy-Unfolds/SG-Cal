@@ -8,7 +8,7 @@ import type { CustomerRow } from "@/lib/customers";
 import { HudFrame } from "@/components/hud/HudFrame";
 import { PaginationControls, usePagination } from "@/components/Pagination";
 
-export default function CustomersClient({ customers }: { customers: CustomerRow[] }) {
+export default function CustomersClient({ customers, isAdmin }: { customers: CustomerRow[]; isAdmin: boolean }) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<CustomerRow | null>(null);
@@ -39,13 +39,15 @@ export default function CustomersClient({ customers }: { customers: CustomerRow[
     <div>
       {error && <p className="text-sm text-red-600 dark:text-red-400 mb-4">{error}</p>}
 
-      <div className="flex justify-end mb-4">
-        <span className="btn-glow inline-block">
-          <button onClick={() => setShowCreate(true)} className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium">
-            + Add Customer
-          </button>
-        </span>
-      </div>
+      {isAdmin && (
+        <div className="flex justify-end mb-4">
+          <span className="btn-glow inline-block">
+            <button onClick={() => setShowCreate(true)} className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium">
+              + Add Customer
+            </button>
+          </span>
+        </div>
+      )}
 
       {customers.length === 0 ? (
         <p className="text-sm text-black/50 dark:text-white/50">No customers yet.</p>
@@ -65,14 +67,16 @@ export default function CustomersClient({ customers }: { customers: CustomerRow[
                   </div>
                   {c.address && <div className="text-xs text-black/40 dark:text-white/40 truncate mt-1">{c.address}</div>}
                 </div>
-                <div className="shrink-0 flex gap-2">
-                  <button onClick={() => setEditing(c)} className="text-xs text-accent hover:underline">
-                    Edit
-                  </button>
-                  <button onClick={() => setDeleting(c)} className="text-xs text-red-600 dark:text-red-400 hover:underline">
-                    Delete
-                  </button>
-                </div>
+                {isAdmin && (
+                  <div className="shrink-0 flex gap-2">
+                    <button onClick={() => setEditing(c)} className="text-xs text-accent hover:underline">
+                      Edit
+                    </button>
+                    <button onClick={() => setDeleting(c)} className="text-xs text-red-600 dark:text-red-400 hover:underline">
+                      Delete
+                    </button>
+                  </div>
+                )}
               </div>
             </HudFrame>
           ))}
@@ -80,7 +84,7 @@ export default function CustomersClient({ customers }: { customers: CustomerRow[
       )}
       <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
-      {showCreate && (
+      {isAdmin && showCreate && (
         <CustomerFormModal
           onClose={() => setShowCreate(false)}
           onSaved={() => {
@@ -89,7 +93,7 @@ export default function CustomersClient({ customers }: { customers: CustomerRow[
           }}
         />
       )}
-      {editing && (
+      {isAdmin && editing && (
         <CustomerFormModal
           customer={editing}
           onClose={() => setEditing(null)}

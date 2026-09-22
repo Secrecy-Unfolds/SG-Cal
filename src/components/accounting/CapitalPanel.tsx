@@ -26,6 +26,7 @@ export default function CapitalPanel({
   governmentSupport,
   baseCurrency,
   exchangeRateSnapshot,
+  isAdmin,
 }: {
   capitalEntries: CapitalEntryRow[];
   capitalBudgets: CapitalBudgetRow[];
@@ -37,6 +38,7 @@ export default function CapitalPanel({
   governmentSupport: GovernmentSupportRow[];
   baseCurrency: string;
   exchangeRateSnapshot: ExchangeRateSnapshot;
+  isAdmin: boolean;
 }) {
   const [subTab, setSubTab] = useState<SubTab>("entries");
 
@@ -58,6 +60,7 @@ export default function CapitalPanel({
           entries={capitalEntries}
           baseCurrency={baseCurrency}
           exchangeRateSnapshot={exchangeRateSnapshot}
+          isAdmin={isAdmin}
         />
       )}
       {subTab === "budgets" && (
@@ -66,11 +69,14 @@ export default function CapitalPanel({
           products={products}
           baseCurrency={baseCurrency}
           exchangeRateSnapshot={exchangeRateSnapshot}
+          isAdmin={isAdmin}
         />
       )}
-      {subTab === "investors" && <InvestorsClient investors={investors} investments={investments} payouts={payouts} />}
+      {subTab === "investors" && (
+        <InvestorsClient investors={investors} investments={investments} payouts={payouts} isAdmin={isAdmin} />
+      )}
       {subTab === "government" && (
-        <GovernmentSupportClient supporters={governmentSupporters} records={governmentSupport} />
+        <GovernmentSupportClient supporters={governmentSupporters} records={governmentSupport} isAdmin={isAdmin} />
       )}
     </div>
   );

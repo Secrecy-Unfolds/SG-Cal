@@ -70,6 +70,22 @@ export async function listTransactions(): Promise<AccountingTransactionRow[]> {
   return res.rows;
 }
 
+// Organization structure Phase 4: a department "accounting" viewer (not
+// Admin-level) can see the Ledger — but a payroll run auto-posts one
+// transaction per paid employee with `description = "Salary — {username}"`
+// (see runPayroll below), which pairs a named employee with their exact
+// salary. That's the same per-employee sensitivity Phase 5 carved out of
+// HR's Employees tab. Strip just the name for a non-admin viewer; leave
+// date/amount/currency/category alone so the ledger's real totals (which a
+// department accounting viewer legitimately needs) stay accurate.
+export function redactPayrollTransactionsForViewer(
+  rows: AccountingTransactionRow[],
+  isAdmin: boolean
+): AccountingTransactionRow[] {
+  if (isAdmin) return rows;
+  return rows.map((t) => (t.payroll_run_id !== null ? { ...t, description: "Payroll (employee detail hidden)" } : t));
+}
+
 export async function getTransactionById(id: number): Promise<AccountingTransactionRow | null> {
   const res = await query<AccountingTransactionRow>(`${TRANSACTION_SELECT} WHERE t.id = $1`, [id]);
   return res.rows[0] ?? null;
@@ -192,7 +208,17 @@ export async function listPayrollRuns(): Promise<PayrollRunRow[]> {
 }
 
 export type RunPayrollResult =
-  | { ok: true; run: PayrollRunRow; transactionsCreated: number }
+  | {
+      ok: true;
+      run: PayrollRunRow;
+      transactionsCreated: number;
+      // For the payroll-run email (org structure Phase 6) — computed here
+      // rather than re-derived by the route, since this function already has
+      // `payable` in hand. totalsByCurrency: salaries can be set in more than
+      // one currency, so a run may post several totals, not one.
+      totalsByCurrency: Record<string, number>;
+      paidUserIds: number[];
+    }
   | { ok: false; error: string };
 
 // One expense transaction per employee with a salary set. `runMonth` is a
@@ -224,6 +250,17 @@ export async function runPayroll(runMonth: string, actorId: number): Promise<Run
     );
   }
 
+  const totalsByCurrency: Record<string, number> = {};
+  for (const e of payable) {
+    totalsByCurrency[e.salary_currency] = (totalsByCurrency[e.salary_currency] ?? 0) + Number(e.salary);
+  }
+
   const run = (await listPayrollRuns()).find((r) => r.id === runId)!;
-  return { ok: true, run, transactionsCreated: payable.length };
+  return {
+    ok: true,
+    run,
+    transactionsCreated: payable.length,
+    totalsByCurrency,
+    paidUserIds: payable.map((e) => e.user_id),
+  };
 }

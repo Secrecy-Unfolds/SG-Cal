@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { isAdminLevel } from "@/lib/users";
+import { canAccessModule } from "@/lib/orgModules";
 import { createInventoryItem, isAssetType, listInventoryItems } from "@/lib/inventory";
 import { getAdminLevelRecipientEmails, sendMailInBackground } from "@/lib/mailer";
 import { inventoryItemCreatedEmail } from "@/lib/inventoryEmailTemplates";
@@ -10,7 +11,7 @@ export const runtime = "nodejs";
 export async function GET() {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!isAdminLevel(session.role)) {
+  if (!isAdminLevel(session.role) && !(await canAccessModule(session, "inventory"))) {
     return NextResponse.json({ error: "Only Admins and Super Admins can view this" }, { status: 403 });
   }
 

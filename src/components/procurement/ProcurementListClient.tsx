@@ -13,23 +13,31 @@ import {
 } from "@/lib/procurementDisplay";
 import { PaginationControls, usePagination } from "@/components/Pagination";
 
-export default function ProcurementListClient({ products }: { products: ProductData[] }) {
+export default function ProcurementListClient({
+  products,
+  isAdmin,
+}: {
+  products: ProductData[];
+  isAdmin: boolean;
+}) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
   const { pageItems, page, setPage, totalPages } = usePagination(products);
 
   return (
     <div>
-      <div className="flex items-center justify-end mb-4">
-        <span className="btn-glow inline-block">
-          <button
-            onClick={() => setShowCreate(true)}
-            className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium"
-          >
-            + New Product
-          </button>
-        </span>
-      </div>
+      {isAdmin && (
+        <div className="flex items-center justify-end mb-4">
+          <span className="btn-glow inline-block">
+            <button
+              onClick={() => setShowCreate(true)}
+              className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium"
+            >
+              + New Product
+            </button>
+          </span>
+        </div>
+      )}
 
       {products.length === 0 ? (
         <p className="text-sm text-black/50 dark:text-white/50">No products yet — add the first one.</p>
@@ -87,7 +95,7 @@ export default function ProcurementListClient({ products }: { products: ProductD
       )}
       <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
-      {showCreate && (
+      {isAdmin && showCreate && (
         <ProductFormModal
           onClose={() => setShowCreate(false)}
           onSaved={() => {

@@ -47,6 +47,7 @@ export default function AccountingTabs({
   baseCurrency,
   exchangeRateSnapshot,
   actorRole,
+  isAdmin,
 }: {
   transactions: AccountingTransactionRow[];
   expenseBudgets: ExpenseBudgetRow[];
@@ -68,6 +69,9 @@ export default function AccountingTabs({
   baseCurrency: string;
   exchangeRateSnapshot: ExchangeRateSnapshot;
   actorRole: UserRole;
+  // Organization structure Phase 4: false for a department-module
+  // "accounting" viewer — every tab below hides its own write affordances.
+  isAdmin: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("ledger");
 
@@ -98,9 +102,10 @@ export default function AccountingTabs({
           baseCurrency={baseCurrency}
           exchangeRateSnapshot={exchangeRateSnapshot}
           actorRole={actorRole}
+          isAdmin={isAdmin}
         />
       )}
-      {tab === "payroll" && <PayrollRunsClient runs={payrollRuns} />}
+      {tab === "payroll" && <PayrollRunsClient runs={payrollRuns} isAdmin={isAdmin} />}
       {tab === "capital" && (
         <CapitalPanel
           capitalEntries={capitalEntries}
@@ -113,12 +118,13 @@ export default function AccountingTabs({
           governmentSupport={governmentSupport}
           baseCurrency={baseCurrency}
           exchangeRateSnapshot={exchangeRateSnapshot}
+          isAdmin={isAdmin}
         />
       )}
       {tab === "statements" && (
         <StatementsClient baseCurrency={baseCurrency} exchangeRateSnapshot={exchangeRateSnapshot} />
       )}
-      {tab === "invoices" && <InvoicesPanel invoices={invoices} customers={customers} />}
+      {tab === "invoices" && <InvoicesPanel invoices={invoices} customers={customers} isAdmin={isAdmin} />}
     </div>
   );
 }

@@ -12,6 +12,10 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user';
 -- Profile page fields: display name, phone, and an optional avatar.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT '';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT NOT NULL DEFAULT '';
+-- 0.2.9: set when a Super Admin resets someone's password; cleared once they
+-- choose their own. While set, the session is locked to the change-password
+-- page (src/middleware.ts) — see src/lib/session.ts's `mcp` claim.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS picture_url TEXT;
 
 CREATE TABLE IF NOT EXISTS events (
@@ -202,6 +206,22 @@ CREATE TABLE IF NOT EXISTS employee_details (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- 0.2.11: leave balance. `annual_leave_days` is a per-employee custom
+-- allowance (NULL = none set, so no balance is shown or compared) counted per
+-- CALENDAR year. Days are counted Sun-Thu (Fri/Sat are the weekend) minus the
+-- public holidays below — see src/lib/hrDisplay.ts's countLeaveDays.
+ALTER TABLE employee_details ADD COLUMN IF NOT EXISTS annual_leave_days NUMERIC(5, 1);
+
+-- Admin-maintained public holidays: one row per calendar day (a multi-day
+-- holiday like Eid is several rows sharing a name).
+CREATE TABLE IF NOT EXISTS public_holidays (
+  id SERIAL PRIMARY KEY,
+  holiday_date DATE NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS leave_requests (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -217,6 +237,54 @@ CREATE TABLE IF NOT EXISTS leave_requests (
 CREATE INDEX IF NOT EXISTS leave_requests_user_id_idx ON leave_requests (user_id);
 CREATE INDEX IF NOT EXISTS leave_requests_status_idx ON leave_requests (status);
 
+-- 0.2.17: Organization structure, Phase 5 — much richer employee details
+-- (confirmed 2026-09-18, resolved in full 2026-09-22) plus per-type document
+-- uploads. Fixed columns, not a custom-fields mechanism (confirmed). Expat
+-- status is derived from `country` (not Oman => visa_expiry applies), not a
+-- separate flag. `position` is untouched/coexists with the job-title system.
+-- The four `*_expiry_reminder_sent_at` columns gate a once-per-expiry-value
+-- reminder (reset when that expiry date is edited — src/lib/hr.ts), same
+-- mark-once-fired pattern used everywhere else in this app.
+ALTER TABLE employee_details ADD COLUMN IF NOT EXISTS civil_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE employee_details ADD COLUMN IF NOT EXISTS civil_id_expiry DATE;
+ALTER TABLE employee_details ADD COLUMN IF NOT EXISTS civil_id_expiry_reminder_sent_at TIMESTAMPTZ;
+ALTER TABLE employee_details ADD COLUMN IF NOT EXISTS passport_number TEXT NOT NULL DEFAULT '';
+ALTER TABLE employee_details ADD COLUMN IF NOT EXISTS passport_expiry DATE;
+ALTER TABLE employee_details ADD COLUMN IF NOT EXISTS passport_expiry_reminder_sent_at TIMESTAMPTZ;
+ALTER TABLE employee_details ADD COLUMN IF NOT EXISTS visa_expiry DATE;
+ALTER TABLE employee_details ADD COLUMN IF NOT EXISTS visa_expiry_reminder_sent_at TIMESTAMPTZ;
+ALTER TABLE employee_details ADD COLUMN IF NOT EXISTS contract_expiry DATE;
+ALTER TABLE employee_details ADD COLUMN IF NOT EXISTS contract_expiry_reminder_sent_at TIMESTAMPTZ;
+ALTER TABLE employee_details ADD COLUMN IF NOT EXISTS father_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE employee_details ADD COLUMN IF NOT EXISTS religion TEXT NOT NULL DEFAULT '';
+ALTER TABLE employee_details ADD COLUMN IF NOT EXISTS country TEXT NOT NULL DEFAULT '';
+ALTER TABLE employee_details ADD COLUMN IF NOT EXISTS date_of_birth DATE;
+ALTER TABLE employee_details ADD COLUMN IF NOT EXISTS gender TEXT NOT NULL DEFAULT '';
+ALTER TABLE employee_details ADD COLUMN IF NOT EXISTS education_level TEXT NOT NULL DEFAULT '';
+ALTER TABLE employee_details ADD COLUMN IF NOT EXISTS degree_field TEXT NOT NULL DEFAULT '';
+ALTER TABLE employee_details ADD COLUMN IF NOT EXISTS graduation_date DATE;
+ALTER TABLE employee_details ADD COLUMN IF NOT EXISTS years_experience NUMERIC(4, 1);
+ALTER TABLE employee_details ADD COLUMN IF NOT EXISTS recommended_by TEXT NOT NULL DEFAULT '';
+
+-- Per-type document uploads (passport, Civil ID, visa, contract, degree,
+-- other). One logical "slot" per (user_id, doc_type); a re-upload adds a new
+-- version_number rather than overwriting — "current" is MAX(version_number),
+-- computed live (same precedent as step_deliverable_files). Files live in
+-- Vercel Blob under hr/employees/.
+CREATE TABLE IF NOT EXISTS employee_documents (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  doc_type TEXT NOT NULL DEFAULT 'other',
+  version_number INTEGER NOT NULL DEFAULT 1,
+  blob_url TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  mime_type TEXT NOT NULL DEFAULT '',
+  size_bytes INTEGER NOT NULL DEFAULT 0,
+  uploaded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  uploaded_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS employee_documents_user_id_idx ON employee_documents (user_id);
+
 -- Self-service attendance: one row per user per Muscat calendar day.
 CREATE TABLE IF NOT EXISTS attendance_records (
   id SERIAL PRIMARY KEY,
@@ -228,6 +296,198 @@ CREATE TABLE IF NOT EXISTS attendance_records (
 );
 
 CREATE INDEX IF NOT EXISTS attendance_records_user_id_idx ON attendance_records (user_id);
+-- 0.2.12: an Admin can add/edit/remove a day's record after the fact. A row
+-- means present and no row means absent (unchanged); these two columns just
+-- record that a person other than the employee last touched the row.
+ALTER TABLE attendance_records ADD COLUMN IF NOT EXISTS edited_by INTEGER REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE attendance_records ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
+
+-- 0.2.13: Organization structure, Phase 1 (docs/org-structure-plan.md).
+-- Departments are a managed list replacing the free-text
+-- employee_details.department; each has ONE Manager and (optionally) one
+-- Director who can oversee several Departments. Naming a Manager/Director here
+-- also sets that person's job title (lib/org.ts keeps the two in sync).
+CREATE TABLE IF NOT EXISTS departments (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  manager_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  director_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS departments_name_lower_idx ON departments (lower(name));
+-- One person manages at most one Department.
+CREATE UNIQUE INDEX IF NOT EXISTS departments_manager_id_idx ON departments (manager_id) WHERE manager_id IS NOT NULL;
+
+-- Editable job-title list (the hierarchy titles), NOT an enum. `level` orders
+-- the hierarchy (1 = top). `structural_key` marks the six titles the code
+-- relies on (it survives a rename); those can't be deleted. Manager, Director,
+-- Project Head and Team Lead are assigned through the structure (a
+-- Department's Manager/Director, a Project's Head, a Team's Lead), never
+-- picked by hand on an employee — CEO and Chief Officer are picked by hand.
+CREATE TABLE IF NOT EXISTS job_titles (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  level INTEGER NOT NULL,
+  qualified_by_department BOOLEAN NOT NULL DEFAULT false, -- shown as "<Department> <title>", e.g. "HR Officer"
+  structural_key TEXT UNIQUE CHECK (structural_key IN ('ceo', 'chief_officer', 'director', 'manager', 'project_head', 'team_lead')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS job_titles_name_lower_idx ON job_titles (lower(name));
+
+-- The employee's Department and title. `reports_to_id` is used ONLY for a
+-- Director -> their Chief Officer; every other reporting line is derived from
+-- Department / Project / Team structure (src/lib/orgHierarchy.ts). The old
+-- free-text `department` column is left in place, unread and unwritten.
+ALTER TABLE employee_details ADD COLUMN IF NOT EXISTS department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL;
+ALTER TABLE employee_details ADD COLUMN IF NOT EXISTS job_title_id INTEGER REFERENCES job_titles(id) ON DELETE SET NULL;
+ALTER TABLE employee_details ADD COLUMN IF NOT EXISTS reports_to_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+
+-- Guard for one-time data steps below: setup re-runs this whole file, and a
+-- seed that re-ran would resurrect a Department someone renamed or deleted.
+CREATE TABLE IF NOT EXISTS one_time_migrations (
+  key TEXT PRIMARY KEY,
+  ran_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM one_time_migrations WHERE key = 'org_phase1_seed') THEN
+    INSERT INTO departments (name) VALUES
+      ('HR'), ('IT'), ('Accounting'), ('Procurement'), ('Inventory Management'), ('Logistics'),
+      ('Engineering'), ('AI'), ('Cybersecurity'), ('Production'), ('Quality Assurance'),
+      ('Maintenance'), ('Marketing'), ('Sales'), ('Customer Service'), ('Legal'),
+      ('Internal Audit'), ('Business Intelligence'), ('HSE'), ('Public Relations'),
+      ('Investor & Government Relations')
+    ON CONFLICT DO NOTHING;
+
+    INSERT INTO job_titles (name, level, qualified_by_department, structural_key) VALUES
+      ('CEO', 1, false, 'ceo'),
+      ('Chief Officer', 2, false, 'chief_officer'),
+      ('Director', 3, false, 'director'),
+      ('Manager', 4, true, 'manager'),
+      ('Project Head', 5, false, 'project_head'),
+      ('Team Lead', 6, false, 'team_lead')
+    ON CONFLICT DO NOTHING;
+    INSERT INTO job_titles (name, level, qualified_by_department) VALUES
+      ('Officer', 7, true), ('Technician', 8, false), ('Developer', 8, false),
+      ('Engineer', 8, false), ('Trainee', 9, false), ('Intern', 9, false)
+    ON CONFLICT DO NOTHING;
+
+    -- Existing free-text departments become real ones: a value matching a
+    -- department (case-insensitive, trimmed) is linked to it; a value with no
+    -- match creates a department of that name, so nothing is lost or blanked.
+    INSERT INTO departments (name)
+      SELECT DISTINCT ON (lower(trim(ed.department))) trim(ed.department)
+      FROM employee_details ed
+      WHERE trim(ed.department) <> ''
+        AND NOT EXISTS (SELECT 1 FROM departments d WHERE lower(d.name) = lower(trim(ed.department)))
+      ORDER BY lower(trim(ed.department))
+    ON CONFLICT DO NOTHING;
+    UPDATE employee_details ed SET department_id = d.id
+      FROM departments d
+      WHERE lower(d.name) = lower(trim(ed.department)) AND ed.department_id IS NULL AND trim(ed.department) <> '';
+
+    INSERT INTO one_time_migrations (key) VALUES ('org_phase1_seed');
+  END IF;
+END $$;
+
+-- 0.2.18: Organization structure, Phase 4 (module-level slice only — confirmed
+-- 2026-09-22: "an HR officer only sees HR, not finance/inventory/procurement").
+-- A Department maps to zero or more ERP modules; a plain (non-Admin-level)
+-- user whose Department has a module gets VIEW-only access to it — every
+-- write in that module stays Admin-level-only, unchanged. Admin-level bypasses
+-- this table entirely (sees every module regardless). A Department with no
+-- row here maps to nothing extra (confirmed default) — the person still keeps
+-- the baseline everyone gets (Calendar, Profile, Dashboard, Plans shared with
+-- them). Organization and Projects are deliberately NOT gateable through this
+-- table (see src/lib/orgModulesDisplay.ts) — they're structural/admin pages,
+-- not a "line of business" a Department maps to.
+CREATE TABLE IF NOT EXISTS department_modules (
+  department_id INTEGER NOT NULL REFERENCES departments(id) ON DELETE CASCADE,
+  module_key TEXT NOT NULL CHECK (module_key IN ('procurement', 'inventory', 'accounting', 'hr')),
+  PRIMARY KEY (department_id, module_key)
+);
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM one_time_migrations WHERE key = 'org_phase4_module_seed') THEN
+    INSERT INTO department_modules (department_id, module_key)
+      SELECT id, 'hr' FROM departments WHERE lower(name) = 'hr'
+      UNION ALL
+      SELECT id, 'accounting' FROM departments WHERE lower(name) = 'accounting'
+      UNION ALL
+      SELECT id, 'procurement' FROM departments WHERE lower(name) = 'procurement'
+      UNION ALL
+      SELECT id, 'inventory' FROM departments WHERE lower(name) = 'inventory management'
+    ON CONFLICT DO NOTHING;
+    INSERT INTO one_time_migrations (key) VALUES ('org_phase4_module_seed');
+  END IF;
+END $$;
+
+-- 0.2.14: Organization structure, Phase 2 — Projects and Teams.
+-- A Project belongs to exactly one Department and has one Project Head; it has
+-- several Teams, each with one Team Lead; people sit under a Team, or directly
+-- under the Project when it has no Team for them. A person is on at most ONE
+-- Project (via a Team or directly), so "who do I report to" has one answer.
+-- project_head_id / team_lead_id are nullable only so a row survives if that
+-- person is ever removed (ON DELETE SET NULL); the API always requires them.
+-- Naming a Head/Lead sets their job title (lib/org.ts keeps title and structure
+-- in sync). department_id is RESTRICT: a Department with Projects can't be deleted.
+CREATE TABLE IF NOT EXISTS projects (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'planning'
+    CHECK (status IN ('planning', 'active', 'on_hold', 'completed', 'cancelled')),
+  start_date DATE,
+  target_end_date DATE,
+  budget NUMERIC(14, 2),
+  currency TEXT NOT NULL DEFAULT 'OMR',
+  department_id INTEGER NOT NULL REFERENCES departments(id) ON DELETE RESTRICT,
+  project_head_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS projects_name_lower_idx ON projects (lower(name));
+CREATE INDEX IF NOT EXISTS projects_department_id_idx ON projects (department_id);
+
+CREATE TABLE IF NOT EXISTS teams (
+  id SERIAL PRIMARY KEY,
+  project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  team_lead_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS teams_project_name_lower_idx ON teams (project_id, lower(name));
+-- One person leads at most one Team.
+CREATE UNIQUE INDEX IF NOT EXISTS teams_team_lead_id_idx ON teams (team_lead_id) WHERE team_lead_id IS NOT NULL;
+
+-- user_id UNIQUE = one person, one Team (confirmed).
+CREATE TABLE IF NOT EXISTS team_members (
+  team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  PRIMARY KEY (team_id, user_id)
+);
+
+-- People on a Project directly, with no Team. (A Team member is on the Project
+-- through the Team and isn't listed here.)
+CREATE TABLE IF NOT EXISTS project_members (
+  project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  PRIMARY KEY (project_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS project_members_user_id_idx ON project_members (user_id);
+
+-- 0.2.15: Organization structure, Phase 3 — optional Project links. A plan
+-- (Process/Strategy/Idea, or a Stage) and a Procurement product may each
+-- optionally belong to a Project — zero-backfill, ON DELETE SET NULL (fulfils
+-- the deferral plans' own schema comment above promised once Projects shipped).
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS plans_project_id_idx ON plans (project_id);
+ALTER TABLE procurement_products ADD COLUMN IF NOT EXISTS project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS procurement_products_project_id_idx ON procurement_products (project_id);
 
 -- Admin-only idea log: name/description/pre-requisites/expected start date.
 CREATE TABLE IF NOT EXISTS ideas (
@@ -879,11 +1139,6 @@ CREATE TABLE IF NOT EXISTS plans (
   promoted_from_plan_id INTEGER REFERENCES plans(id) ON DELETE SET NULL,
   duplicated_from_plan_id INTEGER REFERENCES plans(id) ON DELETE SET NULL,
   migrated_from_idea_id INTEGER,
-  -- project_id intentionally NOT added — Organization Structure/Projects
-  -- is 100% unbuilt (confirmed 2026-09-19, via `AskUserQuestion`). Add
-  -- later as a zero-backfill nullable ALTER TABLE once that module ships;
-  -- document the deferral in docs/erp-v3-roadmap.md / erp-v4-roadmap.md
-  -- when it does.
   created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -959,6 +1214,9 @@ CREATE TABLE IF NOT EXISTS steps (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+-- 0.2.10: "upcoming" (due-soon / starting-soon) reminder, same mark-once-fired
+-- pattern as overdue_reminder_sent_at above. Reset when the step's date changes.
+ALTER TABLE steps ADD COLUMN IF NOT EXISTS upcoming_reminder_sent_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS steps_plan_id_idx ON steps (plan_id);
 CREATE INDEX IF NOT EXISTS steps_event_id_idx ON steps (event_id);
 CREATE INDEX IF NOT EXISTS steps_status_idx ON steps (status);

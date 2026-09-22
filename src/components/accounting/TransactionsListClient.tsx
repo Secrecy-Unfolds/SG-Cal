@@ -19,12 +19,18 @@ export default function TransactionsListClient({
   baseCurrency,
   exchangeRateSnapshot,
   actorRole,
+  isAdmin,
 }: {
   transactions: AccountingTransactionRow[];
   financialAccounts: FinancialAccountRow[];
   baseCurrency: string;
   exchangeRateSnapshot: ExchangeRateSnapshot;
   actorRole: UserRole;
+  // Organization structure Phase 4: false for a department "accounting"
+  // viewer — hides + Add Transaction / Delete. Payroll-derived rows also
+  // have their employee-identifying description redacted server-side
+  // before this component ever sees them (see redactPayrollTransactionsForViewer).
+  isAdmin: boolean;
 }) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
@@ -166,14 +172,16 @@ export default function TransactionsListClient({
             </HudFrame>
           )}
         </div>
-        <span className="btn-glow shrink-0 inline-block">
-          <button
-            onClick={() => setShowCreate(true)}
-            className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium"
-          >
-            + Add Transaction
-          </button>
-        </span>
+        {isAdmin && (
+          <span className="btn-glow shrink-0 inline-block">
+            <button
+              onClick={() => setShowCreate(true)}
+              className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium"
+            >
+              + Add Transaction
+            </button>
+          </span>
+        )}
       </div>
 
       {transactions.length === 0 ? (
@@ -234,12 +242,14 @@ export default function TransactionsListClient({
                     Decide
                   </button>
                 )}
-                <button
-                  onClick={() => setDeletingId(t.id)}
-                  className="text-xs text-red-600 dark:text-red-400 hover:underline"
-                >
-                  Delete
-                </button>
+                {isAdmin && (
+                  <button
+                    onClick={() => setDeletingId(t.id)}
+                    className="text-xs text-red-600 dark:text-red-400 hover:underline"
+                  >
+                    Delete
+                  </button>
+                )}
               </div>
             </HudFrame>
           ))}
@@ -247,7 +257,7 @@ export default function TransactionsListClient({
       )}
       <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
-      {showCreate && (
+      {isAdmin && showCreate && (
         <TransactionFormModal
           financialAccounts={financialAccounts}
           onClose={() => setShowCreate(false)}

@@ -8,11 +8,13 @@ import {
   Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
+  FolderKanban,
   GitBranch,
   LayoutDashboard,
   LogOut,
   Menu,
   Moon,
+  Network,
   Package,
   Settings as SettingsIcon,
   Sun,
@@ -42,10 +44,18 @@ const ROLE_BADGE_CLASS: Record<UserRole, string> = {
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, adminOnly: false, superAdminOnly: false },
   { href: "/calendar", label: "Calendar", icon: CalendarIcon, adminOnly: false, superAdminOnly: false },
-  { href: "/procurement", label: "Procurement", icon: Package, adminOnly: true, superAdminOnly: false },
-  { href: "/inventory", label: "Inventory", icon: Boxes, adminOnly: true, superAdminOnly: false },
-  { href: "/accounting", label: "Accounting", icon: Wallet, adminOnly: true, superAdminOnly: false },
-  { href: "/hr", label: "HR", icon: UserCog, adminOnly: true, superAdminOnly: false },
+  // Organization structure Phase 4 (0.2.18): these four also open up to a
+  // plain user whose Department maps to that module (VIEW-only — every
+  // write inside stays Admin-level-only). `adminOnly: true` still applies
+  // as the fallback for anyone with no such Department; `moduleKey` is the
+  // extra door in on top of it. Organization/Projects deliberately have no
+  // moduleKey — they stay Admin-level-only regardless of department.
+  { href: "/procurement", label: "Procurement", icon: Package, adminOnly: true, superAdminOnly: false, moduleKey: "procurement" as const },
+  { href: "/inventory", label: "Inventory", icon: Boxes, adminOnly: true, superAdminOnly: false, moduleKey: "inventory" as const },
+  { href: "/accounting", label: "Accounting", icon: Wallet, adminOnly: true, superAdminOnly: false, moduleKey: "accounting" as const },
+  { href: "/hr", label: "HR", icon: UserCog, adminOnly: true, superAdminOnly: false, moduleKey: "hr" as const },
+  { href: "/organization", label: "Organization", icon: Network, adminOnly: true, superAdminOnly: false },
+  { href: "/projects", label: "Projects", icon: FolderKanban, adminOnly: true, superAdminOnly: false },
   // v3 Phase 4: a plain "user" can now be shared on individual plans (see
   // lib/planShares.ts), so this is no longer Admin-only — a plain user
   // with nothing shared with them just sees an empty list, same as
@@ -80,12 +90,18 @@ export default function AppShell({
   pictureUrl = null,
   presentCount = 0,
   appVersion,
+  moduleKeys = [],
   children,
 }: {
   session: { uid: number; username: string; role: UserRole };
   pictureUrl?: string | null;
   presentCount?: number;
   appVersion?: string;
+  // Organization structure Phase 4: the modules this person's own
+  // Department maps to (empty for Admin-level — they bypass this
+  // entirely below via `isAdmin`, and for a plain user with no
+  // Department or an unmapped one).
+  moduleKeys?: string[];
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -126,8 +142,11 @@ export default function AppShell({
 
   const isAdmin = session.role !== "user";
   const isSuperAdmin = session.role === "super_admin";
+  const moduleSet = new Set(moduleKeys);
   const visibleItems = NAV_ITEMS.filter(
-    (item) => (!item.adminOnly || isAdmin) && (!item.superAdminOnly || isSuperAdmin)
+    (item) =>
+      (!item.adminOnly || isAdmin || ("moduleKey" in item && !!item.moduleKey && moduleSet.has(item.moduleKey))) &&
+      (!item.superAdminOnly || isSuperAdmin)
   );
   const activeItem = visibleItems.find((item) => isActive(pathname, item.href));
 

@@ -10,7 +10,13 @@ import type { VendorWithProductsRow } from "@/lib/procurement";
 import { HudFrame } from "@/components/hud/HudFrame";
 import { PaginationControls, usePagination } from "@/components/Pagination";
 
-export default function VendorsListClient({ vendors }: { vendors: VendorWithProductsRow[] }) {
+export default function VendorsListClient({
+  vendors,
+  isAdmin,
+}: {
+  vendors: VendorWithProductsRow[];
+  isAdmin: boolean;
+}) {
   const router = useRouter();
   const [editing, setEditing] = useState<VendorWithProductsRow | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -77,27 +83,29 @@ export default function VendorsListClient({ vendors }: { vendors: VendorWithProd
                   </a>
                 )}
               </div>
-              <div className="shrink-0 flex gap-2">
-                <span className="btn-glow inline-block">
-                  <button
-                    type="button"
-                    onClick={() => setEditing(v)}
-                    className="text-xs btn-skew border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
-                  >
-                    Edit
-                  </button>
-                </span>
-                <span className="btn-glow-red inline-block">
-                  <button
-                    type="button"
-                    onClick={() => setConfirmingDelete(v)}
-                    disabled={deletingId === v.id}
-                    className="text-xs btn-skew border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 px-3 py-1.5 disabled:opacity-50"
-                  >
-                    {deletingId === v.id ? "Deleting..." : "Delete"}
-                  </button>
-                </span>
-              </div>
+              {isAdmin && (
+                <div className="shrink-0 flex gap-2">
+                  <span className="btn-glow inline-block">
+                    <button
+                      type="button"
+                      onClick={() => setEditing(v)}
+                      className="text-xs btn-skew border border-black/10 dark:border-white/10 px-3 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/5"
+                    >
+                      Edit
+                    </button>
+                  </span>
+                  <span className="btn-glow-red inline-block">
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingDelete(v)}
+                      disabled={deletingId === v.id}
+                      className="text-xs btn-skew border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 px-3 py-1.5 disabled:opacity-50"
+                    >
+                      {deletingId === v.id ? "Deleting..." : "Delete"}
+                    </button>
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="text-xs text-black/40 dark:text-white/40 uppercase tracking-wide mb-1">
@@ -117,7 +125,7 @@ export default function VendorsListClient({ vendors }: { vendors: VendorWithProd
               </div>
             )}
 
-            <VendorDocumentsPanel vendorId={v.id} documents={v.documents} onChanged={() => router.refresh()} />
+            <VendorDocumentsPanel vendorId={v.id} documents={v.documents} onChanged={() => router.refresh()} canManage={isAdmin} />
           </HudFrame>
         ))}
       </div>

@@ -12,7 +12,15 @@ import { toMuscatDateInput } from "@/lib/time";
 import { HudFrame } from "@/components/hud/HudFrame";
 import { PaginationControls, usePagination } from "@/components/Pagination";
 
-export default function InvoicesClient({ invoices, customers }: { invoices: IssuedInvoiceRow[]; customers: CustomerRow[] }) {
+export default function InvoicesClient({
+  invoices,
+  customers,
+  isAdmin,
+}: {
+  invoices: IssuedInvoiceRow[];
+  customers: CustomerRow[];
+  isAdmin: boolean;
+}) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<{ invoice: IssuedInvoiceRow; lineItems: InvoiceLineItemRow[] } | null>(null);
@@ -71,19 +79,21 @@ export default function InvoicesClient({ invoices, customers }: { invoices: Issu
     <div>
       {error && <p className="text-sm text-red-600 dark:text-red-400 mb-4">{error}</p>}
 
-      <div className="flex justify-end mb-4">
-        <span className="btn-glow inline-block">
-          <button
-            onClick={() => setShowCreate(true)}
-            disabled={customers.length === 0}
-            className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium disabled:opacity-50"
-          >
-            + New Invoice
-          </button>
-        </span>
-      </div>
+      {isAdmin && (
+        <div className="flex justify-end mb-4">
+          <span className="btn-glow inline-block">
+            <button
+              onClick={() => setShowCreate(true)}
+              disabled={customers.length === 0}
+              className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium disabled:opacity-50"
+            >
+              + New Invoice
+            </button>
+          </span>
+        </div>
+      )}
 
-      {customers.length === 0 && (
+      {isAdmin && customers.length === 0 && (
         <p className="text-xs text-black/50 dark:text-white/50 mb-4">Add a customer first, from the Customers sub-tab.</p>
       )}
 
@@ -131,7 +141,7 @@ export default function InvoicesClient({ invoices, customers }: { invoices: Issu
                   >
                     PDF
                   </a>
-                  {inv.status !== "paid" && (
+                  {isAdmin && inv.status !== "paid" && (
                     <button
                       onClick={() => handleAction(inv, "email")}
                       disabled={working === inv.id}
@@ -140,7 +150,7 @@ export default function InvoicesClient({ invoices, customers }: { invoices: Issu
                       Email
                     </button>
                   )}
-                  {inv.status === "draft" && (
+                  {isAdmin && inv.status === "draft" && (
                     <button
                       onClick={() => handleAction(inv, "mark-sent")}
                       disabled={working === inv.id}
@@ -149,7 +159,7 @@ export default function InvoicesClient({ invoices, customers }: { invoices: Issu
                       Mark sent
                     </button>
                   )}
-                  {inv.status !== "paid" && (
+                  {isAdmin && inv.status !== "paid" && (
                     <button
                       onClick={() => handleAction(inv, "mark-paid")}
                       disabled={working === inv.id}
@@ -158,12 +168,12 @@ export default function InvoicesClient({ invoices, customers }: { invoices: Issu
                       Mark paid
                     </button>
                   )}
-                  {canEdit && (
+                  {isAdmin && canEdit && (
                     <button onClick={() => loadForEdit(inv)} className="text-xs text-accent hover:underline">
                       Edit
                     </button>
                   )}
-                  {canEdit && (
+                  {isAdmin && canEdit && (
                     <button onClick={() => setDeleting(inv)} className="text-xs text-red-600 dark:text-red-400 hover:underline">
                       Delete
                     </button>
@@ -176,7 +186,7 @@ export default function InvoicesClient({ invoices, customers }: { invoices: Issu
       )}
       <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
-      {showCreate && (
+      {isAdmin && showCreate && (
         <InvoiceFormModal
           customers={customers}
           onClose={() => setShowCreate(false)}
@@ -186,7 +196,7 @@ export default function InvoicesClient({ invoices, customers }: { invoices: Issu
           }}
         />
       )}
-      {editing && (
+      {isAdmin && editing && (
         <InvoiceFormModal
           invoice={editing.invoice}
           lineItems={editing.lineItems}

@@ -127,7 +127,7 @@ export async function getStepById(id: number): Promise<StepRow | null> {
 // just what the reminder email needs, including `plan_name` (via a join
 // STEP_SELECT doesn't carry, since every other caller already has the
 // plan in hand and doesn't need it duplicated onto every step row).
-export type OverdueStepReminder = {
+export type StepReminder = {
   id: number;
   title: string;
   notes: string;
@@ -139,6 +139,8 @@ export type OverdueStepReminder = {
   attendee_ids: number[];
   plan_name: string;
 };
+export type OverdueStepReminder = StepReminder;
+export type UpcomingStepReminder = StepReminder;
 
 // A step is overdue once its own due moment has passed while it's still
 // not resolved (done/skipped/na don't need reminding; blocked still does,
@@ -174,6 +176,36 @@ export async function markOverdueReminderSent(id: number): Promise<void> {
   await query(`UPDATE steps SET overdue_reminder_sent_at = now() WHERE id = $1`, [id]);
 }
 
+// "Upcoming" reminder (0.2.10): a task due within the next 3 hours, or a
+// meeting starting within the next hour — the same lead times Calendar's own
+// reminders use (lib/events.ts). Same rules as overdue otherwise: not for a
+// step that's already done/skipped/n-a, and it needs someone to tell (the
+// assignee for a task, attendees for a meeting). Marked once fired
+// (upcoming_reminder_sent_at), reset when the step's date changes.
+export async function listStepsNeedingUpcomingReminder(): Promise<UpcomingStepReminder[]> {
+  const res = await query<UpcomingStepReminder>(
+    `SELECT s.id, e.title, s.notes, s.step_type, e.start_at, e.end_at, e.assignee_id, p.name AS plan_name,
+            COALESCE((SELECT json_agg(ea.user_id) FROM event_attendees ea WHERE ea.event_id = e.id), '[]') AS attendee_ids
+     FROM steps s
+     JOIN events e ON e.id = s.event_id
+     JOIN plans p ON p.id = s.plan_id
+     WHERE s.status NOT IN ('done', 'skipped', 'na')
+       AND s.upcoming_reminder_sent_at IS NULL
+       AND (
+         (s.step_type = 'task' AND e.assignee_id IS NOT NULL AND e.end_at IS NOT NULL
+            AND e.end_at > now() AND e.end_at <= now() + interval '3 hours')
+         OR (s.step_type = 'meeting' AND e.start_at > now() AND e.start_at <= now() + interval '1 hour'
+             AND EXISTS (SELECT 1 FROM event_attendees ea WHERE ea.event_id = e.id))
+       )
+     ORDER BY e.start_at ASC`
+  );
+  return res.rows;
+}
+
+export async function markUpcomingReminderSent(id: number): Promise<void> {
+  await query(`UPDATE steps SET upcoming_reminder_sent_at = now() WHERE id = $1`, [id]);
+}
+
 // Plan authoring (steps included) is Admin-level-only end to end (see
 // docs/erp-v3-roadmap.md / the plans API routes), so — unlike Calendar's
 // own resolveTaskAssignment in lib/events.ts, which restricts a plain
@@ -190,6 +222,15 @@ export async function markOverdueReminderSent(id: number): Promise<void> {
 async function validateStepStart(planId: number, startAt: Date): Promise<string | null> {
   const floor = await getFloorForSteps(planId);
   if (floor && toMuscatDateInput(startAt) < floor.date) return startBeforeFloorMessage("A step", floor);
+  return null;
+}
+
+// "Both required" (roadmap, 2026-09-18): a step needs someone accountable —
+// an assignee for a task, at least one attendee for a meeting — so its
+// reminders always have somewhere to go.
+function requirePeopleError(stepType: EventType, assigneeId: number | null, attendeeCount: number): string | null {
+  if (stepType === "task" && assigneeId === null) return "A task step needs an assignee";
+  if (stepType === "meeting" && attendeeCount === 0) return "A meeting step needs at least one attendee";
   return null;
 }
 
@@ -218,6 +259,8 @@ export async function createStep(input: {
   const assigneeId = isMeeting ? null : input.assigneeId;
   const attendeeIds = isMeeting ? Array.from(new Set(input.attendeeIds)) : [];
 
+  const peopleError = requirePeopleError(input.stepType, assigneeId, attendeeIds.length);
+  if (peopleError) return { ok: false, error: peopleError };
   const startError = await validateStepStart(input.planId, input.startAt);
   if (startError) return { ok: false, error: startError };
   const attendeeError = await validateAttendeeIds(attendeeIds);
@@ -313,6 +356,15 @@ export async function updateStep(
   const assigneeId = isMeeting ? null : input.assigneeId;
   const attendeeIds = isMeeting && input.attendeeIds ? Array.from(new Set(input.attendeeIds)) : null;
 
+  // A meeting's attendees may be left untouched (undefined) — then the
+  // existing ones count.
+  const peopleError = requirePeopleError(
+    existing.step_type,
+    assigneeId,
+    attendeeIds ? attendeeIds.length : existing.attendees.length
+  );
+  if (peopleError) return { ok: false, error: peopleError };
+
   // Only re-checked when the date actually moves — a step scheduled before
   // this rule existed can still have its notes/title/etc. edited in place.
   if (toMuscatDateInput(input.startAt) !== toMuscatDateInput(existing.start_at)) {
@@ -367,7 +419,8 @@ export async function updateStep(
   // inference; not leaving that to chance again here.
   await query(
     `UPDATE steps SET notes = $1, requires_deliverable = $2, updated_at = now(),
-       overdue_reminder_sent_at = CASE WHEN $4::boolean THEN NULL ELSE overdue_reminder_sent_at END
+       overdue_reminder_sent_at = CASE WHEN $4::boolean THEN NULL ELSE overdue_reminder_sent_at END,
+       upcoming_reminder_sent_at = CASE WHEN $4::boolean THEN NULL ELSE upcoming_reminder_sent_at END
      WHERE id = $3`,
     [input.notes, input.requiresDeliverable, id, dueDateChanged]
   );

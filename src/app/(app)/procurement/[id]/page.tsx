@@ -1,13 +1,15 @@
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { isAdminLevel } from "@/lib/users";
+import { canAccessModule } from "@/lib/orgModules";
 import { getProductById, listVendorsForProduct } from "@/lib/procurement";
 import ProductDetailClient from "@/components/procurement/ProductDetailClient";
 
 export default async function ProcurementProductPage({ params }: { params: { id: string } }) {
   const session = await getSession();
   if (!session) redirect("/login");
-  if (!isAdminLevel(session.role)) redirect("/");
+  const isAdmin = isAdminLevel(session.role);
+  if (!isAdmin && !(await canAccessModule(session, "procurement"))) redirect("/");
 
   const id = Number(params.id);
   if (!Number.isInteger(id) || id <= 0) notFound();
@@ -19,7 +21,7 @@ export default async function ProcurementProductPage({ params }: { params: { id:
 
   return (
     <div className="max-w-3xl">
-      <ProductDetailClient product={product} vendors={vendors} />
+      <ProductDetailClient product={product} vendors={vendors} isAdmin={isAdmin} />
     </div>
   );
 }

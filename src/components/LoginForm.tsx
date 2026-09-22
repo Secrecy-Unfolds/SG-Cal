@@ -27,7 +27,7 @@ export default function LoginForm() {
         setError(data.error ?? "Login failed");
         return;
       }
-      router.push("/");
+      router.push(data.mustChangePassword ? "/change-password" : "/");
       router.refresh();
     } catch {
       setError("Network error — check your connection and try again.");

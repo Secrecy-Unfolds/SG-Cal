@@ -12,9 +12,11 @@ import { PaginationControls, usePagination } from "@/components/Pagination";
 export default function RequisitionsListClient({
   requisitions,
   actorId,
+  isAdmin,
 }: {
   requisitions: PurchaseRequisitionRow[];
   actorId: number;
+  isAdmin: boolean;
 }) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
@@ -55,16 +57,18 @@ export default function RequisitionsListClient({
 
   return (
     <div>
-      <div className="flex items-center justify-end mb-4">
-        <span className="btn-glow inline-block">
-          <button
-            onClick={() => setShowCreate(true)}
-            className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium"
-          >
-            + New Requisition
-          </button>
-        </span>
-      </div>
+      {isAdmin && (
+        <div className="flex items-center justify-end mb-4">
+          <span className="btn-glow inline-block">
+            <button
+              onClick={() => setShowCreate(true)}
+              className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium"
+            >
+              + New Requisition
+            </button>
+          </span>
+        </div>
+      )}
 
       {error && <p className="text-sm text-red-600 dark:text-red-400 mb-3">{error}</p>}
 
@@ -102,7 +106,7 @@ export default function RequisitionsListClient({
                   )}
                 </div>
                 <div className="shrink-0 flex gap-2">
-                  {r.status === "pending" && (
+                  {isAdmin && r.status === "pending" && (
                     <>
                       <span className="btn-glow inline-block">
                         <button
@@ -144,7 +148,7 @@ export default function RequisitionsListClient({
       )}
       <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
-      {showCreate && (
+      {isAdmin && showCreate && (
         <RequisitionFormModal
           onClose={() => setShowCreate(false)}
           onSaved={() => {

@@ -10,7 +10,17 @@ import PageHeader from "@/components/hud/PageHeader";
 import { HudFrameButton } from "@/components/hud/HudFrame";
 import { PaginationControls, usePagination } from "@/components/Pagination";
 
-export default function InventoryListClient({ items }: { items: InventoryItemRow[] }) {
+export default function InventoryListClient({
+  items,
+  isAdmin,
+}: {
+  items: InventoryItemRow[];
+  // Organization structure Phase 4: false for a department-module
+  // "inventory" viewer — no add/edit/delete. This module has no separate
+  // read-only detail view (unlike Procurement's), so a viewer sees the
+  // list's own summary line only, not the full edit form.
+  isAdmin: boolean;
+}) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<InventoryItemRow | null>(null);
@@ -25,14 +35,16 @@ export default function InventoryListClient({ items }: { items: InventoryItemRow
   return (
     <div>
       <PageHeader label="INVENTORY" title="Inventory">
-        <span className="btn-glow inline-block">
-          <button
-            onClick={() => setShowCreate(true)}
-            className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium"
-          >
-            + Add Item
-          </button>
-        </span>
+        {isAdmin && (
+          <span className="btn-glow inline-block">
+            <button
+              onClick={() => setShowCreate(true)}
+              className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium"
+            >
+              + Add Item
+            </button>
+          </span>
+        )}
       </PageHeader>
 
       {items.length === 0 ? (
@@ -45,8 +57,10 @@ export default function InventoryListClient({ items }: { items: InventoryItemRow
             <HudFrameButton
               key={item.id}
               corners="tl-br"
-              onClick={() => setEditing(item)}
-              className="w-full text-left flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-xl p-4 hover:border-accent/40 card-glow"
+              onClick={() => isAdmin && setEditing(item)}
+              className={`w-full text-left flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-xl p-4 ${
+                isAdmin ? "hover:border-accent/40 card-glow cursor-pointer" : "cursor-default"
+              }`}
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-1">
@@ -72,8 +86,10 @@ export default function InventoryListClient({ items }: { items: InventoryItemRow
       )}
       <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
-      {showCreate && <InventoryItemModal onClose={() => setShowCreate(false)} onSaved={afterChange} onDeleted={afterChange} />}
-      {editing && (
+      {isAdmin && showCreate && (
+        <InventoryItemModal onClose={() => setShowCreate(false)} onSaved={afterChange} onDeleted={afterChange} />
+      )}
+      {isAdmin && editing && (
         <InventoryItemModal item={editing} onClose={() => setEditing(null)} onSaved={afterChange} onDeleted={afterChange} />
       )}
     </div>

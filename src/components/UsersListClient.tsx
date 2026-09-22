@@ -334,8 +334,19 @@ export default function UsersListClient({
                     {u.phone ? ` · ${u.phone}` : ""}
                   </div>
                   <div className="text-xs text-black/40 dark:text-white/40 truncate mt-0.5">
-                    {emp && (emp.position || emp.department)
-                      ? [emp.position, emp.department].filter(Boolean).join(" · ")
+                    {emp && (emp.position || emp.department || emp.job_title)
+                      ? [
+                          emp.position,
+                          emp.job_title
+                            ? emp.job_title_qualified && emp.department
+                              ? `${emp.department} ${emp.job_title}`
+                              : emp.job_title
+                            : null,
+                          // already part of a department-qualified title ("HR Officer")
+                          emp.job_title_qualified && emp.job_title ? null : emp.department,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")
                       : "No position/department set"}
                     {emp?.salary ? ` · ${formatMoney(emp.salary, emp.salary_currency)}` : ""}
                     {emp?.join_date ? ` · Joined ${formatDateOnly(emp.join_date)}` : ""}

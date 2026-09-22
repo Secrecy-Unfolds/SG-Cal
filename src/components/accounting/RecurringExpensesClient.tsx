@@ -10,7 +10,13 @@ import { formatMoney } from "@/lib/procurementDisplay";
 import { HudFrame } from "@/components/hud/HudFrame";
 import { PaginationControls, usePagination } from "@/components/Pagination";
 
-export default function RecurringExpensesClient({ recurring }: { recurring: RecurringExpenseRow[] }) {
+export default function RecurringExpensesClient({
+  recurring,
+  isAdmin,
+}: {
+  recurring: RecurringExpenseRow[];
+  isAdmin: boolean;
+}) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<RecurringExpenseRow | null>(null);
@@ -34,13 +40,15 @@ export default function RecurringExpensesClient({ recurring }: { recurring: Recu
 
   return (
     <div>
-      <div className="flex justify-end mb-4">
-        <span className="btn-glow inline-block">
-          <button onClick={() => setShowCreate(true)} className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium">
-            + Add Recurring Expense
-          </button>
-        </span>
-      </div>
+      {isAdmin && (
+        <div className="flex justify-end mb-4">
+          <span className="btn-glow inline-block">
+            <button onClick={() => setShowCreate(true)} className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium">
+              + Add Recurring Expense
+            </button>
+          </span>
+        </div>
+      )}
 
       {recurring.length === 0 ? (
         <p className="text-sm text-black/50 dark:text-white/50">No recurring expenses yet.</p>
@@ -70,12 +78,16 @@ export default function RecurringExpensesClient({ recurring }: { recurring: Recu
               </div>
               <div className="flex items-center gap-3 shrink-0">
                 <span className="text-sm font-medium">{formatMoney(r.amount, r.currency)}</span>
-                <button onClick={() => setEditing(r)} className="text-xs text-accent hover:underline">
-                  Edit
-                </button>
-                <button onClick={() => setDeleting(r)} className="text-xs text-red-600 dark:text-red-400 hover:underline">
-                  Delete
-                </button>
+                {isAdmin && (
+                  <button onClick={() => setEditing(r)} className="text-xs text-accent hover:underline">
+                    Edit
+                  </button>
+                )}
+                {isAdmin && (
+                  <button onClick={() => setDeleting(r)} className="text-xs text-red-600 dark:text-red-400 hover:underline">
+                    Delete
+                  </button>
+                )}
               </div>
             </HudFrame>
           ))}
@@ -83,7 +95,7 @@ export default function RecurringExpensesClient({ recurring }: { recurring: Recu
       )}
       <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />
 
-      {showCreate && (
+      {isAdmin && showCreate && (
         <RecurringExpenseFormModal
           onClose={() => setShowCreate(false)}
           onSaved={() => {
@@ -92,7 +104,7 @@ export default function RecurringExpensesClient({ recurring }: { recurring: Recu
           }}
         />
       )}
-      {editing && (
+      {isAdmin && editing && (
         <RecurringExpenseFormModal
           recurring={editing}
           onClose={() => setEditing(null)}

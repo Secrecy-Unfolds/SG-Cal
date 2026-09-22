@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { isAdminLevel } from "@/lib/users";
-import { listPayrollRuns, listTransactions } from "@/lib/accounting";
+import { canAccessModule } from "@/lib/orgModules";
+import { listPayrollRuns, listTransactions, redactPayrollTransactionsForViewer } from "@/lib/accounting";
 import { listExpenseBudgets } from "@/lib/expenseBudgets";
 import { listRecurringExpenses } from "@/lib/recurringExpenses";
 import { listRecurringIncome } from "@/lib/recurringIncome";
@@ -21,7 +22,10 @@ import AccountingTabs from "@/components/accounting/AccountingTabs";
 export default async function AccountingPage() {
   const session = await getSession();
   if (!session) redirect("/login");
-  if (!isAdminLevel(session.role)) redirect("/");
+  const isAdmin = isAdminLevel(session.role);
+  // Organization structure Phase 4: a plain user whose Department maps to
+  // "accounting" can view this page too — VIEW-only.
+  if (!isAdmin && !(await canAccessModule(session, "accounting"))) redirect("/");
 
   const [
     transactions,
@@ -67,7 +71,7 @@ export default async function AccountingPage() {
 
   return (
     <AccountingTabs
-      transactions={transactions}
+      transactions={redactPayrollTransactionsForViewer(transactions, isAdmin)}
       expenseBudgets={expenseBudgets}
       recurringExpenses={recurringExpenses}
       recurringIncome={recurringIncome}
@@ -87,6 +91,7 @@ export default async function AccountingPage() {
       baseCurrency={baseCurrency}
       exchangeRateSnapshot={exchangeRateSnapshot}
       actorRole={session.role}
+      isAdmin={isAdmin}
     />
   );
 }

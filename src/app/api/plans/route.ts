@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
   const name = typeof body?.name === "string" ? body.name.trim() : "";
   const description = typeof body?.description === "string" ? body.description.trim() : "";
   const startDate = typeof body?.startDate === "string" && body.startDate ? body.startDate : null;
+  const projectId = typeof body?.projectId === "number" ? body.projectId : null;
 
   if (!isPlanType(planType)) {
     return NextResponse.json({ error: "Invalid plan type" }, { status: 400 });
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
 
-  const plan = await createPlan({ planType, name, description, startDate, createdBy: session.uid });
+  const plan = await createPlan({ planType, name, description, startDate, projectId, createdBy: session.uid });
 
   const recipients = await getAdminLevelRecipientEmails("ideas");
   const { subject, html } = planCreatedEmail(plan);

@@ -65,6 +65,10 @@ export type ProductRow = {
   picture_url: string | null;
   description: string;
   required_for: string;
+  // Optional structured link alongside the free-text "required for" above —
+  // not a replacement (Organization structure, Phase 3).
+  project_id: number | null;
+  project_name: string | null;
   required_by: string | null; // "YYYY-MM-DD"
   quantity_needed: number;
   quantity_unit: string;
@@ -86,7 +90,8 @@ export type ProductRow = {
 };
 
 const PRODUCT_SELECT = `
-  SELECT p.id, p.name, p.picture_url, p.description, p.required_for, p.required_by,
+  SELECT p.id, p.name, p.picture_url, p.description, p.required_for, p.project_id, pr.name AS project_name,
+         p.required_by,
          p.quantity_needed, p.quantity_unit, p.customs_notes,
          p.unit_price, p.shipping_cost, p.customs_cost, p.currency,
          p.purchase_date_expected, p.expected_arrival, p.status,
@@ -94,6 +99,7 @@ const PRODUCT_SELECT = `
          p.created_by, u.username AS created_by_username, p.created_at, p.updated_at
   FROM procurement_products p
   LEFT JOIN users u ON u.id = p.created_by
+  LEFT JOIN projects pr ON pr.id = p.project_id
 `;
 
 export async function listProducts(): Promise<ProductRow[]> {
@@ -259,6 +265,7 @@ export type ProductInput = {
   pictureUrl: string | null;
   description: string;
   requiredFor: string;
+  projectId: number | null;
   requiredBy: string | null; // "YYYY-MM-DD"
   quantityNeeded: number;
   quantityUnit: string;
@@ -279,16 +286,17 @@ export async function createProduct(
 ): Promise<ProductRow> {
   const res = await query<{ id: number }>(
     `INSERT INTO procurement_products
-       (name, picture_url, description, required_for, required_by, quantity_needed, quantity_unit,
+       (name, picture_url, description, required_for, project_id, required_by, quantity_needed, quantity_unit,
         customs_notes, unit_price, shipping_cost, customs_cost, currency, purchase_date_expected,
         expected_arrival, status, preference_remarks, notifications_muted, created_by)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
      RETURNING id`,
     [
       input.name,
       input.pictureUrl,
       input.description,
       input.requiredFor,
+      input.projectId,
       input.requiredBy,
       input.quantityNeeded,
       input.quantityUnit,
@@ -316,17 +324,18 @@ export async function updateProduct(
 ): Promise<ProductRow | null> {
   await query(
     `UPDATE procurement_products
-     SET name = $1, picture_url = $2, description = $3, required_for = $4, required_by = $5,
-         quantity_needed = $6, quantity_unit = $7, customs_notes = $8, unit_price = $9,
-         shipping_cost = $10, customs_cost = $11, currency = $12, purchase_date_expected = $13,
-         expected_arrival = $14, status = $15, preference_remarks = $16, preferred_vendor_id = $17,
-         notifications_muted = $18, updated_at = now()
-     WHERE id = $19`,
+     SET name = $1, picture_url = $2, description = $3, required_for = $4, project_id = $5, required_by = $6,
+         quantity_needed = $7, quantity_unit = $8, customs_notes = $9, unit_price = $10,
+         shipping_cost = $11, customs_cost = $12, currency = $13, purchase_date_expected = $14,
+         expected_arrival = $15, status = $16, preference_remarks = $17, preferred_vendor_id = $18,
+         notifications_muted = $19, updated_at = now()
+     WHERE id = $20`,
     [
       input.name,
       input.pictureUrl,
       input.description,
       input.requiredFor,
+      input.projectId,
       input.requiredBy,
       input.quantityNeeded,
       input.quantityUnit,

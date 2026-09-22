@@ -41,9 +41,14 @@ function Stars({ rating }: { rating: number | null }) {
 export default function ProductDetailClient({
   product,
   vendors,
+  isAdmin,
 }: {
   product: ProductData & { preferred_vendor_id: number | null };
   vendors: ProductVendorData[];
+  // Organization structure Phase 4: false for a department-module
+  // "procurement" viewer — every create/edit/delete/status action here
+  // hides, the page itself stays viewable.
+  isAdmin: boolean;
 }) {
   const router = useRouter();
   const [editingProduct, setEditingProduct] = useState(false);
@@ -227,35 +232,37 @@ export default function ProductDetailClient({
             {PROCUREMENT_STATUS_LABELS[product.status]}
           </span>
           <h1 className="text-xl font-semibold break-words">{product.name}</h1>
-          <div className="flex flex-wrap gap-2 mt-3">
-            <span className="btn-glow inline-block">
-              <button
-                onClick={() => setEditingProduct(true)}
-                className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium"
-              >
-                Edit
-              </button>
-            </span>
-            <span className="btn-glow-red inline-block">
-              <button
-                onClick={() => setConfirmingDeleteProduct(true)}
-                disabled={deleting}
-                className="btn-skew border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 px-4 py-2 text-sm font-medium disabled:opacity-50"
-              >
-                {deleting ? "Deleting..." : "Delete"}
-              </button>
-            </span>
-            <span className="btn-glow inline-block">
-              <button
-                onClick={handleSendToProcurement}
-                disabled={sendingToProcurement || !product.preferred_vendor_id}
-                title={!product.preferred_vendor_id ? "Mark a vendor preferred first" : undefined}
-                className="btn-skew border border-black/10 dark:border-white/10 px-4 py-2 text-sm font-medium hover:bg-black/[0.03] dark:hover:bg-white/5 disabled:opacity-40"
-              >
-                {sendingToProcurement ? "Sending..." : "Send to Procurement"}
-              </button>
-            </span>
-          </div>
+          {isAdmin && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              <span className="btn-glow inline-block">
+                <button
+                  onClick={() => setEditingProduct(true)}
+                  className="bg-accent text-ink btn-skew px-4 py-2 text-sm font-medium"
+                >
+                  Edit
+                </button>
+              </span>
+              <span className="btn-glow-red inline-block">
+                <button
+                  onClick={() => setConfirmingDeleteProduct(true)}
+                  disabled={deleting}
+                  className="btn-skew border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 px-4 py-2 text-sm font-medium disabled:opacity-50"
+                >
+                  {deleting ? "Deleting..." : "Delete"}
+                </button>
+              </span>
+              <span className="btn-glow inline-block">
+                <button
+                  onClick={handleSendToProcurement}
+                  disabled={sendingToProcurement || !product.preferred_vendor_id}
+                  title={!product.preferred_vendor_id ? "Mark a vendor preferred first" : undefined}
+                  className="btn-skew border border-black/10 dark:border-white/10 px-4 py-2 text-sm font-medium hover:bg-black/[0.03] dark:hover:bg-white/5 disabled:opacity-40"
+                >
+                  {sendingToProcurement ? "Sending..." : "Send to Procurement"}
+                </button>
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -271,6 +278,7 @@ export default function ProductDetailClient({
         className="grid grid-cols-2 sm:grid-cols-3 gap-4 bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-2xl p-4 mb-6"
       >
         <Field label="Required for" value={product.required_for} />
+        <Field label="Project" value={product.project_name ?? ""} />
         <Field label="Required by" value={formatDateOnly(product.required_by)} />
         <Field label="Quantity" value={`${product.quantity_needed} ${product.quantity_unit}`} />
         <Field label="Unit price" value={formatMoney(product.unit_price, product.currency)} />
@@ -317,14 +325,16 @@ export default function ProductDetailClient({
                 </button>
               </span>
             )}
-            <span className="btn-glow-amber inline-block">
-              <button
-                onClick={() => setVendorModal({ mode: "add" })}
-                className="btn-skew bg-amber-600 text-white px-4 py-2 text-sm font-medium"
-              >
-                + Add Vendor
-              </button>
-            </span>
+            {isAdmin && (
+              <span className="btn-glow-amber inline-block">
+                <button
+                  onClick={() => setVendorModal({ mode: "add" })}
+                  className="btn-skew bg-amber-600 text-white px-4 py-2 text-sm font-medium"
+                >
+                  + Add Vendor
+                </button>
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -370,6 +380,7 @@ export default function ProductDetailClient({
                       </div>
                     )}
                   </div>
+                  {isAdmin && (
                   <div className="flex flex-wrap gap-2">
                     {v.rfq_status !== "quoted" && v.rfq_status !== "declined" && (
                       <span className="btn-glow inline-block">
@@ -432,6 +443,7 @@ export default function ProductDetailClient({
                       </button>
                     </span>
                   </div>
+                  )}
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <Field label="Country" value={v.country} />

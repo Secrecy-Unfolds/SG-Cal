@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { isAdminLevel } from "@/lib/users";
-import { createLeaveRequest, listAllLeaveRequests, listLeaveRequestsForUser } from "@/lib/hr";
+import { canAccessModule } from "@/lib/orgModules";
+import {
+  createLeaveRequest,
+  getLeaveBalance,
+  listAllLeaveRequests,
+  listLeaveRequestsForUser,
+  listPublicHolidays,
+} from "@/lib/hr";
+import { countLeaveDays, countLeaveDaysInYear } from "@/lib/hrDisplay";
 import { sendMailInBackground, getAdminLevelRecipientEmails } from "@/lib/mailer";
 import { leaveRequestSubmittedEmail } from "@/lib/hrEmailTemplates";
 
@@ -17,7 +25,7 @@ export async function GET(req: NextRequest) {
 
   const scope = new URL(req.url).searchParams.get("scope");
   if (scope === "all") {
-    if (!isAdminLevel(session.role)) {
+    if (!isAdminLevel(session.role) && !(await canAccessModule(session, "hr"))) {
       return NextResponse.json({ error: "Only Admins and Super Admins can view this" }, { status: 403 });
     }
     const requests = await listAllLeaveRequests();
@@ -41,15 +49,37 @@ export async function POST(req: NextRequest) {
   if (!startDate || !endDate) {
     return NextResponse.json({ error: "Start and end date are required" }, { status: 400 });
   }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+    return NextResponse.json({ error: "Invalid date" }, { status: 400 });
+  }
   if (endDate < startDate) {
     return NextResponse.json({ error: "End date must be on or after the start date" }, { status: 400 });
   }
 
+  // Days count Sun-Thu minus public holidays (lib/hrDisplay.ts). A request
+  // that covers only weekend/holiday days is pointless, so it's refused.
+  const holidayDates = (await listPublicHolidays()).map((h) => h.holiday_date);
+  const days = countLeaveDays(startDate, endDate, holidayDates);
+  if (days === 0) {
+    return NextResponse.json(
+      { error: "That range has no working days — weekends (Fri/Sat) and public holidays don't count as leave" },
+      { status: 400 }
+    );
+  }
+
+  // Warn-only (confirmed): a request larger than the remaining balance still
+  // goes through, flagged to the approving admin. Compared against the year
+  // the request starts in (days falling in that year only).
+  const year = Number(startDate.slice(0, 4));
+  const balance = await getLeaveBalance(session.uid, year);
+  const daysInYear = countLeaveDaysInYear(startDate, endDate, holidayDates, year);
+  const exceedsBalance = balance.remaining !== null && daysInYear > balance.remaining;
+
   const request = await createLeaveRequest({ userId: session.uid, startDate, endDate, reason });
 
   const recipients = await getAdminLevelRecipientEmails("hr");
-  const { subject, html } = leaveRequestSubmittedEmail(request);
+  const { subject, html } = leaveRequestSubmittedEmail(request, { days, remaining: balance.remaining, exceedsBalance });
   sendMailInBackground({ to: recipients, subject, html });
 
-  return NextResponse.json({ request }, { status: 201 });
+  return NextResponse.json({ request, days, exceedsBalance, remaining: balance.remaining }, { status: 201 });
 }

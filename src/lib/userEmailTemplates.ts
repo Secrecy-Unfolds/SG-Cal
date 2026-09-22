@@ -20,7 +20,7 @@ export function passwordResetEmail(who: string, tempPassword: string): { subject
       "Password reset",
       introText(`${whoSafe} (a Super Admin) reset your password. Your new temporary password is:`) +
         passwordBlock +
-        introText("Sign in with it, then change it right away from Change Password on your Profile page.")
+        introText("Sign in with it — you'll be asked to choose your own password straight away, before you can use anything else.")
     ),
   };
 }

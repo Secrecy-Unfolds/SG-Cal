@@ -25,5 +25,21 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  // A session flagged "must change password" (Super-Admin reset) can only
+  // reach the change-password page/API and logout — everything else bounces
+  // there, so the temporary password can't be used as a normal login.
+  if (session.mcp) {
+    const allowed = pathname === "/change-password" || pathname === "/api/auth/change-password";
+    if (!allowed) {
+      if (pathname.startsWith("/api/")) {
+        return NextResponse.json(
+          { error: "You must change your password first", code: "PASSWORD_CHANGE_REQUIRED" },
+          { status: 403 }
+        );
+      }
+      return NextResponse.redirect(new URL("/change-password", req.url));
+    }
+  }
+
   return NextResponse.next();
 }

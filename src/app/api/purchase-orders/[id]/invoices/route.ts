@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { isAdminLevel } from "@/lib/users";
+import { canAccessModule } from "@/lib/orgModules";
 import { getPurchaseOrderById } from "@/lib/purchaseOrders";
 import { createVendorInvoice, listVendorInvoicesForPO } from "@/lib/vendorInvoices";
 import { getAdminLevelRecipientEmails, sendMailInBackground } from "@/lib/mailer";
+import { getEmailsByIds } from "@/lib/users";
+import { getDepartmentLeadershipEmails, resolvePurchaseDepartmentId } from "@/lib/orgNotify";
 import { transactionFromVendorInvoiceEmail } from "@/lib/accountingEmailTemplates";
 
 export const runtime = "nodejs";
@@ -16,7 +19,7 @@ function parseId(idParam: string): number | null {
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!isAdminLevel(session.role)) {
+  if (!isAdminLevel(session.role) && !(await canAccessModule(session, "procurement"))) {
     return NextResponse.json({ error: "Only Admins and Super Admins can view this" }, { status: 403 });
   }
 
@@ -65,8 +68,17 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   // a new-expense notice (same as any other transactionXEmail), just
   // triggered from a Procurement action. Someone who mutes Accounting
   // shouldn't keep hearing about new expenses just because they came from
-  // a PO invoice instead of a manual entry.
-  const recipients = await getAdminLevelRecipientEmails("accounting");
+  // a PO invoice instead of a manual entry. Org structure Phase 6 (confirmed
+  // 2026-09-22): also always reaches the poster and the Manager + Director of
+  // the department this purchase belongs to — see lib/orgNotify.ts.
+  const departmentId = await resolvePurchaseDepartmentId(po.product_id, session.uid);
+  const recipients = Array.from(
+    new Set([
+      ...(await getAdminLevelRecipientEmails("accounting")),
+      ...(await getEmailsByIds([session.uid])),
+      ...(await getDepartmentLeadershipEmails(departmentId !== null ? [departmentId] : [])),
+    ])
+  );
   const { subject, html } = transactionFromVendorInvoiceEmail(transaction, po, session.username);
   sendMailInBackground({ to: recipients, subject, html });
 

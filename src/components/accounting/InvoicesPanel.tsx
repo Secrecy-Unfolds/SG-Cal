@@ -9,7 +9,15 @@ import FolderTabs from "@/components/hud/FolderTabs";
 
 type SubTab = "invoices" | "customers";
 
-export default function InvoicesPanel({ invoices, customers }: { invoices: IssuedInvoiceRow[]; customers: CustomerRow[] }) {
+export default function InvoicesPanel({
+  invoices,
+  customers,
+  isAdmin,
+}: {
+  invoices: IssuedInvoiceRow[];
+  customers: CustomerRow[];
+  isAdmin: boolean;
+}) {
   const [subTab, setSubTab] = useState<SubTab>("invoices");
 
   return (
@@ -23,8 +31,8 @@ export default function InvoicesPanel({ invoices, customers }: { invoices: Issue
         onChange={setSubTab}
       />
 
-      {subTab === "invoices" && <InvoicesClient invoices={invoices} customers={customers} />}
-      {subTab === "customers" && <CustomersClient customers={customers} />}
+      {subTab === "invoices" && <InvoicesClient invoices={invoices} customers={customers} isAdmin={isAdmin} />}
+      {subTab === "customers" && <CustomersClient customers={customers} isAdmin={isAdmin} />}
     </div>
   );
 }

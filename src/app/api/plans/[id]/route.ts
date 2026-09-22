@@ -54,12 +54,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       : body?.prerequisiteStageId === null
       ? null
       : undefined;
+  const projectId = typeof body?.projectId === "number" ? body.projectId : null;
 
   if (!name) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
 
-  const result = await updatePlan(id, { name, description, startDate, prerequisiteStageId });
+  const result = await updatePlan(id, { name, description, startDate, projectId, prerequisiteStageId });
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: result.notFound ? 404 : 400 });
   }

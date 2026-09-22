@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { isAdminLevel } from "@/lib/users";
+import { canAccessModule } from "@/lib/orgModules";
 import { createRequisition, listRequisitions } from "@/lib/purchaseRequisitions";
 import { getAdminLevelRecipientEmails, sendMailInBackground } from "@/lib/mailer";
 import { requisitionSubmittedEmail } from "@/lib/procurementEmailTemplates";
@@ -10,7 +11,7 @@ export const runtime = "nodejs";
 export async function GET() {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!isAdminLevel(session.role)) {
+  if (!isAdminLevel(session.role) && !(await canAccessModule(session, "procurement"))) {
     return NextResponse.json({ error: "Only Admin-level accounts can view requisitions" }, { status: 403 });
   }
 
